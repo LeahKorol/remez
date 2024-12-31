@@ -123,4 +123,5 @@ def dashboard():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # TODO: install a self ssl certificate instead of this dummy certificate
+    app.run(debug=True, ssl_context='adhoc')
