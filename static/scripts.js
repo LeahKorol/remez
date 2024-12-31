@@ -25,17 +25,40 @@ document.querySelector('.closebtn').addEventListener('click', function() {
 
 const dropBtn = document.getElementById('dropBtn');
 if (dropBtn) { // Check if the element actually exists
-const dropdownContent = document.querySelector('.dropdown-content');
+    const dropdownContent = document.querySelector('.dropdown-content');
 
-dropBtn.addEventListener('click', function() {
-    console.log('clicked');
-    if (dropdownContent.style.display === "none") {
-        dropdownContent.style.display = "block";
-    } else {
-        dropdownContent.style.display = "none";
-    }
-    console.log(dropdownContent);
-});
+    dropBtn.addEventListener('click', function() {
+        console.log('clicked');
+        if (dropdownContent.style.display === "none") {
+            dropdownContent.style.display = "block";
+        } else {
+            dropdownContent.style.display = "none";
+        }
+        console.log(dropdownContent);
+    });
 }
 
+//add a query to firestore collection
+document.getElementById('queryForm').addEventListener('submit', async function (event) {
+    event.preventDefault();
+
+     // Create an object from the form data
+     const formData = new FormData(event.target);
+     const queryData = {
+         query_name: formData.get('query_name'),
+         query_text: formData.get('query_text')
+     };
+     
+     // Send the data as JSON
+     const res = await fetch('/add-query', {
+         method: 'POST',
+         headers: {
+             'Content-Type': 'application/json',
+         },
+         credentials: 'same-origin',  // Ensures cookies are sent with the request
+         body: JSON.stringify(queryData)
+     });
+    const msg = document.getElementById('error-message');
+    msg.textContent = res.ok ? 'Success!' : 'Error!';
+});
 

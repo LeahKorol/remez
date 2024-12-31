@@ -23,7 +23,20 @@
 
       <p>This is a protected page that requires authenication to view.</p> 
 
-      <p>Use this template to create and customize more protected pages for your app.</p>
+    <p>We will use this template to create and customize more protected pages for the app.</p>
+
+    <ul>
+      {% for item in queries %}
+      <li {% if item==30 %}style="color: red" {% endif %}>{{ item }}</li>
+      {% endfor %}
+    </ul>
+
+    <form id="queryForm" class="input-group">
+      <input type="text" id="query_name" name="query_name" placeholder="Query Name" required><br>
+      <textarea id="query_text" name="query_text" class="input-group" placeholder="Query Text" required></textarea>
+      <button type="submit">Submit</button>
+      <div id="error-message" style="color:red;"></div>
+    </form>
 
     </main>
 

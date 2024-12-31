@@ -111,14 +111,44 @@ def logout():
 ##############################################
 """ Private Routes (Require authorization) """
 
+# @app.route('/dashboard')
+# @auth_required
+# def dashboard():
+
+#     return render_template('dashboard.html')
+
 @app.route('/dashboard')
 @auth_required
 def dashboard():
+    user_id = session['user']['uid']
+    # Retrieve all queries for the logged-in user
+    queries_ref = db.collection('queries').where('user_id', '==', user_id)
+    queries = queries_ref.stream()
+    query_list = [query.to_dict() for query in queries]
+    print(query_list)
 
-    return render_template('dashboard.html')
+    return render_template('dashboard.html', queries=query_list)
 
+##############################################
+""" Ensure firestore works """
+@app.route('/add-query', methods=['POST'])
+@auth_required
+def add_query():
+    user_id = session['user']['uid']
+    data = request.get_json()  # Parse incoming JSON data
+    query_name = data.get('query_name')
+    query_text = data.get('query_text')
 
-
+    # Add query to Firestore
+    if query_name and query_text:
+        query_ref = db.collection('queries').add({
+            'user_id': user_id,
+            'query_name': query_name,
+            'query_text': query_text
+        })
+        return redirect(url_for('dashboard'))
+    else:
+        return jsonify({'error': 'Query name and text are required'}), 400
 
 
 
