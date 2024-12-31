@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -8,20 +8,20 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" >
 
-  <title>Flask Template</title>
+  <title>REMEZ</title>
 
 
-  </head>
+</head>
 
-  <body>
+<body>
 
-    {% include 'navbar_private.html' %}
+  {% include 'navbar_private.html' %}
 
-    <main>
+  <main>
 
-      <h1>Dashboard (Protected Page)</h1>
+    <h1>Dashboard (Protected Page)</h1>
 
-      <p>This is a protected page that requires authenication to view.</p> 
+    <p>This is a protected page that requires authenication to view.</p>
 
     <p>We will use this template to create and customize more protected pages for the app.</p>
 
@@ -38,12 +38,12 @@
       <div id="error-message" style="color:red;"></div>
     </form>
 
-    </main>
+  </main>
 
-    <script src="{{ url_for('static', filename='login-auth.js') }}" type="module"></script>
-    <script src="{{ url_for('static', filename='scripts.js') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='login-auth.js') }}" type="module"></script>
+  <script src="{{ url_for('static', filename='scripts.js') }}" type="module"></script>
 
-  </body>
-  
+</body>
+
 
 </html>
