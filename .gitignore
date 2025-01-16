@@ -1,4 +1,11 @@
+# Firebase credentials file
 firebase-auth.json
+
+# Environment variables file
 .env
+
+# Virtual environment directory
 venv
 
+# Python bytecode cache directories
+__pycache__/
