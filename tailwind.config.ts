@@ -83,6 +83,18 @@ export default {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: ".5" },
         },
+        progress: {
+          "0%": { width: "0%" },
+          "100%": { width: "100%" }
+        },
+        "chart-in": {
+          "0%": { opacity: "0", transform: "scale(0.9)" },
+          "100%": { opacity: "1", transform: "scale(1)" }
+        },
+        "data-point": {
+          "0%": { opacity: "0", transform: "translateY(20px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" }
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -92,6 +104,18 @@ export default {
         "slide-in": "slide-in 0.3s ease-out",
         "slide-out": "slide-out 0.3s ease-out",
         pulse: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        progress: "progress 15s linear forwards",
+        "chart-in": "chart-in 0.5s ease-out forwards",
+        "data-point": "data-point 0.3s ease-out forwards",
+      },
+      transitionDelay: {
+        '400': '400ms',
+        '500': '500ms',
+        '600': '600ms',
+        '700': '700ms',
+        '800': '800ms',
+        '900': '900ms',
+        '1000': '1000ms',
       },
       borderRadius: {
         lg: "var(--radius)",

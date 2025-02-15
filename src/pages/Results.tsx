@@ -20,7 +20,6 @@ const Results = () => {
       return;
     }
     
-    // Simulate data loading with animation
     const finalData = [
       { name: "Jan", value: 65 },
       { name: "Feb", value: 59 },
@@ -30,22 +29,16 @@ const Results = () => {
       { name: "Jun", value: 68 },
     ];
 
-    // First show loading
     setTimeout(() => {
       setIsLoading(false);
+      setShowChart(true);
     }, 1000);
 
-    // Then animate the chart data point by point
     finalData.forEach((point, index) => {
       setTimeout(() => {
         setData(prev => [...prev, point]);
       }, 1500 + (index * 300));
     });
-
-    // Show the chart with animation
-    setTimeout(() => {
-      setShowChart(true);
-    }, 1200);
 
   }, [location.state, navigate]);
 
@@ -68,24 +61,33 @@ const Results = () => {
               <div className="inline-block mb-2 px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-sm">
                 Analysis Results
               </div>
-              <CardTitle>
+              <CardTitle className="animate-fade-in delay-200">
                 Interaction Analysis: {medication1} + {medication2}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <p className="text-gray-600 animate-fade-in delay-100">
+              <p className="text-gray-600 animate-fade-in delay-300">
                 Based on our analysis, the combination of {medication1} and{" "}
                 {medication2} shows a moderate likelihood of causing {sideEffect}.
                 Please consult with your healthcare provider for personalized
                 advice.
               </p>
 
-              <div className={`h-[400px] w-full transition-opacity duration-500 ${showChart ? 'opacity-100' : 'opacity-0'}`}>
+              <div 
+                className={`h-[400px] w-full transition-all duration-1000 
+                  ${showChart ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={data}>
-                    <CartesianGrid strokeDasharray="3 3" className="animate-fade-in delay-200" />
-                    <XAxis dataKey="name" className="animate-fade-in delay-300" />
-                    <YAxis className="animate-fade-in delay-300" />
+                    <CartesianGrid 
+                      strokeDasharray="3 3" 
+                      className="animate-fade-in delay-400"
+                    />
+                    <XAxis 
+                      dataKey="name" 
+                      className="animate-fade-in delay-500"
+                    />
+                    <YAxis className="animate-fade-in delay-500" />
                     <Tooltip />
                     <Line
                       type="monotone"
@@ -94,17 +96,24 @@ const Results = () => {
                       strokeWidth={2}
                       dot={{ r: 4 }}
                       activeDot={{ r: 8 }}
-                      className="animate-fade-in delay-400"
+                      className="animate-data-point"
                     />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
 
               <div className="flex justify-end space-x-4 pt-4">
-                <Button variant="outline" onClick={() => navigate("/search")} className="animate-fade-in delay-500">
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate("/search")}
+                  className="animate-fade-in delay-700"
+                >
                   New Search
                 </Button>
-                <Button onClick={handleSave} className="animate-fade-in delay-500">
+                <Button 
+                  onClick={handleSave}
+                  className="animate-fade-in delay-800"
+                >
                   Save Results
                 </Button>
               </div>

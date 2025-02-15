@@ -25,24 +25,21 @@ const Search = () => {
     setIsCalculating(true);
     setProgress(0);
 
-    // Create animation steps
     const steps = [
-      "Initializing analysis...",
-      "Processing medication data...",
-      "Analyzing interactions...",
-      "Generating visualization...",
-      "Finalizing results..."
+      { message: "Initializing analysis...", delay: 0 },
+      { message: "Processing medication data...", delay: 3000 },
+      { message: "Analyzing interactions...", delay: 6000 },
+      { message: "Generating visualization...", delay: 9000 },
+      { message: "Finalizing results...", delay: 12000 }
     ];
 
-    // Simulate calculation steps with progress
-    steps.forEach((step, index) => {
+    steps.forEach(({ message, delay }) => {
       setTimeout(() => {
-        toast.info(step);
-        setProgress((index + 1) * (100 / steps.length));
-      }, index * 3000);
+        toast.info(message);
+        setProgress((delay / 12000) * 100);
+      }, delay);
     });
-    
-    // Navigate to results after all steps
+
     setTimeout(() => {
       setIsCalculating(false);
       navigate("/results", {
@@ -61,25 +58,51 @@ const Search = () => {
           </CardHeader>
           <CardContent>
             {isCalculating ? (
-              <div className="py-12 space-y-6 text-center">
-                <div className="text-2xl font-medium text-purple-600 animate-pulse">
+              <div className="py-12 space-y-8">
+                <div className="text-2xl font-medium text-purple-600 animate-pulse text-center">
                   Analyzing Interactions...
                 </div>
-                <div className="max-w-md mx-auto space-y-4">
-                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div className="max-w-md mx-auto space-y-6">
+                  <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-purple-500 transition-all duration-1000 ease-out"
-                      style={{ width: `${progress}%` }}
+                      className="absolute inset-0 bg-purple-500 animate-progress"
+                      style={{ 
+                        width: `${progress}%`,
+                        transition: 'width 1s ease-out'
+                      }}
                     />
                   </div>
                   <div className="grid grid-cols-3 gap-4">
-                    <div className="h-24 bg-purple-100 rounded-lg animate-pulse" />
-                    <div className="h-24 bg-blue-100 rounded-lg animate-pulse delay-150" />
-                    <div className="h-24 bg-indigo-100 rounded-lg animate-pulse delay-300" />
+                    {[0, 1, 2].map((i) => (
+                      <div
+                        key={i}
+                        className={`h-24 rounded-lg animate-pulse transition-all duration-1000 ease-in-out`}
+                        style={{
+                          animationDelay: `${i * 150}ms`,
+                          backgroundColor: `rgba(${139}, ${104}, ${216}, ${0.3 + (i * 0.2)})`
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex justify-center space-x-2 animate-pulse">
+                    {[...Array(5)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="w-2 h-2 rounded-full bg-purple-500"
+                        style={{
+                          animationDelay: `${i * 200}ms`
+                        }}
+                      />
+                    ))}
                   </div>
                 </div>
-                <div className="text-sm text-gray-500">
-                  Estimated time: {Math.ceil((15000 - (progress / 100 * 15000)) / 1000)} seconds
+                <div className="text-center space-y-2">
+                  <div className="text-sm text-gray-500">
+                    Estimated time remaining: {Math.ceil((15000 - (progress / 100 * 15000)) / 1000)} seconds
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    Processing your request...
+                  </div>
                 </div>
               </div>
             ) : (
