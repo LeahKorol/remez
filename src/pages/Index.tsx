@@ -10,7 +10,7 @@ const Index = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 relative pb-20">
       <Navbar />
       <div className="container mx-auto px-4 pt-32">
         <div className="max-w-3xl mx-auto text-center">
@@ -63,17 +63,19 @@ const Index = () => {
           >
             {isAuthenticated ? "Start New Search" : "Login to Begin"}
           </Button>
-
-          <div className="mt-24 pt-8 border-t border-gray-200 text-sm text-gray-500 animate-fade-in delay-500">
-            <p className="mb-2">
-              Created by Lea Korol and Talia Kaziof, Software Engineers
-            </p>
-            <p>
-              In collaboration with Dr. Boris Gorlik
-            </p>
-          </div>
         </div>
       </div>
+      
+      <footer className="fixed bottom-0 left-0 right-0 bg-white bg-opacity-90 backdrop-blur-sm border-t border-gray-200 py-4 text-sm text-gray-500 text-center animate-fade-in delay-500">
+        <div className="container mx-auto px-4">
+          <p className="mb-1">
+            Created by Eng. Lea Korol and Eng. Talia Kaziof
+          </p>
+          <p>
+            In collaboration with Dr. Boris Gorlik
+          </p>
+        </div>
+      </footer>
     </div>
   );
 };
