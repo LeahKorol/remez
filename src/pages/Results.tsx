@@ -11,6 +11,8 @@ const Results = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
+  const [showChart, setShowChart] = useState(false);
+  const [data, setData] = useState<Array<{ name: string; value: number }>>([]);
 
   useEffect(() => {
     if (!location.state) {
@@ -18,19 +20,34 @@ const Results = () => {
       return;
     }
     
+    // Simulate data loading with animation
+    const finalData = [
+      { name: "Jan", value: 65 },
+      { name: "Feb", value: 59 },
+      { name: "Mar", value: 80 },
+      { name: "Apr", value: 55 },
+      { name: "May", value: 72 },
+      { name: "Jun", value: 68 },
+    ];
+
+    // First show loading
     setTimeout(() => {
       setIsLoading(false);
     }, 1000);
-  }, [location.state, navigate]);
 
-  const data = [
-    { name: "Jan", value: 65 },
-    { name: "Feb", value: 59 },
-    { name: "Mar", value: 80 },
-    { name: "Apr", value: 55 },
-    { name: "May", value: 72 },
-    { name: "Jun", value: 68 },
-  ];
+    // Then animate the chart data point by point
+    finalData.forEach((point, index) => {
+      setTimeout(() => {
+        setData(prev => [...prev, point]);
+      }, 1500 + (index * 300));
+    });
+
+    // Show the chart with animation
+    setTimeout(() => {
+      setShowChart(true);
+    }, 1200);
+
+  }, [location.state, navigate]);
 
   const handleSave = () => {
     toast.success("Search results saved successfully!");
@@ -56,19 +73,19 @@ const Results = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <p className="text-gray-600">
+              <p className="text-gray-600 animate-fade-in delay-100">
                 Based on our analysis, the combination of {medication1} and{" "}
                 {medication2} shows a moderate likelihood of causing {sideEffect}.
                 Please consult with your healthcare provider for personalized
                 advice.
               </p>
 
-              <div className="h-[400px] w-full animate-fade-in delay-200">
+              <div className={`h-[400px] w-full transition-opacity duration-500 ${showChart ? 'opacity-100' : 'opacity-0'}`}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={data}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
+                    <CartesianGrid strokeDasharray="3 3" className="animate-fade-in delay-200" />
+                    <XAxis dataKey="name" className="animate-fade-in delay-300" />
+                    <YAxis className="animate-fade-in delay-300" />
                     <Tooltip />
                     <Line
                       type="monotone"
@@ -77,16 +94,19 @@ const Results = () => {
                       strokeWidth={2}
                       dot={{ r: 4 }}
                       activeDot={{ r: 8 }}
+                      className="animate-fade-in delay-400"
                     />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
 
               <div className="flex justify-end space-x-4 pt-4">
-                <Button variant="outline" onClick={() => navigate("/search")}>
+                <Button variant="outline" onClick={() => navigate("/search")} className="animate-fade-in delay-500">
                   New Search
                 </Button>
-                <Button onClick={handleSave}>Save Results</Button>
+                <Button onClick={handleSave} className="animate-fade-in delay-500">
+                  Save Results
+                </Button>
               </div>
             </CardContent>
           </Card>

@@ -13,6 +13,7 @@ const Search = () => {
   const [medication2, setMedication2] = useState("");
   const [sideEffect, setSideEffect] = useState("");
   const [isCalculating, setIsCalculating] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,8 +23,26 @@ const Search = () => {
     }
 
     setIsCalculating(true);
+    setProgress(0);
+
+    // Create animation steps
+    const steps = [
+      "Initializing analysis...",
+      "Processing medication data...",
+      "Analyzing interactions...",
+      "Generating visualization...",
+      "Finalizing results..."
+    ];
+
+    // Simulate calculation steps with progress
+    steps.forEach((step, index) => {
+      setTimeout(() => {
+        toast.info(step);
+        setProgress((index + 1) * (100 / steps.length));
+      }, index * 3000);
+    });
     
-    // Simulate calculation time with animation
+    // Navigate to results after all steps
     setTimeout(() => {
       setIsCalculating(false);
       navigate("/results", {
@@ -46,11 +65,21 @@ const Search = () => {
                 <div className="text-2xl font-medium text-purple-600 animate-pulse">
                   Analyzing Interactions...
                 </div>
-                <div className="max-w-md mx-auto h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-purple-500 animate-[slide-in_15s_linear]" />
+                <div className="max-w-md mx-auto space-y-4">
+                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-purple-500 transition-all duration-1000 ease-out"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="h-24 bg-purple-100 rounded-lg animate-pulse" />
+                    <div className="h-24 bg-blue-100 rounded-lg animate-pulse delay-150" />
+                    <div className="h-24 bg-indigo-100 rounded-lg animate-pulse delay-300" />
+                  </div>
                 </div>
                 <div className="text-sm text-gray-500">
-                  This may take up to 15 seconds
+                  Estimated time: {Math.ceil((15000 - (progress / 100 * 15000)) / 1000)} seconds
                 </div>
               </div>
             ) : (
