@@ -1,6 +1,6 @@
 # Standard Library imports
 import os
-#  load_dotenv is used to load environment-specific settings from the .env file
+# load_dotenv is used to load environment-specific settings from the .env file
 from dotenv import load_dotenv
 
 # Core Flask imports
