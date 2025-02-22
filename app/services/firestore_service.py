@@ -5,16 +5,19 @@
 # Third-party imports
 
 # App imports
-from ..firebase_init import FirebaseApp
+from app.db.firebase import Firebase
 
-db = FirebaseApp.get_firestore()
+def get_db():
+    return Firebase.get_firestore()
 
 def get_user_queries(user_id):
+    db = get_db()
     queries_ref = db.collection('queries').where('user_id', '==', user_id)
     queries = queries_ref.stream()
     return [query.to_dict() for query in queries]
 
 def create_query(user_id, query_name, query_text):
+    db = get_db()
     query_data = {
         'user_id': user_id,
         'query_name': query_name,
@@ -27,4 +30,3 @@ def create_query(user_id, query_name, query_text):
     except Exception as e:
         print(f"Error adding query to Firestore: {e}")
         raise RuntimeError("Failed to create the query in Firestore.")
-

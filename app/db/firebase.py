@@ -1,7 +1,7 @@
 # Standard Library imports
 
 # Core Flask imports
-from flask import Flask
+from flask import Flask  # To access the app's current configuration
 
 # Third-party imports
 from firebase_admin import credentials, initialize_app, firestore
@@ -9,13 +9,13 @@ from google.cloud.firestore import Client
 
 # App imports
 
-class FirebaseApp:
+class Firebase:
     _client: Client = None
 
     @classmethod
     def init_app(cls, app: Flask):
         """Initialize Firebase with the Flask app"""
-        cred_path = app.config.get('FIREBASE_CREDENTIALS_PATH')
+        cred_path = app.config['FIREBASE_CREDENTIALS_PATH']
         cred = credentials.Certificate(cred_path)
         initialize_app(cred)
         cls._client = firestore.client()
