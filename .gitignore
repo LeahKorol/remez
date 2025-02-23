@@ -9,3 +9,6 @@ venv
 
 # Python bytecode cache directories
 __pycache__/
+
+# Application's logs directory
+logs

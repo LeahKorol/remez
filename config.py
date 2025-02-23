@@ -26,6 +26,9 @@ class Config:
     # configurate path to firebase credentials
     FIREBASE_CREDENTIALS_PATH = os.environ.get('FIREBASE_CREDENTIALS_PATH')
 
+    # a logging stream
+    LOG_TO_STDOUT = str_to_bool(os.environ.get('LOG_TO_STDOUT', 'false'))
+
 class DevelopmentConfig(Config):
     pass
 

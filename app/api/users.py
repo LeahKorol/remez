@@ -1,7 +1,7 @@
 # Standard Library imports
 
 # Core Flask imports
-from flask import session, request, jsonify
+from flask import session, request, jsonify, current_app
 
 # Third-party imports
 
@@ -26,4 +26,5 @@ def add_query():
         query_dta = fs.create_query(user_id, query_name, query_text)
         return jsonify(query_dta), 201  # Return the result with a 201 status code (Created)
     except RuntimeError as e:
+        current_app.logger.error(f"Creating query failed: {e}")
         return jsonify({"error": "An unexpected error occurred."}), 500

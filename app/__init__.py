@@ -1,4 +1,7 @@
 # Standard Library imports
+import logging
+from logging.handlers import RotatingFileHandler
+import os
 
 # Core Flask imports
 from flask import Flask
@@ -8,6 +11,31 @@ from flask import Flask
 # App imports
 from config import config_manager
 from app.db.firebase import Firebase
+
+def load_logs(app: Flask) -> None:
+    """Initialize a logging stream for the app."""
+    
+    # Create a formatter for consistency
+    formatter = logging.Formatter(
+        "%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]"
+    )
+    if app.config["LOG_TO_STDOUT"]:
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.INFO)
+        stream_handler.setFormatter(formatter)
+        app.logger.addHandler(stream_handler)
+    else:
+        # Ensure the logs directory exists
+        os.makedirs("logs", exist_ok=True)
+        file_handler = RotatingFileHandler("logs/app.log", maxBytes=10240, backupCount=10)
+        file_handler.setLevel(logging.INFO)
+        file_handler.setFormatter(formatter)
+        app.logger.addHandler(file_handler)
+
+    # Handle messages at the INFO level and above
+    app.logger.setLevel(logging.INFO)
+    # first message
+    app.logger.info("app startup")
 
 def create_app(config_name):
     app = Flask(__name__)
@@ -21,5 +49,8 @@ def create_app(config_name):
 
     from app.api import bp as api_bp
     app.register_blueprint(api_bp)
+
+    if not app.debug and not app.testing:
+        load_logs(app)
 
     return app
