@@ -1,32 +1,47 @@
 # Standard Library imports
 
 # Core Flask imports
+from flask import current_app
 
 # Third-party imports
+from firebase_admin import firestore, exceptions
 
 # App imports
 from app.db.firebase import Firebase
 
+
+# Firestore collections
+USERS_COLLECTION = "users"
+QUERIES_COLLECTION = "queries"
+
+
 def get_db():
     return Firebase.get_firestore()
 
-def get_user_queries(user_id):
+
+def get_user_queries(uid):
     db = get_db()
-    queries_ref = db.collection('queries').where('user_id', '==', user_id)
-    queries = queries_ref.stream()
+    user_ref = db.collection(USERS_COLLECTION).document(uid)
+    queries_ref = user_ref.collection(QUERIES_COLLECTION).stream()
+    queries = [{"id": doc.id, **doc.to_dict()} for doc in queries_ref]
     return [query.to_dict() for query in queries]
 
-def create_query(user_id, query_name, query_text):
+
+def create_query(uid, query_name, query_text):
     db = get_db()
     query_data = {
-        'user_id': user_id,
-        'query_name': query_name,
-        'query_text': query_text
+        "name": query_name,
+        "text": query_text,
+        "created_at": firestore.SERVER_TIMESTAMP,
     }
     try:
-        _, query_ref = db.collection('queries').add(query_data)
+        user_queris_ref = (
+            db.collection(USERS_COLLECTION).document(uid).collection(QUERIES_COLLECTION)
+        )
+        _, new_query_ref = user_queris_ref.add(query_data)
         # Return the query data along with the document ID
-        return {**query_data, 'id': query_ref.id}
-    except Exception as e:
-        print(f"Error adding query to Firestore: {e}")
-        raise RuntimeError("Failed to create the query in Firestore.")
+        return new_query_ref.id
+
+    except exceptions.FirebaseError as e:
+        current_app.logger.error(f"Query creation failed: {e}")
+        raise e

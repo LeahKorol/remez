@@ -1,30 +1,42 @@
 # Standard Library imports
 
 # Core Flask imports
-from flask import session, request, jsonify, current_app
+from flask import session, jsonify, current_app
 
 # Third-party imports
+from firebase_admin import exceptions
 
 # App imports
 from app.api import bp
 from app.decorators import auth_required
+from app.utils.validate import QueryIn
 from app.services import firestore_service as fs
 
-@bp.route('/add-query', methods=['POST'])
-@auth_required
-def add_query():
-    user_id = session['user']['uid']
-    data = request.get_json()  # Parse incoming JSON data
-    query_name = data.get('query_name')
-    query_text = data.get('query_text')
 
-    # Add query to Firestore
-    if not query_name or not query_text:
-        return jsonify({'error': 'Missing query name or text'}), 400
+@bp.post("/users/<string:uid>/queries")
+@auth_required
+@bp.input(QueryIn)
+def create_query(uid: str, json_data):
+    """Creates a new query for the authenticated user."""
+
+    # Ensure user is modifying their own data
+    if uid != session["user"]["uid"]:
+        return (
+            jsonify({"error": "Forbidden: Cannot create queries for other users"}),
+            403,
+        )
+    # Parse incoming JSON data
+    name = json_data["name"]
+    text = json_data["text"]
+
     try:
-        # Call the create_query function
-        query_dta = fs.create_query(user_id, query_name, query_text)
-        return jsonify(query_dta), 201  # Return the result with a 201 status code (Created)
-    except RuntimeError as e:
-        current_app.logger.error(f"Creating query failed: {e}")
+        query_id = fs.create_query(uid, name, text)
+        return jsonify({"query_id": query_id}), 201
+
+    except exceptions.FirebaseError as e:
+        current_app.logger.error(f"Query creation failed: {e}")
+        return jsonify({"error": "An unexpected error occurred."}), 500
+
+    except Exception as e:
+        current_app.logger.error(f"An error occured: {e}")
         return jsonify({"error": "An unexpected error occurred."}), 500
