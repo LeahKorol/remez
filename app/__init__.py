@@ -4,7 +4,7 @@ from logging.handlers import RotatingFileHandler
 import os
 
 # Core Flask imports
-from flask import Flask
+from apiflask import APIFlask
 
 # Third-party imports
 
@@ -12,7 +12,7 @@ from flask import Flask
 from config import config_manager
 from app.db.firebase import Firebase
 
-def load_logs(app: Flask) -> None:
+def load_logs(app: APIFlask) -> None:
     """Initialize a logging stream for the app."""
     
     # Create a formatter for consistency
@@ -38,7 +38,7 @@ def load_logs(app: Flask) -> None:
     app.logger.info("app startup")
 
 def create_app(config_name):
-    app = Flask(__name__)
+    app = APIFlask(__name__)
     app.config.from_object(config_manager[config_name])
 
     # Firebase Admin SDK setup

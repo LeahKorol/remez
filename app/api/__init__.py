@@ -1,12 +1,12 @@
 # Standard Library imports
 
 # Core Flask imports
-from flask import Blueprint
+from apiflask import APIBlueprint
 
 # Third-party imports
 
 # App imports
 
-bp = Blueprint('api', __name__)
+bp = APIBlueprint('api', __name__)
 
 from app.api import auth, users
