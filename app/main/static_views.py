@@ -19,14 +19,14 @@ def home():
 @bp.route('/login')
 def login():
     if 'user' in session:
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('main.dashboard'))
     else:
         return render_template('login.html')
 
 @bp.route('/signup')
 def signup():
     if 'user' in session:
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('main.dashboard'))
     else:
         return render_template('signup.html')
 
@@ -34,7 +34,7 @@ def signup():
 @bp.route('/reset-password')
 def reset_password():
     if 'user' in session:
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('main.dashboard'))
     else:
         return render_template('forgot_password.html')
 
