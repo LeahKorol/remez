@@ -68,7 +68,7 @@ def firestore_test_data(app, sample_data, request_config):
         QUERIES_COLLECTION
     ).document(query_id).set(test_query)
 
-    yield query_id  # Provide query_id for tests
+    yield query_id, test_query  # Provides a query for tests
 
     # Cleanup test data after tests
     docs = (
@@ -84,7 +84,6 @@ def firestore_test_data(app, sample_data, request_config):
 
 def test_create_query(client, sample_data, request_config):
     """Test creating a query via POST request."""
-
     # arrange
     _, url, headers = request_config
 
@@ -94,12 +93,12 @@ def test_create_query(client, sample_data, request_config):
     # assert
     assert response.status_code == 201, f"Unexpected status: {response.status_code}"
     data = response.get_json()
-    assert "query_id" in data, "Query ID missing in response"
+    assert "id" in data, "Query ID missing in response"
+    assert "created_at" in data, "Query creation time missing in response"
 
 
 def test_query_is_stored_correctly(client, request_config, sample_data):
     """Test that the query is correctly stored in Firestore."""
-
     # arrange
     db = Firebase.get_firestore()
     uid, url, headers = request_config
@@ -107,7 +106,7 @@ def test_query_is_stored_correctly(client, request_config, sample_data):
     # act - call API test to create a query
     response = client.post(url, headers=headers, json=sample_data)
     data = response.get_json()
-    query_id = data["query_id"]
+    query_id = data["id"]
 
     # assert
     doc_ref = (
@@ -119,6 +118,7 @@ def test_query_is_stored_correctly(client, request_config, sample_data):
     doc = doc_ref.get()
 
     # Ensure document exists
+    assert doc is not None, f"Failed to retrieve document {query_id}"
     assert doc.exists, f"Query {query_id} not found in Firestore"
 
     # Validate stored data
@@ -128,13 +128,97 @@ def test_query_is_stored_correctly(client, request_config, sample_data):
     assert "created_at" in stored_data, "Missing 'created_at' timestamp"
 
 
+def test_get_user_query(client, request_config, firestore_test_data):
+    """Test getting user's query via GET request"""
+    # arrange
+    _, url, headers = request_config
+    query_id, query_data = firestore_test_data
+
+    # act
+    response = client.get(f"{url}/{query_id}", headers=headers)
+    data = response.get_json()
+
+    # assert
+    assert response.status_code == 200, f"Unexpected status: {response.status_code}"
+    assert data["id"] == query_id, "Query id mismatch"
+    assert data["name"] == query_data["name"], "Query name mismatch"
+
+
+def test_get_user_queries(client, request_config, firestore_test_data):
+    """Test getting user's queries via GET request"""
+    # arrange
+    _, url, headers = request_config
+    query_id, _ = firestore_test_data
+
+    # act
+    response = client.get(url, headers=headers)
+    stored_queries = response.get_json()
+
+    # assert
+    assert response.status_code == 200, f"Unexpected status: {response.status_code}"
+    assert any(
+        query["id"] == query_id for query in stored_queries
+    ), f"Query {query_id} not found"
+
+
+def test_update_user_query(client, request_config, firestore_test_data):
+    """Test update user's query via a PATCH request"""
+    # arrange
+    _, url, headers = request_config
+    query_id, query_data = firestore_test_data
+    update_data = {"name": "updated_test_query"}
+
+    # act
+    response = client.patch(f"{url}/{query_id}", headers=headers, json=update_data)
+    data = response.get_json()
+
+    # assert
+    assert response.status_code == 200, f"Unexpected status: {response.status_code}"
+    assert data["id"] == query_id, "The wrong query was changed"
+    assert data["name"] == update_data["name"], "The fields wasn't updated"
+    assert data["text"] == query_data["text"], "The wrong field was changed"
+
+
+def test_delete_user_query(client, request_config, firestore_test_data):
+    """Test deleting a user's query via DELETE request"""
+    # arrange
+    _, url, headers = request_config
+    query_id, _ = firestore_test_data
+
+    # act
+    response = client.delete(f"{url}/{query_id}", headers=headers)
+
+    # assert
+    assert response.status_code == 204, f"Unexpected status: {response.status_code}"
+
+
+def test_query_was_deleted(firestore_test_data, request_config):
+    """Test that a deleted query no longer exists in Firestore"""
+    query_id, _ = firestore_test_data
+    uid, _, _ = request_config
+    db = Firebase.get_firestore()
+
+    doc_ref = (
+        db.collection(USERS_COLLECTION)
+        .document(uid)
+        .collection(QUERIES_COLLECTION)
+        .document(query_id)
+    )
+    doc = doc_ref.get()
+
+    # Ensure document retrieval was successful
+    assert doc is not None, f"Failed to retrieve document {query_id}"
+    assert not doc.exists, f"Query {query_id} exists in Firestore"
+
+
 @pytest.mark.parametrize(
     "method, endpoint, requires_body",
     [
         ("POST", "/users/other_user/queries", True),  # Requires a body
-        # ("GET", "/users/other_user/data", False),  # No body needed
-        # ("PUT", "/users/other_user/data", True),  # Requires a body
-        # ("DELETE", "/users/other_user/data", False),  # No body needed
+        ("GET", "/users/other_user/queries/query_id", False),  # No body needed
+        ("GET", "/users/other_user/queries", False),  # No body needed
+        ("PATCH", "/users/other_user/queries/query_id", True),  # Requires a body
+        ("DELETE", "/users/other_user/queries/query_id", False),  # No body needed
     ],
 )
 def test_user_cannot_access_other_users_data(
@@ -148,4 +232,5 @@ def test_user_cannot_access_other_users_data(
     else:
         response = request_method(endpoint, headers=headers)
 
-    assert response.status_code == 403  # Forbidden
+    # Forbidden
+    assert response.status_code == 403, f"Unexpected status: {response.status_code}"
