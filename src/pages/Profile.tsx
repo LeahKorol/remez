@@ -16,18 +16,49 @@ const Profile = () => {
     }
   }, [isAuthenticated, navigate]);
 
+  // Mock saved searches data with complete information
   const savedSearches = [
     {
       id: 1,
       date: "2024-03-10",
       medications: ["Aspirin", "Ibuprofen"],
       sideEffect: "Headache",
+      // Add full data needed for results display
+      medication1: "Aspirin",
+      medication2: "Ibuprofen",
+      sideEffect: "Headache",
+      result: {
+        likelihood: "moderate",
+        data: [
+          { name: "Jan", value: 65 },
+          { name: "Feb", value: 59 },
+          { name: "Mar", value: 80 },
+          { name: "Apr", value: 55 },
+          { name: "May", value: 72 },
+          { name: "Jun", value: 68 },
+        ]
+      }
     },
     {
       id: 2,
       date: "2024-03-09",
       medications: ["Paracetamol", "Codeine"],
       sideEffect: "Dizziness",
+      // Add full data needed for results display
+      medication1: "Paracetamol",
+      medication2: "Codeine", 
+      sideEffect: "Dizziness",
+      result: {
+        likelihood: "high",
+        data: [
+          { name: "Jan", value: 70 },
+          { name: "Feb", value: 75 },
+          { name: "Mar", value: 82 },
+          { name: "Apr", value: 78 },
+          { name: "May", value: 85 },
+          { name: "Jun", value: 81 },
+        ]
+      }
     },
   ];
 
@@ -79,7 +110,14 @@ const Profile = () => {
                       </div>
                       <Button
                         variant="ghost"
-                        onClick={() => navigate(`/results?id=${search.id}`)}
+                        onClick={() => navigate("/results", { 
+                          state: { 
+                            medication1: search.medication1,
+                            medication2: search.medication2,
+                            sideEffect: search.sideEffect,
+                            savedResult: search.result
+                          } 
+                        })}
                       >
                         View Results
                       </Button>

@@ -20,25 +20,36 @@ const Results = () => {
       return;
     }
     
-    const finalData = [
-      { name: "Jan", value: 65 },
-      { name: "Feb", value: 59 },
-      { name: "Mar", value: 80 },
-      { name: "Apr", value: 55 },
-      { name: "May", value: 72 },
-      { name: "Jun", value: 68 },
-    ];
-
-    setTimeout(() => {
+    // Check if we're viewing a saved result or generating a new one
+    const { savedResult } = location.state;
+    
+    if (savedResult) {
+      // Display saved result directly
+      setData(savedResult.data);
       setIsLoading(false);
       setShowChart(true);
-    }, 1000);
+    } else {
+      // Generate new result with animation
+      const finalData = [
+        { name: "Jan", value: 65 },
+        { name: "Feb", value: 59 },
+        { name: "Mar", value: 80 },
+        { name: "Apr", value: 55 },
+        { name: "May", value: 72 },
+        { name: "Jun", value: 68 },
+      ];
 
-    finalData.forEach((point, index) => {
       setTimeout(() => {
-        setData(prev => [...prev, point]);
-      }, 1500 + (index * 300));
-    });
+        setIsLoading(false);
+        setShowChart(true);
+      }, 1000);
+
+      finalData.forEach((point, index) => {
+        setTimeout(() => {
+          setData(prev => [...prev, point]);
+        }, 1500 + (index * 300));
+      });
+    }
 
   }, [location.state, navigate]);
 
