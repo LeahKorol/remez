@@ -26,7 +26,6 @@ const Profile = () => {
       // Add full data needed for results display
       medication1: "Aspirin",
       medication2: "Ibuprofen",
-      sideEffect: "Headache",
       result: {
         likelihood: "moderate",
         data: [
@@ -47,7 +46,6 @@ const Profile = () => {
       // Add full data needed for results display
       medication1: "Paracetamol",
       medication2: "Codeine", 
-      sideEffect: "Dizziness",
       result: {
         likelihood: "high",
         data: [
