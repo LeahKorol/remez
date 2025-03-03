@@ -1,6 +1,13 @@
+# Standard Library imports
+
+# Core Flask imports
 from apiflask import Schema
 from apiflask.fields import String
 from apiflask.validators import Length
+
+# Third-party imports
+
+# App imports
 
 
 class QueryIn(Schema):
@@ -13,3 +20,7 @@ class QueryOut(Schema):
     name = String()
     text = String()
     created_at = String()
+
+
+class Login(Schema):
+    idToken = String(required=True)

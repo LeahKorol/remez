@@ -2,6 +2,7 @@
 import pytest
 
 # Core Flask imports
+from flask import g
 
 # Third-party imports
 
@@ -10,12 +11,24 @@ from app.db.firebase import Firebase
 from app.services.firestore_service import USERS_COLLECTION, QUERIES_COLLECTION
 
 
+@pytest.fixture
+def client(app):
+    """
+    Provides a test client for making requests within an application context.
+    This fixture ensures that tests run inside a valid Flask application context,
+    allowing access to `g` (global request object) and `current_app`.
+    """
+    with app.test_client() as test_client:
+        with app.app_context():
+            yield test_client
+
+
 @pytest.fixture(scope="module")
 def request_config():
     """Fixure to provide requests configuration"""
     uid = "firebase_test_user"
     base_url = f"/{USERS_COLLECTION}/{uid}/{QUERIES_COLLECTION}"
-    headers = {"Authorization": "Bearer fake-token", "Content-Type": "application/json"}
+    headers = {"Idtoken": "Bearer fake-token", "Content-Type": "application/json"}
 
     return uid, base_url, headers
 
@@ -30,9 +43,9 @@ def sample_data():
 
 
 # Define the mock verification function
-def mock_verify_token():
-    """Return a mock token instead of verifying a real token."""
-    return "mock_token"
+def mock_verify_session_cookie(session_cookie, check_revoked):
+    """Return a mock user instead of verifying the token."""
+    return {"uid": "firebase_test_user", "email": "test@example.com"}
 
 
 @pytest.fixture(autouse=True)
@@ -40,15 +53,18 @@ def mock_auth(client, monkeypatch, request_config):
     """
     Automatically mock Firebase authentication for all tests.
     - Sets a mock user in the session.
-    - Mocks `verify_token()` to always return a mock token.
+    - Mocks `verify_verify_session_cookie()` to always return a mock token.
     """
-    # Set user session before tests
+    # Set user session and g (request context) before tests
     with client.session_transaction() as session:
-        uid, _, _ = request_config
-        session["user"] = {"uid": uid, "email": "test@example.com"}
+        session["session"] = "Bearer fake token"
+
+    g.current_user = {"uid": "firebase_test_user", "email": "test@example.com"}
 
     # Apply the monkeypatch to replace the actual `verify_token` function
-    monkeypatch.setattr("app.services.auth_service.verify_token", mock_verify_token)
+    monkeypatch.setattr(
+        "firebase_admin.auth.verify_session_cookie", mock_verify_session_cookie
+    )
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -88,6 +104,7 @@ def test_create_query(client, sample_data, request_config):
     _, url, headers = request_config
 
     # act
+    g.current_user = {"uid": "firebase_test_user", "email": "test@example.com"}
     response = client.post(url, headers=headers, json=sample_data)
 
     # assert

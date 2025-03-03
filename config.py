@@ -4,30 +4,50 @@ from datetime import timedelta
 
 # Loads environment variables from the .env file
 basedir = os.path.abspath(os.path.dirname(__file__))
-load_dotenv(os.path.join(basedir, '.env'))
+load_dotenv(os.path.join(basedir, ".env"))
+
+
+def str_to_bool(value):
+    return str(value).lower() == "true"
+
 
 #  Config is a base class containing common configuration settings.
 #  The other config classes inherit from it.
 class Config:
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess'
+    SECRET_KEY = os.environ.get("SECRET_KEY") or "you-will-never-guess"
 
     # Configure session cookie settings
-    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE') or True
-    SESSION_COOKIE_HTTPONLY = os.environ.get('SESSION_COOKIE_HTTPONLY') or True
+    SESSION_COOKIE_SECURE = str_to_bool(os.environ.get("SESSION_COOKIE_SECURE", "true"))
+    SESSION_COOKIE_HTTPONLY = str_to_bool(
+        os.environ.get("SESSION_COOKIE_HTTPONLY", "true")
+    )
 
     # Retrieve the number of days as a string and convert it to an integer
-    permanent_session_lifetime_days = int(os.getenv('PERMANENT_SESSION_LIFETIME', 1))
+    permanent_session_lifetime_days = int(os.getenv("PERMANENT_SESSION_LIFETIME", 1))
     # Set the PERMANENT_SESSION_LIFETIME using timedelta
     PERMANENT_SESSION_LIFETIME = timedelta(days=permanent_session_lifetime_days)
 
-    SESSION_REFRESH_EACH_REQUEST = os.environ.get('SESSION_REFRESH_EACH_REQUEST') or True
-    SESSION_COOKIE_SAMESITE = os.environ.get('SESSION_COOKIE_SAMESITE') or 'Lax'
+    SESSION_REFRESH_EACH_REQUEST = str_to_bool(
+        os.environ.get("SESSION_REFRESH_EACH_REQUEST", "true")
+    )
+    SESSION_COOKIE_SAMESITE = os.environ.get("SESSION_COOKIE_SAMESITE") or "Lax"
 
     # configurate path to firebase credentials
-    FIREBASE_CREDENTIALS_PATH = os.environ.get('FIREBASE_CREDENTIALS_PATH')
+    FIREBASE_CREDENTIALS_PATH = os.environ.get("FIREBASE_CREDENTIALS_PATH")
 
     # a logging stream
-    LOG_TO_STDOUT = str_to_bool(os.environ.get('LOG_TO_STDOUT', 'false'))
+    LOG_TO_STDOUT = str_to_bool(os.environ.get("LOG_TO_STDOUT", "false"))
+
+    # security scheme - used in the API documentation
+    SECURITY_SCHEMES = {
+        "FirebaseSessionAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "in": "cookie",
+            "name": "session",
+        }
+    }
+
 
 class DevelopmentConfig(Config):
     pass
@@ -39,6 +59,7 @@ class TestingConfig(Config):
 
 class ProductionConfig(Config):
     pass
+
 
 config_manager = {
     "dev": DevelopmentConfig,

@@ -20,6 +20,6 @@ def app():
     delete_app(firebase_app)
 
 
-@pytest.fixture()
+@pytest.fixture
 def client(app):
     return app.test_client()
