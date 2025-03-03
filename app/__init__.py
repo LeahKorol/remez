@@ -12,9 +12,10 @@ from apiflask import APIFlask
 from config import config_manager
 from app.db.firebase import Firebase
 
+
 def load_logs(app: APIFlask) -> None:
     """Initialize a logging stream for the app."""
-    
+
     # Create a formatter for consistency
     formatter = logging.Formatter(
         "%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]"
@@ -27,7 +28,9 @@ def load_logs(app: APIFlask) -> None:
     else:
         # Ensure the logs directory exists
         os.makedirs("logs", exist_ok=True)
-        file_handler = RotatingFileHandler("logs/app.log", maxBytes=10240, backupCount=10)
+        file_handler = RotatingFileHandler(
+            "logs/app.log", maxBytes=10240, backupCount=10
+        )
         file_handler.setLevel(logging.INFO)
         file_handler.setFormatter(formatter)
         app.logger.addHandler(file_handler)
@@ -37,6 +40,7 @@ def load_logs(app: APIFlask) -> None:
     # first message
     app.logger.info("app startup")
 
+
 def create_app(config_name):
     app = APIFlask(__name__)
     app.config.from_object(config_manager[config_name])
@@ -45,12 +49,17 @@ def create_app(config_name):
     Firebase.init_app(app)
 
     from app.main import bp as views_bp
+
     app.register_blueprint(views_bp)
 
     from app.api import bp as api_bp
+
     app.register_blueprint(api_bp)
 
     if not app.debug and not app.testing:
         load_logs(app)
+
+    # with app.app_context():
+    #     print(app.url_map)
 
     return app

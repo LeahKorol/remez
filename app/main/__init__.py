@@ -1,14 +1,12 @@
 # Standard Library imports
 
 # Core Flask imports
-from flask import Blueprint
+from apiflask import APIBlueprint
 
 # Third-party imports
 
 # App imports
 
-bp = Blueprint('main', __name__)
+bp = APIBlueprint("main", __name__)
 
 from app.main import static_views
-
-

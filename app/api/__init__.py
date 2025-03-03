@@ -7,6 +7,7 @@ from apiflask import APIBlueprint
 
 # App imports
 
-bp = APIBlueprint('api', __name__)
+bp = APIBlueprint("api", __name__)
 
+# Import route modules AFTER defining `bp`
 from app.api import auth, users
