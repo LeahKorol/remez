@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { toast } from "sonner";
+import { Pencil, Search } from "lucide-react";
 
 const Results = () => {
   const location = useLocation();
@@ -13,6 +14,7 @@ const Results = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showChart, setShowChart] = useState(false);
   const [data, setData] = useState<Array<{ name: string; value: number }>>([]);
+  const [isFromSaved, setIsFromSaved] = useState(false);
 
   useEffect(() => {
     if (!location.state) {
@@ -28,6 +30,7 @@ const Results = () => {
       setData(savedResult.data);
       setIsLoading(false);
       setShowChart(true);
+      setIsFromSaved(true);
     } else {
       // Generate new result with animation
       const finalData = [
@@ -56,6 +59,18 @@ const Results = () => {
   const handleSave = () => {
     toast.success("Search results saved successfully!");
     navigate("/profile");
+  };
+
+  const handleEdit = () => {
+    const { medication1, medication2, sideEffect } = location.state;
+    navigate("/search", { 
+      state: { 
+        medication1, 
+        medication2, 
+        sideEffect,
+        isEditing: true 
+      } 
+    });
   };
 
   if (isLoading || !location.state) return null;
@@ -114,19 +129,39 @@ const Results = () => {
               </div>
 
               <div className="flex justify-end space-x-4 pt-4">
-                <Button 
-                  variant="outline" 
-                  onClick={() => navigate("/search")}
-                  className="animate-fade-in delay-700"
-                >
-                  New Search
-                </Button>
-                <Button 
-                  onClick={handleSave}
-                  className="animate-fade-in delay-800"
-                >
-                  Save Results
-                </Button>
+                {isFromSaved ? (
+                  <>
+                    <Button 
+                      variant="outline" 
+                      onClick={handleEdit}
+                      className="animate-fade-in delay-700"
+                    >
+                      <Pencil className="mr-2 h-4 w-4" /> עריכה
+                    </Button>
+                    <Button 
+                      onClick={() => navigate("/search")}
+                      className="animate-fade-in delay-800"
+                    >
+                      <Search className="mr-2 h-4 w-4" /> חיפוש חדש
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => navigate("/search")}
+                      className="animate-fade-in delay-700"
+                    >
+                      New Search
+                    </Button>
+                    <Button 
+                      onClick={handleSave}
+                      className="animate-fade-in delay-800"
+                    >
+                      Save Results
+                    </Button>
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>
