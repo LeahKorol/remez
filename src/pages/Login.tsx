@@ -5,7 +5,6 @@ import { Navbar } from "@/components/Navbar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 const Login = () => {
@@ -21,6 +20,7 @@ const Login = () => {
     try {
       await login(email, password);
     } catch (error) {
+      console.error("Login submission error:", error);
       // Error is already handled in the AuthContext
     } finally {
       setIsLoading(false);
@@ -75,6 +75,9 @@ const Login = () => {
                   "Login"
                 )}
               </Button>
+              <div className="text-center text-sm text-gray-500 mt-4">
+                <p>For demo: Use any email and password to login</p>
+              </div>
             </form>
           </CardContent>
         </Card>

@@ -28,20 +28,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (email: string, password: string) => {
     try {
       setLoading(true);
-      // Mock login - in a real app, this would validate against a backend
-      if (email === "user@example.com" && password === "password") {
-        const mockUser = {
-          username: "user123",
-          name: "John Doe",
-          email: email,
-          uid: "user-123"
-        };
-        setUser(mockUser);
-        toast.success("Login successful!");
-        navigate("/profile");
-      } else {
-        throw new Error("Invalid credentials");
-      }
+      
+      // For demo purposes, accept any email/password combination
+      // In a real app, this would validate against a backend
+      const mockUser = {
+        username: "user123",
+        name: "John Doe",
+        email: email,
+        uid: "user-123"
+      };
+      
+      setUser(mockUser);
+      toast.success("Login successful!");
+      navigate("/profile");
     } catch (error) {
       console.error("Login error:", error);
       toast.error("Login failed. Please check your credentials.");
