@@ -38,6 +38,23 @@ if (dropBtn) { // Check if the element actually exists
     });
 }
 
+
+/*
+Store uid in memory (not in localStorage. It can be modifired there - NOT secured).
+TO-DO: Whem migrating to a modern framework, store it in something like React Context,
+to maintain access across the app.
+*/
+let userId = null
+
+async function fetchUserId(){
+    const response = await fetch('/me', {credentials: "include"}) //Ensure cookies are sent with the request
+    if (response.ok){
+        userId = await response.json().uid
+    }
+}
+// window.onload = fetchUserId;
+
+
 //add a query to firestore collection
 document.getElementById('queryForm').addEventListener('submit', async function (event) {
     event.preventDefault();

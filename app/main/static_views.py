@@ -7,57 +7,64 @@ from flask import render_template, session, redirect, url_for, make_response
 
 # App imports
 from app.main import bp
-from app.decorators import auth_required
+from app.utils.decorators import auth_required
 
 #####################
 """ Public Routes """
 
-@bp.route('/')
+
+@bp.route("/")
 def home():
-    return render_template('home.html')
+    return render_template("home.html")
 
-@bp.route('/login')
+
+@bp.route("/login")
 def login():
-    if 'user' in session:
-        return redirect(url_for('main.dashboard'))
+    if "idToken" in session:
+        return redirect(url_for("main.logout"))
     else:
-        return render_template('login.html')
+        return render_template("login.html")
 
-@bp.route('/signup')
+
+@bp.route("/signup")
 def signup():
-    if 'user' in session:
-        return redirect(url_for('main.dashboard'))
+    if "idToken" in session:
+        return redirect(url_for("main.logout"))
     else:
-        return render_template('signup.html')
+        return render_template("signup.html")
 
 
-@bp.route('/reset-password')
+@bp.route("/reset-password")
 def reset_password():
-    if 'user' in session:
-        return redirect(url_for('main.dashboard'))
+    if "idToken" in session:
+        return redirect(url_for("main.logout"))
     else:
-        return render_template('forgot_password.html')
+        return render_template("forgot_password.html")
 
-@bp.route('/terms')
+
+@bp.route("/terms")
 def terms():
-    return render_template('terms.html')
+    return render_template("terms.html")
 
-@bp.route('/privacy')
+
+@bp.route("/privacy")
 def privacy():
-    return render_template('privacy.html')
+    return render_template("privacy.html")
 
-@bp.route('/logout')
+
+@bp.route("/logout")
 def logout():
-    session.pop('user', None)  # Remove the user from session
-    response = make_response(redirect(url_for('main.login')))
-    response.set_cookie('session', '', expires=0)  # Optionally clear the session cookie
+    session.pop("user", None)  # Remove the user from session
+    response = make_response(redirect(url_for("main.login")))
+    response.set_cookie("session", "", expires=0)  # Optionally clear the session cookie
     return response
 
 
 ##############################################
 """ Private Routes (Require authorization) """
 
-@bp.route('/dashboard')
+
+@bp.route("/dashboard")
 @auth_required
 def dashboard():
-    return render_template('dashboard.html')
+    return render_template("dashboard.html")
