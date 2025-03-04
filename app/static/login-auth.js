@@ -127,13 +127,16 @@ function resetPassword() {
 }
 
 function loginUser(user, idToken) {
-    fetch('/auth', {
+    fetch('/api/sessionLogin', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${idToken}`
         },
-        credentials: 'same-origin'
+        credentials: 'same-origin',
+        body: JSON.stringify({
+            'idToken': idToken
+        })
     }).then(response => {
         if (response.ok) {
             window.location.href = '/dashboard';

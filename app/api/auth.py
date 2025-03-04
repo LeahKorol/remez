@@ -3,6 +3,7 @@
 # Core Flask imports
 from flask import current_app, jsonify
 from apiflask import abort
+from flask import g
 
 # Third-party imports
 from firebase_admin import auth, exceptions
@@ -11,7 +12,8 @@ import time
 
 # App imports
 from app.api import bp
-from app.schemas import Login
+from app.schemas import Login, MeOut
+from app.utils.decorators import auth_required
 
 
 @bp.post("/sessionLogin")
@@ -59,3 +61,11 @@ def session_logout():
     response = jsonify({"status": "success"})
     response.set_cookie("session", expires=0)
     return response
+
+
+@bp.get("/me")
+@auth_required
+@bp.output(MeOut)
+@bp.doc(security="FirebaseSessionAuth")
+def get_user_details():
+    return {"uid": g.current_user["uid"]}

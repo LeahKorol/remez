@@ -24,3 +24,7 @@ class QueryOut(Schema):
 
 class Login(Schema):
     idToken = String(required=True)
+
+
+class MeOut(Schema):
+    uid = String(required=True)

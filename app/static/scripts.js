@@ -47,12 +47,21 @@ to maintain access across the app.
 let userId = null
 
 async function fetchUserId(){
-    const response = await fetch('/me', {credentials: "include"}) //Ensure cookies are sent with the request
+    const response = await fetch('/api/me', {credentials: "include"}) //Ensure cookies are sent with the request
     if (response.ok){
-        userId = await response.json().uid
+        const data = await response.json()
+        userId = data.uid; // Now userId is correctly assigned
+        console.log("User ID set:", userId);
+    } else {
+        console.error("Failed to fetch user ID");
     }
 }
-// window.onload = fetchUserId;
+// Fetch userId before anything else
+window.onload = async function(){
+    document.getElementById('queryFormSubmitBtn').disabled = true; // Disable submit button until userId is fetched
+    await fetchUserId();
+    document.getElementById('queryFormSubmitBtn').disabled = false;
+}
 
 
 //add a query to firestore collection
@@ -62,12 +71,12 @@ document.getElementById('queryForm').addEventListener('submit', async function (
      // Create an object from the form data
      const formData = new FormData(event.target);
      const queryData = {
-         query_name: formData.get('query_name'),
-         query_text: formData.get('query_text')
+         name: formData.get('query_name'),
+         text: formData.get('query_text')
      };
      
      // Send the data as JSON
-     const res = await fetch('/add-query', {
+     const res = await fetch(`/api/users/${userId}/queries`, {
          method: 'POST',
          headers: {
              'Content-Type': 'application/json',
