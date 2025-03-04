@@ -1,12 +1,21 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer, 
+  ReferenceArea 
+} from "recharts";
 import { toast } from "sonner";
-import { Pencil, Search } from "lucide-react";
+import { Pencil, Search, ZoomIn, ZoomOut } from "lucide-react";
 
 const Results = () => {
   const location = useLocation();
@@ -15,6 +24,13 @@ const Results = () => {
   const [showChart, setShowChart] = useState(false);
   const [data, setData] = useState<Array<{ name: string; value: number }>>([]);
   const [isFromSaved, setIsFromSaved] = useState(false);
+  
+  // Zoom functionality state
+  const [leftX, setLeftX] = useState<string | null>(null);
+  const [rightX, setRightX] = useState<string | null>(null);
+  const [refAreaLeft, setRefAreaLeft] = useState<string | null>(null);
+  const [refAreaRight, setRefAreaRight] = useState<string | null>(null);
+  const [originalData, setOriginalData] = useState<Array<{ name: string; value: number }>>([]);
 
   useEffect(() => {
     if (!location.state) {
@@ -28,6 +44,7 @@ const Results = () => {
     if (savedResult) {
       // Display saved result directly
       setData(savedResult.data);
+      setOriginalData(savedResult.data);
       setIsLoading(false);
       setShowChart(true);
       setIsFromSaved(true);
@@ -41,6 +58,8 @@ const Results = () => {
         { name: "May", value: 72 },
         { name: "Jun", value: 68 },
       ];
+
+      setOriginalData(finalData);
 
       setTimeout(() => {
         setIsLoading(false);
@@ -73,6 +92,60 @@ const Results = () => {
     });
   };
 
+  // Zoom functionality
+  const getAxisYDomain = (from: string, to: string, ref: string, offset: number) => {
+    const refData = data.slice(
+      data.findIndex(d => d.name === from),
+      data.findIndex(d => d.name === to) + 1
+    );
+    
+    let [bottom, top] = [
+      Math.min(...refData.map(d => d.value)) - offset,
+      Math.max(...refData.map(d => d.value)) + offset
+    ];
+    
+    return [bottom, top];
+  };
+
+  const zoomIn = () => {
+    if (refAreaLeft === refAreaRight || refAreaRight === null || refAreaLeft === null) {
+      setRefAreaLeft(null);
+      setRefAreaRight(null);
+      return;
+    }
+
+    // Ensure left is always less than right
+    const leftName = refAreaLeft;
+    const rightName = refAreaRight;
+
+    const [bottom, top] = getAxisYDomain(
+      leftName!,
+      rightName!,
+      'value',
+      5
+    );
+
+    setLeftX(leftName);
+    setRightX(rightName);
+
+    const zoomedData = data.slice(
+      data.findIndex(d => d.name === leftName),
+      data.findIndex(d => d.name === rightName) + 1
+    );
+
+    setData(zoomedData);
+    setRefAreaLeft(null);
+    setRefAreaRight(null);
+  };
+
+  const zoomOut = () => {
+    setData(originalData);
+    setLeftX(null);
+    setRightX(null);
+    setRefAreaLeft(null);
+    setRefAreaRight(null);
+  };
+
   if (isLoading || !location.state) return null;
 
   const { medication1, medication2, sideEffect } = location.state;
@@ -103,17 +176,37 @@ const Results = () => {
                 className={`h-[400px] w-full transition-all duration-1000 
                   ${showChart ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
               >
+                <div className="flex justify-end mb-2 space-x-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={zoomOut}
+                    disabled={!leftX && !rightX}
+                  >
+                    <ZoomOut className="h-4 w-4 mr-1" /> Reset Zoom
+                  </Button>
+                  <p className="text-sm text-gray-500 italic">Tip: Drag on chart to zoom into a specific area</p>
+                </div>
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={data}>
+                  <LineChart 
+                    data={data}
+                    onMouseDown={e => e && e.activeLabel && setRefAreaLeft(e.activeLabel)}
+                    onMouseMove={e => refAreaLeft && e && e.activeLabel && setRefAreaRight(e.activeLabel)}
+                    onMouseUp={zoomIn}
+                  >
                     <CartesianGrid 
                       strokeDasharray="3 3" 
                       className="animate-fade-in delay-400"
                     />
                     <XAxis 
                       dataKey="name" 
+                      allowDataOverflow
                       className="animate-fade-in delay-500"
                     />
-                    <YAxis className="animate-fade-in delay-500" />
+                    <YAxis 
+                      allowDataOverflow
+                      className="animate-fade-in delay-500" 
+                    />
                     <Tooltip />
                     <Line
                       type="monotone"
@@ -124,6 +217,15 @@ const Results = () => {
                       activeDot={{ r: 8 }}
                       className="animate-data-point"
                     />
+                    {refAreaLeft && refAreaRight && (
+                      <ReferenceArea 
+                        x1={refAreaLeft} 
+                        x2={refAreaRight} 
+                        strokeOpacity={0.3} 
+                        fill="#8884d8" 
+                        fillOpacity={0.3} 
+                      />
+                    )}
                   </LineChart>
                 </ResponsiveContainer>
               </div>

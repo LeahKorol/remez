@@ -1,23 +1,17 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 const Profile = () => {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate("/login");
-    }
-  }, [isAuthenticated, navigate]);
-
-  // Mock saved searches data with complete information
-  const savedSearches = [
+  const [savedSearches, setSavedSearches] = useState([
     {
       id: 1,
       date: "2024-03-10",
@@ -58,7 +52,18 @@ const Profile = () => {
         ]
       }
     },
-  ];
+  ]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate("/login");
+    }
+  }, [isAuthenticated, navigate]);
+
+  const handleDelete = (id: number) => {
+    setSavedSearches(prev => prev.filter(search => search.id !== id));
+    toast.success("Search deleted successfully");
+  };
 
   if (!user) return null;
 
@@ -91,37 +96,51 @@ const Profile = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {savedSearches.map((search) => (
-                  <div
-                    key={search.id}
-                    className="p-4 rounded-lg border hover:border-purple-500 transition-colors cursor-pointer"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="text-sm text-gray-500">{search.date}</p>
-                        <p className="font-medium">
-                          {search.medications.join(" + ")}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          Side Effect: {search.sideEffect}
-                        </p>
+                {savedSearches.length === 0 ? (
+                  <p className="text-center text-gray-500 py-4">No saved searches yet</p>
+                ) : (
+                  savedSearches.map((search) => (
+                    <div
+                      key={search.id}
+                      className="p-4 rounded-lg border hover:border-purple-500 transition-colors"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="text-sm text-gray-500">{search.date}</p>
+                          <p className="font-medium">
+                            {search.medications.join(" + ")}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            Side Effect: {search.sideEffect}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(search.id)}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            onClick={() => navigate("/results", { 
+                              state: { 
+                                medication1: search.medication1,
+                                medication2: search.medication2,
+                                sideEffect: search.sideEffect,
+                                savedResult: search.result
+                              } 
+                            })}
+                          >
+                            View Results
+                          </Button>
+                        </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        onClick={() => navigate("/results", { 
-                          state: { 
-                            medication1: search.medication1,
-                            medication2: search.medication2,
-                            sideEffect: search.sideEffect,
-                            savedResult: search.result
-                          } 
-                        })}
-                      >
-                        View Results
-                      </Button>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
