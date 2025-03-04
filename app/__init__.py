@@ -54,7 +54,11 @@ def create_app(config_name):
 
     from app.api import bp as api_bp
 
-    app.register_blueprint(api_bp)
+    app.register_blueprint(api_bp, url_prefix="/api")
+
+    from app.errors import bp as errors_bp
+
+    app.register_blueprint(errors_bp)
 
     if not app.debug and not app.testing:
         load_logs(app)

@@ -66,5 +66,6 @@ def logout():
 
 @bp.route("/dashboard")
 @auth_required
+@bp.doc(security="FirebaseSessionAuth")
 def dashboard():
     return render_template("dashboard.html")

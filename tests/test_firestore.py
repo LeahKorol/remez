@@ -27,7 +27,7 @@ def client(app):
 def request_config():
     """Fixure to provide requests configuration"""
     uid = "firebase_test_user"
-    base_url = f"/{USERS_COLLECTION}/{uid}/{QUERIES_COLLECTION}"
+    base_url = f"/api/{USERS_COLLECTION}/{uid}/{QUERIES_COLLECTION}"
     headers = {"Idtoken": "Bearer fake-token", "Content-Type": "application/json"}
 
     return uid, base_url, headers
@@ -231,11 +231,11 @@ def test_query_was_deleted(firestore_test_data, request_config):
 @pytest.mark.parametrize(
     "method, endpoint, requires_body",
     [
-        ("POST", "/users/other_user/queries", True),  # Requires a body
-        ("GET", "/users/other_user/queries/query_id", False),  # No body needed
-        ("GET", "/users/other_user/queries", False),  # No body needed
-        ("PATCH", "/users/other_user/queries/query_id", True),  # Requires a body
-        ("DELETE", "/users/other_user/queries/query_id", False),  # No body needed
+        ("POST", "/api/users/other_user/queries", True),  # Requires a body
+        ("GET", "/api/users/other_user/queries/query_id", False),  # No body needed
+        ("GET", "/api/users/other_user/queries", False),  # No body needed
+        ("PATCH", "/api/users/other_user/queries/query_id", True),  # Requires a body
+        ("DELETE", "/api/users/other_user/queries/query_id", False),  # No body needed
     ],
 )
 def test_user_cannot_access_other_users_data(
