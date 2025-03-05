@@ -1,6 +1,6 @@
-
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,14 +16,17 @@ import {
 } from "recharts";
 import { toast } from "sonner";
 import { Pencil, Search, ZoomIn, ZoomOut } from "lucide-react";
+import { searchService, SearchInput } from "@/services/searchService";
 
 const Results = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [showChart, setShowChart] = useState(false);
   const [data, setData] = useState<Array<{ name: string; value: number }>>([]);
   const [isFromSaved, setIsFromSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
   // Zoom functionality state
   const [leftX, setLeftX] = useState<string | null>(null);
@@ -75,9 +78,37 @@ const Results = () => {
 
   }, [location.state, navigate]);
 
-  const handleSave = () => {
-    toast.success("Search results saved successfully!");
-    navigate("/profile");
+  const handleSave = async () => {
+    if (!user) {
+      toast.error("You must be logged in to save searches");
+      navigate("/login");
+      return;
+    }
+
+    const { medication1, medication2, sideEffect } = location.state;
+    
+    setIsSaving(true);
+    
+    try {
+      const searchData: SearchInput = {
+        medication1,
+        medication2,
+        sideEffect,
+        result: {
+          likelihood: "moderate", // This would be dynamic in a real app
+          data: originalData
+        }
+      };
+      
+      await searchService.saveSearch(user.uid, searchData);
+      toast.success("Search results saved successfully!");
+      navigate("/profile");
+    } catch (error) {
+      console.error("Failed to save search:", error);
+      toast.error("Failed to save search");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleEdit = () => {
@@ -258,9 +289,10 @@ const Results = () => {
                     </Button>
                     <Button 
                       onClick={handleSave}
+                      disabled={isSaving}
                       className="animate-fade-in delay-800"
                     >
-                      Save Results
+                      {isSaving ? 'Saving...' : 'Save Results'}
                     </Button>
                   </>
                 )}

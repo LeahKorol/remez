@@ -1,11 +1,11 @@
 
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { authService } from "@/services/authService";
 
 interface User {
   username: string;
-  name: string;
   email: string;
   uid: string;
 }
@@ -22,23 +22,34 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
+  // Check if user is already authenticated on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const currentUser = await authService.getCurrentUser();
+        if (currentUser) {
+          setUser(currentUser);
+        }
+      } catch (error) {
+        console.error("Auth check failed:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
 
   const login = async (email: string, password: string) => {
     try {
       setLoading(true);
       
-      // For demo purposes, accept any email/password combination
-      // In a real app, this would validate against a backend
-      const mockUser = {
-        username: "user123",
-        name: "John Doe",
-        email: email,
-        uid: "user-123"
-      };
+      const userData = await authService.login({ email, password });
+      setUser(userData);
       
-      setUser(mockUser);
       toast.success("Login successful!");
       navigate("/profile");
     } catch (error) {
@@ -53,6 +64,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const logout = async () => {
     try {
       setLoading(true);
+      await authService.logout();
       setUser(null);
       toast.success("Logged out successfully");
       navigate("/login");
