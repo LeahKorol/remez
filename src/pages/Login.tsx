@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -18,10 +19,18 @@ const Login = () => {
     setIsLoading(true);
     
     try {
+      if (!email || !password) {
+        toast.error("Please enter both email and password");
+        setIsLoading(false);
+        return;
+      }
+      
       await login(email, password);
-    } catch (error) {
+      toast.success("Login successful!");
+    } catch (error: any) {
       console.error("Login submission error:", error);
-      // Error is already handled in the AuthContext
+      const errorMessage = error.message || "Login failed. Please try again.";
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -76,7 +85,7 @@ const Login = () => {
                 )}
               </Button>
               <div className="text-center text-sm text-gray-500 mt-4">
-                <p>For demo: Use any email and password to login</p>
+                <p>Use your Firebase email and password to login</p>
               </div>
             </form>
           </CardContent>

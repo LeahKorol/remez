@@ -1,6 +1,14 @@
 
 import api from './api';
 import { toast } from 'sonner';
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/auth';
+import { firebaseConfig } from '../config/firebase';
+
+// Initialize Firebase if not already initialized
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
 
 interface LoginCredentials {
   email: string;
@@ -8,25 +16,32 @@ interface LoginCredentials {
 }
 
 export const authService = {
-  // Login function (in a real app would get idToken from Firebase first)
+  // Login function using Firebase Auth and then getting a session cookie
   async login(credentials: LoginCredentials): Promise<{ uid: string; email: string; username: string }> {
     try {
-      // In a real implementation, we would:
-      // 1. Authenticate with Firebase to get ID token
-      // 2. Send that token to our backend
+      // 1. Login to Firebase to get ID token
+      const userCredential = await firebase.auth().signInWithEmailAndPassword(
+        credentials.email, 
+        credentials.password
+      );
       
-      // For demo purposes, we'll simulate this process
-      const mockIdToken = "mock-firebase-id-token";
+      // 2. Get the ID token from Firebase
+      const idToken = await userCredential.user?.getIdToken();
       
-      await api.post('/sessionLogin', { idToken: mockIdToken });
+      if (!idToken || !userCredential.user) {
+        throw new Error('Failed to get Firebase ID token');
+      }
+
+      // 3. Send token to backend to create session cookie
+      await api.post('/sessionLogin', { idToken });
       
-      // Get user details from the /me endpoint
+      // 4. Get user details from the /me endpoint
       const { data } = await api.get('/me');
       
-      // Return user data for the frontend
+      // 5. Return user data for the frontend
       return {
         uid: data.uid,
-        email: credentials.email, // The email would normally come from the /me response
+        email: credentials.email,
         username: credentials.email.split('@')[0] // Generate username from email for demo
       };
     } catch (error) {
@@ -39,6 +54,10 @@ export const authService = {
   // Logout function
   async logout(): Promise<void> {
     try {
+      // Sign out from Firebase
+      await firebase.auth().signOut();
+      
+      // Tell the backend to invalidate the session cookie
       await api.post('/sessionLogout');
     } catch (error) {
       console.error('Logout error:', error);
@@ -52,13 +71,20 @@ export const authService = {
     try {
       const { data } = await api.get('/me');
       
-      // In a real app, the /me endpoint would return more user details
-      // For demo, we'll just use the uid and create dummy values
-      return {
-        uid: data.uid,
-        email: `user-${data.uid}@example.com`, // Dummy email
-        username: `user-${data.uid}` // Dummy username
-      };
+      // If we successfully got user data, the user is authenticated
+      if (data && data.uid) {
+        // Get current Firebase user to get the email
+        const currentUser = firebase.auth().currentUser;
+        const email = currentUser?.email || `user-${data.uid}@example.com`;
+        
+        return {
+          uid: data.uid,
+          email: email,
+          username: email.split('@')[0]
+        };
+      }
+      
+      return null;
     } catch (error) {
       // If 401 or other error, user is not authenticated
       return null;
