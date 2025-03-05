@@ -3,10 +3,10 @@ from typing import Optional
 
 # Core Flask imports
 from flask import request, current_app
-from apiflask import abort
 
 # Third-party imports
 from firebase_admin import auth
+from werkzeug.exceptions import Unauthorized
 
 # App imports
 
@@ -26,7 +26,7 @@ def verify_token() -> Optional[dict]:
 
     if not session_cookie:
         current_app.logger.warning("Unauthorized: Missing session cookie.")
-        abort(401, message="Unauthorized: Missing session cookie")
+        raise Unauthorized(description="Unauthorized: Missing session cookie")
 
     try:
         # Verify the session cookie. If `check_revoked=True`, additional checks ensure the
@@ -38,12 +38,12 @@ def verify_token() -> Optional[dict]:
         current_app.logger.warning(
             f"Unauthorized: Invalid session cookie. Error: {str(e)}"
         )
-        abort(401, message="Unauthorized: Invalid session cookie")
+        raise Unauthorized(description="Unauthorized: Invalid session cookie")
 
     except auth.AuthError as e:  # Catches broader Firebase authentication errors
         current_app.logger.error(f"Firebase AuthError: {str(e)}")
-        abort(401, message="Unauthorized: Firebase authentication error")
+        raise Unauthorized(description="Unauthorized: Firebase authentication error")
 
     except Exception as e:
         current_app.logger.error(f"Unexpected error in verify_token: {e}")
-        abort(500, message="Internal Server Error")
+        raise Unauthorized(description="Internal Server Error")
