@@ -1,7 +1,6 @@
-
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { Navbar } from "@/components/Navbar";
+import Layout from "@/components/Layout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,13 +8,13 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 const Login = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState(""); // Save the user's email
+  const [password, setPassword] = useState(""); // Save the user's password
+  const [isLoading, setIsLoading] = useState(false); // Check if the login request is in progress
   const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault(); // Prevent page refresh on form submission
     setIsLoading(true);
     
     try {
@@ -37,8 +36,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 relative pb-20">
-      <Navbar />
+    <Layout>
       <div className="container mx-auto px-4 pt-32">
         <Card className="max-w-md mx-auto animate-fade-in">
           <CardHeader>
@@ -48,7 +46,7 @@ const Login = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4"> {/* Handle form submission */}
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm font-medium">
                   Email
@@ -57,7 +55,7 @@ const Login = () => {
                   id="email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => setEmail(e.target.value)} // Update email state
                   required
                   disabled={isLoading}
                 />
@@ -68,7 +66,7 @@ const Login = () => {
                 </label>
                 <Input
                   id="password"
-                  type="password"
+                  type="password" // Hide characters
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -84,25 +82,11 @@ const Login = () => {
                   "Login"
                 )}
               </Button>
-              <div className="text-center text-sm text-gray-500 mt-4">
-                <p>Use your Firebase email and password to login</p>
-              </div>
             </form>
           </CardContent>
         </Card>
       </div>
-      
-      <footer className="fixed bottom-0 left-0 right-0 bg-white bg-opacity-90 backdrop-blur-sm border-t border-gray-200 py-4 text-sm text-gray-500 text-center animate-fade-in delay-500">
-        <div className="container mx-auto px-4">
-          <p className="mb-1">
-            Created by Eng. Lea Korol and Eng. Talia Kaziof
-          </p>
-          <p>
-            In collaboration with Dr. Boris Gorlik
-          </p>
-        </div>
-      </footer>
-    </div>
+    </Layout>
   );
 };
 
