@@ -1,6 +1,5 @@
-
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,11 +8,23 @@ import { toast } from "sonner";
 
 const Search = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [medication1, setMedication1] = useState("");
   const [medication2, setMedication2] = useState("");
   const [sideEffect, setSideEffect] = useState("");
   const [isCalculating, setIsCalculating] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    if (location.state) {
+      const { medication1, medication2, sideEffect, isEditing } = location.state;
+      if (medication1) setMedication1(medication1);
+      if (medication2) setMedication2(medication2);
+      if (sideEffect) setSideEffect(sideEffect);
+      if (isEditing) setIsEditing(true);
+    }
+  }, [location.state]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,7 +65,9 @@ const Search = () => {
       <div className="container mx-auto px-4 pt-32">
         <Card className="max-w-2xl mx-auto animate-fade-in">
           <CardHeader>
-            <CardTitle>New Medication Interaction Search</CardTitle>
+            <CardTitle>
+              {isEditing ? "עריכת חיפוש" : "New Medication Interaction Search"}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {isCalculating ? (
@@ -135,7 +148,7 @@ const Search = () => {
                   />
                 </div>
                 <Button type="submit" className="w-full">
-                  Analyze Interaction
+                  {isEditing ? "עדכן תוצאות" : "Analyze Interaction"}
                 </Button>
               </form>
             )}

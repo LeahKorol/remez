@@ -1,44 +1,80 @@
 
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { authService } from "@/services/authService";
 
 interface User {
   username: string;
-  name: string;
   email: string;
+  uid: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string) => void;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const login = (username: string, password: string) => {
-    // In a real app, this would validate against a backend
-    if (username && password) {
-      setUser({
-        username,
-        name: "Test User",
-        email: "test@example.com",
-      });
+  // Check if user is already authenticated on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const currentUser = await authService.getCurrentUser();
+        if (currentUser) {
+          setUser(currentUser);
+        }
+      } catch (error) {
+        console.error("Auth check failed:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    try {
+      setLoading(true);
+      
+      const userData = await authService.login({ email, password });
+      setUser(userData);
+      
       toast.success("Login successful!");
       navigate("/profile");
+    } catch (error) {
+      console.error("Login error:", error);
+      toast.error("Login failed. Please check your credentials.");
+      throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    toast.success("Logged out successfully");
-    navigate("/login");
+  const logout = async () => {
+    try {
+      setLoading(true);
+      await authService.logout();
+      setUser(null);
+      toast.success("Logged out successfully");
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast.error("Logout failed");
+      throw error;
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -48,6 +84,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         login,
         logout,
         isAuthenticated: !!user,
+        loading
       }}
     >
       {children}
