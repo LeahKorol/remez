@@ -1,12 +1,11 @@
-
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/AuthContext";  
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/Navbar";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom"; // navigate in the app
 import { BeakerIcon, ShieldCheckIcon, ActivityIcon } from "lucide-react";
 
 const Index = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth(); // checks if the user is already connected
   const navigate = useNavigate();
 
   return (
@@ -69,10 +68,10 @@ const Index = () => {
       <footer className="fixed bottom-0 left-0 right-0 bg-white bg-opacity-90 backdrop-blur-sm border-t border-gray-200 py-4 text-sm text-gray-500 text-center animate-fade-in delay-500">
         <div className="container mx-auto px-4">
           <p className="mb-1">
-            Created by Eng. Lea Korol and Eng. Talia Kaziof
+            Created by Eng. Leah Korol and Eng. Talya Kazayof
           </p>
           <p>
-            In collaboration with Dr. Boris Gorlik
+            In collaboration with Dr. Boris Gorelik
           </p>
         </div>
       </footer>
