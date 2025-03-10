@@ -104,8 +104,8 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 const Login = () => {
-  const [email, setEmail] = useState(""); // save the user email
-  const [password, setPassword] = useState(""); // save the user password
+  const [email, setEmail] = useState(""); // Save the user email
+  const [password, setPassword] = useState(""); // Save the user password
   const [isLoading, setIsLoading] = useState(false); // Check if the login request is in progress
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -125,7 +125,7 @@ const Login = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ email, password }),
-        credentials: "include", // access the saving of the session
+        credentials: "include", // Access the saving of the session
       });
 
       const data = await response.json();
