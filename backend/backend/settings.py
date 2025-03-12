@@ -54,12 +54,15 @@ INSTALLED_APPS = [
     "dj_rest_auth.registration",
     # API documentation
     "drf_spectacular",
+    # Enable CORS
+    "corsheaders",
     # Project apps
     "users",
     "api",
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",  # Enable CORS, Must be placed at the top
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -187,3 +190,7 @@ REST_AUTH = {
 
 # SECURITY WARNING: keep the JWT signing key used in production secret!
 SIGNING_KEY = os.getenv("SIGNING_KEY")
+
+# CORS settings
+CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+CORS_ALLOW_CREDENTIALS = True  # Allow using cookies for authentication
