@@ -119,7 +119,7 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5000/sessionLogin", {
+      const response = await fetch("MY_PAGE_OF_LOGIN", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
