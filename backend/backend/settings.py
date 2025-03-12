@@ -52,8 +52,11 @@ INSTALLED_APPS = [
     "allauth.account",
     "allauth.socialaccount",
     "dj_rest_auth.registration",
+    # API documentation
+    "drf_spectacular",
     # Project apps
     "users",
+    "api",
 ]
 
 MIDDLEWARE = [
@@ -153,19 +156,24 @@ ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_EMAIL_VERIFICATION = "none"  # Do not require email confirmation
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 
+# Prevent first_name/last_name from being required
+ACCOUNT_USER_MODEL_FIELDS = ["email"]
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "dj_rest_auth.jwt_auth.JWTCookieAuthentication",
     ),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 REST_AUTH = {
-    # custom serializer
-    # "USER_DETAILS_SERIALIZER": "users.serializers.UserSerializer",
-
-    "USE_JWT": True,
+    # Custom serializers
+    "USER_DETAILS_SERIALIZER": "users.serializers.UserSerializer",
+    "REGISTER_SERIALIZER": "users.serializers.CustomRegisterSerializer",
     # Do not need session authentication because we use JWT cookies
     "SESSION_LOGIN": False,
+    # JWT configuration
+    "USE_JWT": True,
     # Cookies names
     "JWT_AUTH_COOKIE": os.getenv("JWT_AUTH_COOKIE", "jwt-access-token"),
     "JWT_AUTH_REFRESH_COOKIE": os.getenv(
