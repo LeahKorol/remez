@@ -25,24 +25,28 @@ class UserSerializer(serializers.ModelSerializer):
 class CustomRegisterSerializer(RegisterSerializer):
     """Custom serializer for user registration."""
 
-    username = None
+    username = None  # Remove username field
     email = serializers.EmailField(required=True)
     name = serializers.CharField(max_length=255, required=False)
+    password1 = serializers.CharField(write_only=True)
+    password2 = serializers.CharField(write_only=True)
 
-    # override function to check for duplicate emails even if they are not verified
     def validate_email(self, email):
+        """
+        Override the regular validate_email method to ensure that not-verified emails
+        won't be duplicated.
+        """
         email = get_adapter().clean_email(email)
-        if email and EmailAddress.objects.filter(email=email).exists():
+        if email and EmailAddress.objects.filter(email__iexact=email).exists():
             raise serializers.ValidationError(
                 _("A user is already registered with this e-mail address."),
             )
         return email
 
+    # Define transaction.atomic to rollback the save operation in case of error
     @transaction.atomic
     def save(self, request):
-        self.validate_email(self.data.get("email", ""))
         user = super().save(request)
-        user.name = self.data.get("name")
-        if user.name:
-            user.save()
+        user.name = self.data.get("name", "")
+        user.save()
         return user
