@@ -6,3 +6,6 @@ venv
 
 # Python bytecode cache directories
 __pycache__/
+
+# DB
+**/db.sqlite3
