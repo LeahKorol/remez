@@ -11,6 +11,11 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,12 +25,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-lha5le)z(#&titm*swb0r8pa4!6tz$*%b$9fvda-an8c$1n&g7"
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
 
 
 # Application definition
@@ -37,6 +42,16 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # DRF
+    "rest_framework",
+    # Auth
+    "django.contrib.sites",
+    "rest_framework.authtoken",
+    "dj_rest_auth",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "dj_rest_auth.registration",
     # Project apps
     "users",
 ]
@@ -49,6 +64,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "allauth.account.middleware.AccountMiddleware",  # Third-party
 ]
 
 ROOT_URLCONF = "backend.urls"
@@ -125,4 +141,41 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Project-spesific settings
+
+# Custom user model
 AUTH_USER_MODEL = "users.User"
+
+# django-allauth configurations so that dj-rest-auth uses email / password authentication
+ACCOUNT_LOGIN_METHODS = {"email"}
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_EMAIL_VERIFICATION = "none"  # Do not require email confirmation
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "dj_rest_auth.jwt_auth.JWTCookieAuthentication",
+    ),
+}
+
+REST_AUTH = {
+    # custom serializer
+    # "USER_DETAILS_SERIALIZER": "users.serializers.UserSerializer",
+
+    "USE_JWT": True,
+    # Do not need session authentication because we use JWT cookies
+    "SESSION_LOGIN": False,
+    # Cookies names
+    "JWT_AUTH_COOKIE": os.getenv("JWT_AUTH_COOKIE", "jwt-access-token"),
+    "JWT_AUTH_REFRESH_COOKIE": os.getenv(
+        "JWT_AUTH_REFRESH_COOKIE", "jwt-refresh-token"
+    ),
+    # If set to True, the cookie will only be sent over HTTPS connections
+    "JWT_AUTH_SECURE": os.getenv("JWT_AUTH_SECURE", "False") == "True",
+    # If set to True, refresh token will not be sent in the response body
+    "JWT_AUTH_HTTPONLY": os.getenv("JWT_AUTH_HTTPONLY", "False") == "True",
+}
+
+# SECURITY WARNING: keep the JWT signing key used in production secret!
+SIGNING_KEY = os.getenv("SIGNING_KEY")
