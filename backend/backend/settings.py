@@ -170,6 +170,7 @@ REST_AUTH = {
     # Custom serializers
     "USER_DETAILS_SERIALIZER": "users.serializers.UserSerializer",
     "REGISTER_SERIALIZER": "users.serializers.CustomRegisterSerializer",
+    "LOGIN_SERIALIZER": "users.serializers.CustomLoginSerializer",
     # Do not need session authentication because we use JWT cookies
     "SESSION_LOGIN": False,
     # JWT configuration

@@ -5,6 +5,7 @@ Serializers for user-related functionality.
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from dj_rest_auth.registration.serializers import RegisterSerializer
+from dj_rest_auth.serializers import LoginSerializer
 from django.db import transaction
 
 # For overriding validate_email
@@ -50,3 +51,7 @@ class CustomRegisterSerializer(RegisterSerializer):
         user.name = self.data.get("name", "")
         user.save()
         return user
+
+
+class CustomLoginSerializer(LoginSerializer):
+    username = None  # Remove username field
