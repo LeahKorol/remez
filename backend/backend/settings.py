@@ -150,6 +150,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Custom user model
 AUTH_USER_MODEL = "users.User"
 
+SITE_ID = 1
+
 # django-allauth configurations so that dj-rest-auth uses email / password authentication
 ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_USERNAME_REQUIRED = False
@@ -175,14 +177,13 @@ REST_AUTH = {
     # JWT configuration
     "USE_JWT": True,
     # Cookies names
-    "JWT_AUTH_COOKIE": os.getenv("JWT_AUTH_COOKIE", "jwt-access-token"),
-    "JWT_AUTH_REFRESH_COOKIE": os.getenv(
-        "JWT_AUTH_REFRESH_COOKIE", "jwt-refresh-token"
-    ),
+    "JWT_AUTH_COOKIE": os.getenv("JWT_AUTH_COOKIE", "jwt-access"),
+    "JWT_AUTH_REFRESH_COOKIE": os.getenv("JWT_AUTH_REFRESH_COOKIE", "jwt-refresh"),
     # If set to True, the cookie will only be sent over HTTPS connections
     "JWT_AUTH_SECURE": os.getenv("JWT_AUTH_SECURE", "False") == "True",
     # If set to True, refresh token will not be sent in the response body
     "JWT_AUTH_HTTPONLY": os.getenv("JWT_AUTH_HTTPONLY", "False") == "True",
+    "JWT_AUTH_SAMESITE": "Lax",
 }
 
 # SECURITY WARNING: keep the JWT signing key used in production secret!
