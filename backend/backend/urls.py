@@ -23,6 +23,15 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
+spectacular_settings = {
+    'TITLE': 'My API',
+    'DESCRIPTION': 'My API description',
+    'VERSION': '1.0.0',
+    'TAGS': [
+        {'name': 'Analysis', 'description': 'Analysis related operations'},
+    ],
+}
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     # DRF Schema and Documentation
@@ -33,4 +42,5 @@ urlpatterns = [
         name="api-docs",
     ),
     path("api/v1/auth/", include("users.urls")),
+    path("api/v1/analysis/", include("analysis.urls")),
 ]
