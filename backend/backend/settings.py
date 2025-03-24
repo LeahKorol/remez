@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 from dotenv import load_dotenv
+from datetime import timedelta
 import os
 
 # Load environment variables from .env file
@@ -129,7 +130,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Asia/Jerusalem"  # Show dates in Israeli local time
 
 USE_I18N = True
 
@@ -185,6 +186,15 @@ REST_AUTH = {
     # If set to True, refresh token will not be sent in the response body
     "JWT_AUTH_HTTPONLY": os.getenv("JWT_AUTH_HTTPONLY", "False") == "True",
     "JWT_AUTH_SAMESITE": "Lax",
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(
+        hours=int(os.getenv("ACCESS_TOKEN_LIFETIME_HOURS", 1))
+    ),
+    "REFRESH_TOKEN_LIFETIME": timedelta(
+        days=int(os.getenv("REFRESH_TOKEN_LIFETIME_DAYS", 7))
+    ),
 }
 
 # SECURITY WARNING: keep the JWT signing key used in production secret!
