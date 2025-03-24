@@ -47,3 +47,32 @@ class Query(models.Model):
 
     def __str__(self):
         return self.name if self.name else f"Query #{self.id}"
+
+
+class Case(models.Model):
+    """Represents a case from the Faers data"""
+
+    faers_primary_id = models.BigIntegerField(unique=True)
+    # An indexed field. Deleting the Drug will raise a ProtectedError
+    drug = models.ForeignKey(Drug, on_delete=models.PROTECT)
+    year = models.IntegerField(
+        validators=[MinValueValidator(2000), MaxValueValidator(2030)]
+    )
+    quarter = models.IntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(4)]
+    )
+
+    class Meta:
+        ordering = ["year", "quarter"]
+
+    def __str__(self):
+        return f"Case: {self.faers_primary_id}"
+
+
+class CaseReaction(models.Model):
+    case = models.ForeignKey(Case, on_delete=models.CASCADE)  # An indexed field
+    # An indexed field. Deleting the Reaction will raise a ProtectedError
+    reaction = models.ForeignKey(Reaction, on_delete=models.PROTECT)
+
+    def __str__(self):
+        return f"Case: {self.case.id}, Reaction: {self.reaction.id}"
