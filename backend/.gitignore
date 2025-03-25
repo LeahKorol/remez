@@ -9,3 +9,6 @@ __pycache__/
 
 # DB
 **/db.sqlite3
+
+# FAERS data files
+**/output

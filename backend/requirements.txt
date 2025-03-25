@@ -5,3 +5,6 @@ dj-rest-auth[with_social]==7.0.1     # REST API authentication utils
 drf_spectacular==0.28.0     # API documentation
 django-cors-headers==4.7.0   # Enable Cross-Origin Resource Sharing (CORS)
 psycopg[binary]==3.2.6 # A PostgreSQL  Adapter
+
+# FAERS analysis requirements: https://github.com/bgbg/faers_analysis/blob/main/requirements.txt
+tqdm==4.67.1
