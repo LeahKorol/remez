@@ -14,6 +14,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
 import os
+import sys
 
 # Load environment variables from .env file
 load_dotenv()
@@ -98,12 +99,52 @@ WSGI_APPLICATION = "backend.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+
+# Supabase-specific database configuration
+# Supabase provides two connection options:
+# - Pooled (PgBouncer, port 6543): for regular runtime (runserver, gunicorn)
+# - Direct (PostgreSQL, port 5432): for management commands (migrate, createsuperuser)
+# PgBouncer does not support all PostgreSQL features needed by migrations (e.g., advisory locks)
+
+# Define commands that require direct DB connection (bypass PgBouncer)
+USE_DIRECT_DB_COMMANDS = {
+    "migrate",
+    "createsuperuser",
+    "collectstatic",
+    "loaddata",
+    "shell",
+    "dbshell",
+}
+is_management_command = len(sys.argv) > 1 and sys.argv[1] in USE_DIRECT_DB_COMMANDS
+
+# Choose settings based on command type
+if is_management_command:
+    # Direct connection for Django management commands
+    DB_PORT = os.environ["DB_PORT_DIRECT"]
+    DB_HOST = os.environ["DB_HOST_DIRECT"]
+    DB_USER = os.environ["DB_USER_DIRECT"]
+else:
+    # Pooled connection for app runtime
+    DB_PORT = os.environ["DB_PORT_POOLED"]
+    DB_HOST = os.environ["DB_HOST_POOLED"]
+    DB_USER = os.environ["DB_USER_POOLED"]
+
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ["DB_NAME"],
+        "USER": DB_USER,
+        "PASSWORD": os.environ["DB_PASSWORD"],
+        "HOST": DB_HOST,
+        "PORT": DB_PORT,
+        "OPTIONS": {"sslmode": "require"},  # Supbase requires SSL connection
+        "CONN_MAX_AGE": (
+            600 if not is_management_command else 0
+        ),  # Keep-alive for pooling, improves performance
     }
 }
+if not is_management_command:
+    DATABASES["default"]["pool_mode"] = "transaction"
 
 
 # Password validation
