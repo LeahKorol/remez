@@ -86,7 +86,8 @@ class QuerySerializerTest(TestCase):
         self.assertEqual(query.quarter_start, 1)
         self.assertEqual(query.quarter_end, 2)
         self.assertEqual(list(query.drugs.all()), [self.drug1, self.drug2])
-        self.assertEqual(list(query.reactions.all()), [self.reaction1, self.reaction2])
+        # Model instances with primary key value are hashable by default
+        self.assertEqual(set(query.reactions.all()), {self.reaction1, self.reaction2})
 
     def test_update_query(self):
         """Test successful update of a Query"""
