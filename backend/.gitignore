@@ -1,0 +1,14 @@
+# Environment variables file
+.env
+
+# Virtual environment directory
+venv
+
+# Python bytecode cache directories
+__pycache__/
+
+# DB
+**/db.sqlite3
+
+# FAERS data files
+**/output
