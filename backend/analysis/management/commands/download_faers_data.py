@@ -46,7 +46,7 @@ class Command(BaseCommand):
         year_q_from = options["year_q_from"]
         year_q_to = options["year_q_to"]
         dir_out = os.path.abspath(
-            options.get("dir_out", "analysis/management/commands/output")
+            options["dir_out"] or "analysis/management/commands/output"
         )
         threads = options.get("threads", 4)
         clean_on_failure = options.get("clean_on_failure", True)
@@ -87,7 +87,12 @@ class Command(BaseCommand):
             # "ther",
         ]
         for w in what:
-            tmplt = f"https://data.nber.org/fda/faers/{year}/{w}{yearquarter}.csv.zip"
+            if year <= 2018:
+                tmplt = (
+                    f"https://data.nber.org/fda/faers/{year}/{w}{yearquarter}.csv.zip"
+                )
+            else:
+                tmplt = f"https://data.nber.org/fda/faers/{year}/csv/{w}{yearquarter}.csv.zip"
             ret.append(tmplt)
         return ret
 
