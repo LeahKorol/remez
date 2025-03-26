@@ -114,6 +114,7 @@ USE_DIRECT_DB_COMMANDS = {
     "loaddata",
     "shell",
     "dbshell",
+    "test",  # Ensure test DB is deleted immediately after the tests run.
 }
 is_management_command = len(sys.argv) > 1 and sys.argv[1] in USE_DIRECT_DB_COMMANDS
 
