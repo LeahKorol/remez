@@ -8,3 +8,5 @@ psycopg[binary]==3.2.6 # A PostgreSQL  Adapter
 
 # FAERS analysis requirements: https://github.com/bgbg/faers_analysis/blob/main/requirements.txt
 tqdm==4.67.1
+numpy==2.2.4
+pandas==2.2.3
