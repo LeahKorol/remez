@@ -3,7 +3,7 @@ from django.db.utils import IntegrityError
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.contrib.auth import get_user_model
-from analysis.models import Drug, Reaction, Query, Case, CaseReaction
+from analysis.models import Drug, Reaction, Query, Case, CaseDrug, CaseReaction
 from django.utils import timezone
 import time
 
@@ -122,87 +122,34 @@ class QueryTests(TestCase):
 
 class CaseTests(TestCase):
     def setUp(self):
-        # Create valid data
-        self.faers_primary_id = "1111"
+        self.faers_primary_id = 1111
         self.year = 2013
         self.quarter = 1
-
-        # Add a drug to the database
-        self.drug = Drug.objects.create(name="drug")
 
     def test_creation_with_valid_data(self):
         """Should successfully create a Case with valid data."""
         case = Case.objects.create(
             faers_primary_id=self.faers_primary_id,
-            drug=self.drug,
             year=self.year,
             quarter=self.quarter,
         )
-
         self.assertEqual(case.faers_primary_id, self.faers_primary_id)
-        self.assertEqual(case.drug, self.drug)
         self.assertEqual(case.year, self.year)
         self.assertEqual(case.quarter, self.quarter)
 
     def test_duplicate_faers_primary_id(self):
         """Should raise ValidationError when creating a Case with a duplicate faers_primary_id."""
-        Case.objects.create(
-            faers_primary_id="2222",
-            drug=self.drug,
-            year=self.year,
-            quarter=self.quarter,
-        )
+        Case.objects.create(faers_primary_id=2222, year=self.year, quarter=self.quarter)
         duplicate_case = Case(
-            faers_primary_id="2222",
-            drug=self.drug,
-            year=self.year,
-            quarter=self.quarter,
+            faers_primary_id=2222, year=self.year, quarter=self.quarter
         )
         with self.assertRaises(ValidationError):
             duplicate_case.full_clean()
 
-    def test_unexisted_drug(self):
-        """Should raise IntegrityError when saving a Case with a nonexistent drug_id."""
-        case = Case(
-            faers_primary_id=self.faers_primary_id,
-            drug=Drug(name="unexisted"),
-            year=self.year,
-            quarter=self.quarter,
-        )
-        with self.assertRaises(ValueError):
-            case.save()
-
-    def test_drug_has_multiple_cases(self):
-        """A Drug should be able to access all related Case instances via the reverse relationship."""
-
-        drug = Drug.objects.create(name="Aspirin")
-
-        case1 = Case.objects.create(
-            drug=drug,
-            faers_primary_id="1",
-            year=2021,
-            quarter=1,
-        )
-        case2 = Case.objects.create(
-            drug=drug,
-            faers_primary_id="2",
-            year=2021,
-            quarter=2,
-        )
-        # reverse relationship
-        related_cases = drug.case_set.all()
-
-        self.assertIn(case1, related_cases)
-        self.assertIn(case2, related_cases)
-        self.assertEqual(related_cases.count(), 2)
-
     def test_year_too_large(self):
         """Should raise ValidationError when year is greater than 2030."""
         case = Case(
-            faers_primary_id=self.faers_primary_id,
-            drug=self.drug,
-            year=2031,
-            quarter=self.quarter,
+            faers_primary_id=self.faers_primary_id, year=2031, quarter=self.quarter
         )
         with self.assertRaises(ValidationError):
             case.full_clean()
@@ -210,58 +157,64 @@ class CaseTests(TestCase):
     def test_year_too_small(self):
         """Should raise ValidationError when year is less than 2000."""
         case = Case(
-            faers_primary_id=self.faers_primary_id,
-            drug=self.drug,
-            year=1999,
-            quarter=self.quarter,
+            faers_primary_id=self.faers_primary_id, year=1999, quarter=self.quarter
         )
         with self.assertRaises(ValidationError):
             case.full_clean()
 
     def test_quarter_too_large(self):
         """Should raise ValidationError when quarter is greater than 4."""
-        case = Case(
-            faers_primary_id=self.faers_primary_id,
-            drug=self.drug,
-            year=2031,
-            quarter=5,
-        )
+        case = Case(faers_primary_id=self.faers_primary_id, year=self.year, quarter=5)
         with self.assertRaises(ValidationError):
             case.full_clean()
 
     def test_quarter_too_small(self):
         """Should raise ValidationError when quarter is less than 1."""
-        case = Case(
-            faers_primary_id=self.faers_primary_id,
-            drug=self.drug,
-            year=1999,
-            quarter=0,
-        )
+        case = Case(faers_primary_id=self.faers_primary_id, year=self.year, quarter=0)
         with self.assertRaises(ValidationError):
             case.full_clean()
 
     def test_cases_are_ordered_by_year_and_quarter(self):
         """Cases should be ordered by year, then quarter (ascending)."""
-
-        # Create out-of-order on purpose
-        Case.objects.create(faers_primary_id=1, drug=self.drug, year=2022, quarter=3)
-        Case.objects.create(faers_primary_id=2, drug=self.drug, year=2021, quarter=2)
-        Case.objects.create(faers_primary_id=3, drug=self.drug, year=2021, quarter=1)
-        Case.objects.create(faers_primary_id=4, drug=self.drug, year=2022, quarter=1)
+        Case.objects.create(faers_primary_id=1, year=2022, quarter=3)
+        Case.objects.create(faers_primary_id=2, year=2021, quarter=2)
+        Case.objects.create(faers_primary_id=3, year=2021, quarter=1)
+        Case.objects.create(faers_primary_id=4, year=2022, quarter=1)
 
         cases = list(Case.objects.all())
         ordered_ids = [case.faers_primary_id for case in cases]
-        expected_order = [3, 2, 4, 1]  # based on year, then quarter
+        expected_order = [3, 2, 4, 1]
 
         self.assertEqual(ordered_ids, expected_order)
 
+
+class CaseDrugTests(TestCase):
+    def setUp(self):
+        self.drug = Drug.objects.create(name="drug")
+        self.case = Case.objects.create(faers_primary_id=1111, year=2013, quarter=1)
+
+    def test_create_case_drug(self):
+        """Should successfully link a Case to a Drug via CaseDrug."""
+        casedrug = CaseDrug.objects.create(case=self.case, drug=self.drug)
+        self.assertEqual(casedrug.case, self.case)
+        self.assertEqual(casedrug.drug, self.drug)
+
+    def test_drug_has_multiple_cases(self):
+        """A Drug should be able to access all related CaseDrug instances via the reverse relationship."""
+        case2 = Case.objects.create(faers_primary_id=2222, year=2014, quarter=2)
+
+        CaseDrug.objects.create(case=self.case, drug=self.drug)
+        CaseDrug.objects.create(case=case2, drug=self.drug)
+
+        related_cases = [cd.case for cd in self.drug.casedrug_set.all()]
+
+        self.assertIn(self.case, related_cases)
+        self.assertIn(case2, related_cases)
+        self.assertEqual(len(related_cases), 2)
+
     def test_protect_on_drug_delete(self):
-        Case.objects.create(
-            faers_primary_id=self.faers_primary_id,
-            drug=self.drug,
-            year=self.year,
-            quarter=self.quarter,
-        )
+        """Deleting a Drug with existing CaseDrug references should raise IntegrityError."""
+        CaseDrug.objects.create(case=self.case, drug=self.drug)
         with self.assertRaises(IntegrityError):
             self.drug.delete()
 
@@ -271,7 +224,6 @@ class CaseReactionTests(TestCase):
     def setUp(self):
         self.case = Case.objects.create(
             faers_primary_id="3333",
-            drug=Drug.objects.create(name="Test drug"),
             year=2013,
             quarter=1,
         )
