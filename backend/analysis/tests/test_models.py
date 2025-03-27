@@ -3,17 +3,17 @@ from django.db.utils import IntegrityError
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.contrib.auth import get_user_model
-from analysis.models import Drug, Reaction, Query, Case, CaseDrug, CaseReaction
+from analysis.models import DrugList, ReactionList, Query, Case, Drug, Reaction
 from django.utils import timezone
 import time
 
 
-class DrugReactionTests(TestCase):
+class NameListTests(TestCase):
     def create_and_assert(self, model, name, expected_error=None):
         """
         Helper method to create a model instance and test uniqueness.
 
-        :param model: The model class (e.g., Drug, Reaction).
+        :param model: The model class (e.g., Drug, Reaction), inheriting from NameList.
         :param name: The name of the object to create.
         :param expected_error: If not None, expects an error.
         """
@@ -27,18 +27,21 @@ class DrugReactionTests(TestCase):
 
     def test_create_objects(self):
         """Test creating both Drug and Reaction objects."""
-        for model, name in [(Drug, "drug"), (Reaction, "reaction")]:
+        for model, name in [(DrugList, "drug"), (ReactionList, "reaction")]:
             self.create_and_assert(model, name)
 
     def test_name_field_is_unique(self):
         """Test that the name field enforces uniqueness for both models."""
-        for model, name in [(Drug, "duplicate_drug"), (Reaction, "duplicate_reaction")]:
+        for model, name in [
+            (DrugList, "duplicate_drug"),
+            (ReactionList, "duplicate_reaction"),
+        ]:
             self.create_and_assert(model, name)  # First creation should succeed
             self.create_and_assert(model, name, IntegrityError)  # Second should fail
 
     def test_name_field_is_255_long(self):
         """Test that name field enforces max length of 255 characters"""
-        for model in [Drug, Reaction]:
+        for model in [DrugList, ReactionList]:
             obj = model(name="l" * 256)
             with self.assertRaises(ValidationError):  # Database will enforce max_length
                 obj.full_clean()
@@ -46,8 +49,8 @@ class DrugReactionTests(TestCase):
 
 class QueryTests(TestCase):
     def setUp(self):
-        self.drug = Drug.objects.create(name="drug")
-        self.reaction = Reaction.objects.create(name="reaction")
+        self.drug = DrugList.objects.create(name="drug")
+        self.reaction = ReactionList.objects.create(name="reaction")
 
         email = "testanalysis@example.com"
         password = "t1234567"
@@ -188,14 +191,14 @@ class CaseTests(TestCase):
         self.assertEqual(ordered_ids, expected_order)
 
 
-class CaseDrugTests(TestCase):
+class DrugTests(TestCase):
     def setUp(self):
-        self.drug = Drug.objects.create(name="drug")
+        self.drug = DrugList.objects.create(name="drug")
         self.case = Case.objects.create(faers_primary_id=1111, year=2013, quarter=1)
 
     def test_create_case_drug(self):
         """Should successfully link a Case to a Drug via CaseDrug."""
-        casedrug = CaseDrug.objects.create(case=self.case, drug=self.drug)
+        casedrug = Drug.objects.create(case=self.case, drug=self.drug)
         self.assertEqual(casedrug.case, self.case)
         self.assertEqual(casedrug.drug, self.drug)
 
@@ -203,10 +206,10 @@ class CaseDrugTests(TestCase):
         """A Drug should be able to access all related CaseDrug instances via the reverse relationship."""
         case2 = Case.objects.create(faers_primary_id=2222, year=2014, quarter=2)
 
-        CaseDrug.objects.create(case=self.case, drug=self.drug)
-        CaseDrug.objects.create(case=case2, drug=self.drug)
+        Drug.objects.create(case=self.case, drug=self.drug)
+        Drug.objects.create(case=case2, drug=self.drug)
 
-        related_cases = [cd.case for cd in self.drug.casedrug_set.all()]
+        related_cases = [cd.case for cd in self.drug.drug_set.all()]
 
         self.assertIn(self.case, related_cases)
         self.assertIn(case2, related_cases)
@@ -214,12 +217,12 @@ class CaseDrugTests(TestCase):
 
     def test_protect_on_drug_delete(self):
         """Deleting a Drug with existing CaseDrug references should raise IntegrityError."""
-        CaseDrug.objects.create(case=self.case, drug=self.drug)
+        Drug.objects.create(case=self.case, drug=self.drug)
         with self.assertRaises(IntegrityError):
             self.drug.delete()
 
 
-class CaseReactionTests(TestCase):
+class ReactionTests(TestCase):
 
     def setUp(self):
         self.case = Case.objects.create(
@@ -227,10 +230,10 @@ class CaseReactionTests(TestCase):
             year=2013,
             quarter=1,
         )
-        self.reaction = Reaction.objects.create(name="Test Reaction")
+        self.reaction = ReactionList.objects.create(name="Test Reaction")
 
     def test_create_case_reaction(self):
-        case_reaction = CaseReaction.objects.create(
+        case_reaction = Reaction.objects.create(
             case=self.case,
             reaction=self.reaction,
         )
@@ -238,7 +241,7 @@ class CaseReactionTests(TestCase):
         self.assertEqual(case_reaction.reaction, self.reaction)
 
     def test_str_representation(self):
-        case_reaction = CaseReaction.objects.create(
+        case_reaction = Reaction.objects.create(
             case=self.case,
             reaction=self.reaction,
         )
@@ -246,15 +249,15 @@ class CaseReactionTests(TestCase):
         self.assertEqual(str(case_reaction), expected_str)
 
     def test_cascade_on_case_delete(self):
-        case_reaction = CaseReaction.objects.create(
+        case_reaction = Reaction.objects.create(
             case=self.case,
             reaction=self.reaction,
         )
         self.case.delete()
-        self.assertFalse(CaseReaction.objects.filter(id=case_reaction.id).exists())
+        self.assertFalse(Reaction.objects.filter(id=case_reaction.id).exists())
 
     def test_protect_on_reaction_delete(self):
-        CaseReaction.objects.create(
+        Reaction.objects.create(
             case=self.case,
             reaction=self.reaction,
         )

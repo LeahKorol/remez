@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand, CommandError
 from pathlib import Path
 import pandas as pd
 
-from analysis.models import Drug, Reaction
+from analysis.models import DrugList, ReactionList
 
 
 class Command(BaseCommand):
@@ -42,11 +42,11 @@ class Command(BaseCommand):
         if term == "drug":
             term_file_name = "drug"
             term_field_name = "drugname"
-            model = Drug
+            model = DrugList
         elif term == "reaction":
             term_file_name = "reac"
             term_field_name = "pt"
-            model = Reaction
+            model = ReactionList
         else:
             raise CommandError(f"Invalid term {term}")
 

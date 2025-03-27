@@ -4,12 +4,34 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db.models import Q, CheckConstraint
 
 
-class Drug(models.Model):
+class NameList(models.Model):
+    """
+    An abstract model for storing unique terms' names as drugs and reactions.
+
+    Used to normalize names across related models by storing names once and
+    using foreign key IDs elsewhere. This ensures consistency when querying or linking to NameList models.
+    name = models.CharField(max_length=255, unique=True)
+    """
+
     name = models.CharField(max_length=255, unique=True)
 
+    class Meta:
+        abstract = True  # This model won't create a table
 
-class Reaction(models.Model):
-    name = models.CharField(max_length=255, unique=True)
+    def __str__(self):
+        return self.name
+
+
+class DrugList(NameList):
+    """Stores unique drug names extracted from FAERS data."""
+
+    pass
+
+
+class ReactionList(NameList):
+    """Stores unique reaction names extracted from FAERS data."""
+
+    pass
 
 
 class Query(models.Model):
@@ -21,8 +43,8 @@ class Query(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     # Input parameters
-    drugs = models.ManyToManyField(Drug)
-    reactions = models.ManyToManyField(Reaction)
+    drugs = models.ManyToManyField(DrugList)
+    reactions = models.ManyToManyField(ReactionList)
     # TO-DO: DO NOT hard code the values
     quarter_start = models.IntegerField(
         validators=[MinValueValidator(0), MaxValueValidator(49)]
@@ -76,23 +98,23 @@ class Case(models.Model):
         return f"Case: {self.faers_primary_id}"
 
 
-class CaseDrug(models.Model):
+class Drug(models.Model):
     """Stores data extracted from the FAERS drug CSV files (e.g., drug{year}q{quarter})."""
 
     case = models.ForeignKey(Case, on_delete=models.CASCADE)  # An indexed field
     # An indexed field. Deleting the Drug will raise a ProtectedError
-    drug = models.ForeignKey(Drug, on_delete=models.PROTECT)
+    drug = models.ForeignKey(DrugList, on_delete=models.PROTECT)
 
     def __str__(self):
         return f"Case: {self.case.id}, Drug: {self.reaction.id}"
 
 
-class CaseReaction(models.Model):
+class Reaction(models.Model):
     """Stores data extracted from the FAERS reaction CSV files (e.g., reaction{year}q{quarter})."""
 
     case = models.ForeignKey(Case, on_delete=models.CASCADE)  # An indexed field
     # An indexed field. Deleting the Reaction will raise a ProtectedError
-    reaction = models.ForeignKey(Reaction, on_delete=models.PROTECT)
+    reaction = models.ForeignKey(ReactionList, on_delete=models.PROTECT)
 
     def __str__(self):
         return f"Case: {self.case.id}, Reaction: {self.reaction.id}"

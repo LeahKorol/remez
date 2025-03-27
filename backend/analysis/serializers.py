@@ -1,12 +1,14 @@
 from rest_framework import serializers
-from analysis.models import Drug, Reaction, Query
+from analysis.models import DrugList, ReactionList, Query
 from django.db import transaction
 
 
 class QuerySerializer(serializers.ModelSerializer):
-    drugs = serializers.PrimaryKeyRelatedField(many=True, queryset=Drug.objects.all())
+    drugs = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=DrugList.objects.all()
+    )
     reactions = serializers.PrimaryKeyRelatedField(
-        many=True, queryset=Reaction.objects.all()
+        many=True, queryset=ReactionList.objects.all()
     )
 
     class Meta:

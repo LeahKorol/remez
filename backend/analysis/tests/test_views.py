@@ -1,7 +1,7 @@
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.urls import reverse
-from analysis.models import Query, Drug, Reaction
+from analysis.models import Query, DrugList, ReactionList
 from analysis.serializers import QuerySerializer
 from users.models import User
 from django.conf import settings
@@ -20,8 +20,8 @@ class QueryViewSetTests(APITestCase):
         )
 
         # Create a drug & a reaction
-        drug = Drug.objects.create(name="drug")
-        reaction = Reaction.objects.create(name="reaction")
+        drug = DrugList.objects.create(name="drug")
+        reaction = ReactionList.objects.create(name="reaction")
 
         cls.required_fields = {
             "quarter_start": 1,
