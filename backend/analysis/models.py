@@ -1,7 +1,14 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import (
+    MinValueValidator,
+    MaxValueValidator,
+    MaxLengthValidator,
+)
 from django.db.models import Q, CheckConstraint
+
+# Use TextField and not CharField as recommended in Postgres documentation (copy the url, not click):
+# https://wiki.postgresql.org/wiki/Don't_Do_This#Don.27t_use_varchar.28n.29_by_default
 
 
 class NameList(models.Model):
@@ -10,10 +17,10 @@ class NameList(models.Model):
 
     Used to normalize names across related models by storing names once and
     using foreign key IDs elsewhere. This ensures consistency when querying or linking to NameList models.
-    name = models.CharField(max_length=255, unique=True)
+    name = models.TextField(unique=True, validators=[MaxLengthValidator(255)])
     """
 
-    name = models.CharField(max_length=255, unique=True)
+    name = models.TextField(unique=True, validators=[MaxLengthValidator(255)])
 
     class Meta:
         abstract = True  # This model won't create a table
@@ -37,7 +44,7 @@ class ReactionList(NameList):
 class Query(models.Model):
     """Represents a user's query with its parameters and results"""
 
-    name = models.CharField(max_length=255, blank=True)
+    name = models.TextField(blank=True, validators=[MaxLengthValidator(255)])
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -142,17 +149,23 @@ class Demo(models.Model):
     """Stores data extracted from the FAERS demo CSV files (e.g., demo{year}q{quarter})."""
 
     case = models.ForeignKey(Case, on_delete=models.CASCADE)
-    event_dt_num = models.CharField(max_length=10, null=True)
+    event_dt_num = models.TextField(null=True, validators=[MaxLengthValidator(10)])
 
     age = models.IntegerField(
         null=True, validators=[MinValueValidator(0), MaxValueValidator(130)]
     )
-    age_cod = models.CharField(max_length=5, null=True, choices=AgeCode.choices)
-    sex = models.CharField(max_length=5, null=True, choices=Sex.choices)
+    age_cod = models.TextField(
+        null=True, choices=AgeCode.choices, validators=[MaxLengthValidator(5)]
+    )
+    sex = models.TextField(
+        null=True, choices=Sex.choices, validators=[MaxLengthValidator(5)]
+    )
     wt = models.FloatField(
         null=True, validators=[MinValueValidator(0), MaxValueValidator(1000)]
     )
-    wt_cod = models.CharField(max_length=5, null=True, choices=WeightCode.choices)
+    wt_cod = models.TextField(
+        null=True, choices=WeightCode.choices, validators=[MaxLengthValidator(5)]
+    )
 
     def __str__(self):
         return f"Demo: {self.case_id}"
@@ -173,7 +186,9 @@ class Outcome(models.Model):
     """Stores data extracted from the FAERS outcome CSV files (e.g., outc{year}q{quarter})."""
 
     case = models.ForeignKey(Case, on_delete=models.CASCADE)  # An indexed field
-    outc_cod = models.CharField(max_length=5, null=True, choices=OutcomeCode.choices)
+    outc_cod = models.TextField(
+        null=True, choices=OutcomeCode.choices, validators=[MaxValueValidator(5)]
+    )
 
     def __str__(self):
         return f"Case: {self.case_id}, Outcome: {self.get_outc_cod_display()}"
