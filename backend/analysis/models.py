@@ -7,6 +7,8 @@ from django.core.validators import (
 )
 from django.db.models import Q, CheckConstraint
 
+from analysis.managers import CaseAwareManager
+
 # Use TextField and not CharField as recommended in Postgres documentation (copy the url, not click):
 # https://wiki.postgresql.org/wiki/Don't_Do_This#Don.27t_use_varchar.28n.29_by_default
 
@@ -145,10 +147,28 @@ class Case(models.Model):
         return f"Case: {self.faers_primary_id}"
 
 
-class Demo(models.Model):
-    """Stores data extracted from the FAERS demo CSV files (e.g., demo{year}q{quarter})."""
+class CaseRelatedModel(models.Model):
+    """
+    Abstract base for models linked to Case.
+
+    - Adds a ForeignKey to Case.
+    - Auto-annotates:
+        - `primaryid` = case.faers_primaryid
+        - `caseid` = case.faers_caseid
+    """
 
     case = models.ForeignKey(Case, on_delete=models.CASCADE)
+
+    # A custom manager that annotatses the queryset with the case's primaryid and caseid
+    objects = CaseAwareManager()
+
+    class Meta:
+        abstract = True  # This model won't create a table
+
+
+class Demo(CaseRelatedModel):
+    """Stores data extracted from the FAERS demo CSV files (e.g., demo{year}q{quarter})."""
+
     event_dt_num = models.TextField(null=True, validators=[MaxLengthValidator(10)])
 
     age = models.IntegerField(
@@ -171,10 +191,9 @@ class Demo(models.Model):
         return f"Demo: {self.case_id}"
 
 
-class Drug(models.Model):
+class Drug(CaseRelatedModel):
     """Stores data extracted from the FAERS drug CSV files (e.g., drug{year}q{quarter})."""
 
-    case = models.ForeignKey(Case, on_delete=models.CASCADE)  # An indexed field
     # An indexed field. Deleting the Drug will raise a ProtectedError
     drug = models.ForeignKey(DrugList, on_delete=models.PROTECT)
 
@@ -182,10 +201,9 @@ class Drug(models.Model):
         return f"Case: {self.case_id}, Drug: {self.drug_id}"
 
 
-class Outcome(models.Model):
+class Outcome(CaseRelatedModel):
     """Stores data extracted from the FAERS outcome CSV files (e.g., outc{year}q{quarter})."""
 
-    case = models.ForeignKey(Case, on_delete=models.CASCADE)  # An indexed field
     outc_cod = models.TextField(
         null=True, choices=OutcomeCode.choices, validators=[MaxValueValidator(5)]
     )
@@ -194,10 +212,9 @@ class Outcome(models.Model):
         return f"Case: {self.case_id}, Outcome: {self.get_outc_cod_display()}"
 
 
-class Reaction(models.Model):
+class Reaction(CaseRelatedModel):
     """Stores data extracted from the FAERS reaction CSV files (e.g., reaction{year}q{quarter})."""
 
-    case = models.ForeignKey(Case, on_delete=models.CASCADE)  # An indexed field
     # An indexed field. Deleting the Reaction will raise a ProtectedError
     reaction = models.ForeignKey(ReactionList, on_delete=models.PROTECT)
 

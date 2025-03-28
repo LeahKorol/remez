@@ -3,6 +3,10 @@ from django.db.utils import IntegrityError
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.contrib.auth import get_user_model
+from abc import ABC
+from django.utils import timezone
+import time
+
 from analysis.models import (
     DrugList,
     ReactionList,
@@ -17,9 +21,6 @@ from analysis.models import (
     WeightCode,
     OutcomeCode,
 )
-
-from django.utils import timezone
-import time
 
 
 class NameListTests(TestCase):
@@ -232,8 +233,10 @@ class CaseTests(TestCase):
         self.assertEqual(ordered_ids, expected_order)
 
 
-class BaseModelTestCase(TestCase):
-    """Create a Case object for all the models needing it in their tests."""
+class CaseRelatedModelTestCase(TestCase, ABC):
+    """An Abstract base class for testing models related to Case."""
+
+    model = None  # To be set in each subclass
 
     def setUp(self):
         self.case = Case.objects.create(
@@ -243,8 +246,17 @@ class BaseModelTestCase(TestCase):
             quarter=2,
         )
 
+    def test_annotation_fields_available(self):
+        instance = self.model.objects.create(
+            case=self.case, **getattr(self, "extra_create_kwargs", {})
+        )
+        annotated = self.model.objects.get(id=instance.id)
+        self.assertEqual(annotated.primaryid, self.case.faers_primaryid)
+        self.assertEqual(annotated.caseid, self.case.faers_caseid)
 
-class DemoModelTests(BaseModelTestCase):
+
+class DemoModelTests(CaseRelatedModelTestCase):
+    model = Demo
 
     def test_create_valid_demo(self):
         demo = Demo.objects.create(
@@ -287,10 +299,14 @@ class DemoModelTests(BaseModelTestCase):
         self.assertIn(str(self.case.id), str(demo))
 
 
-class DrugTests(BaseModelTestCase):
+class DrugTests(CaseRelatedModelTestCase):
+    model = Drug
+
     def setUp(self):
         super().setUp()
         self.drug = DrugList.objects.create(name="drug")
+        # Used in test_annotation_fields_available
+        self.extra_create_kwargs = {"drug": self.drug}
 
     def test_create_case_drug(self):
         """Should successfully link a Case to a Drug via CaseDrug."""
@@ -320,7 +336,8 @@ class DrugTests(BaseModelTestCase):
             self.drug.delete()
 
 
-class OutcomeModelTests(BaseModelTestCase):
+class OutcomeModelTests(CaseRelatedModelTestCase):
+    model = Outcome
 
     def test_create_valid_outcome(self):
         outcome = Outcome.objects.create(case=self.case, outc_cod=OutcomeCode.DEATH)
@@ -339,11 +356,14 @@ class OutcomeModelTests(BaseModelTestCase):
         self.assertIn("Disability", str(outcome))
 
 
-class ReactionTests(BaseModelTestCase):
+class ReactionTests(CaseRelatedModelTestCase):
+    model = Reaction
 
     def setUp(self):
         super().setUp()
         self.reaction = ReactionList.objects.create(name="Test Reaction")
+        # Used in test_annotation_fields_available
+        self.extra_create_kwargs = {"reaction": self.reaction}
 
     def test_create_case_reaction(self):
         case_reaction = Reaction.objects.create(
