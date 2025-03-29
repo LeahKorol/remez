@@ -10,13 +10,58 @@ function App() {
         <button className="login-btn">Login</button>
       </nav>
 
-      <header className="App-header">
-        {/* <img src={logo} className="App-logo" alt="logo" /> */}
-        <h1 className="welcome-text">Welcome to REMEZ</h1>
-        <p className="App-description">
+      <div className="content">
+        <div className="welcome-banner">Welcome to REMEZ</div>
+
+        <h1 className="main-title">
           Advanced Medication Interaction Analysis
+        </h1>
+
+        <p className="description">
+          Discover potential interactions between medications and their side effects using our
+          sophisticated analysis tools.
         </p>
-      </header>
+
+        <div className="features-container">
+          <div className="feature-card">
+            <div className="icon-circle purple">
+              <span className="icon">⊟</span>
+            </div>
+            <h3 className="feature-title">Advanced Analysis</h3>
+            <p className="feature-description">
+              Precise medication interaction evaluation using modern algorithms
+            </p>
+          </div>
+
+          <div className="feature-card">
+            <div className="icon-circle blue">
+              <span className="icon">⊚</span>
+            </div>
+            <h3 className="feature-title">Evidence-Based</h3>
+            <p className="feature-description">
+              Research-backed data analysis for reliable results
+            </p>
+          </div>
+
+          <div className="feature-card">
+            <div className="icon-circle blue-light">
+              <span className="icon">⌁</span>
+            </div>
+            <h3 className="feature-title">Real-Time Results</h3>
+            <p className="feature-description">
+              Instant visualization of interaction analysis
+            </p>
+          </div>
+        </div>
+
+        <button className="begin-btn">Login to Begin</button>
+
+        <div className="footer">
+          <p>Created by Eng. Leah Korol and Eng. Talya Kazayof</p>
+          <p>In collaboration with Dr. Boris Gorelik</p>
+        </div>
+
+      </div>
     </div>
   );
 }
