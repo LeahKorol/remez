@@ -1,10 +1,40 @@
 .App {
   text-align: center;
+  font-family: Arial, sans-serif;
+  color: #333;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .App-logo {
   height: 40vmin;
   pointer-events: none;
+}
+
+/* Navbar */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 30px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.logo {
+  color: #7b42e0;
+  font-weight: bold;
+  font-size: 24px;
+}
+
+.login-btn {
+  background-color: #111827;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 8px 20px;
+  font-weight: bold;
+  cursor: pointer;
 }
 
 @media (prefers-reduced-motion: no-preference) {
