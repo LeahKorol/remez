@@ -1,6 +1,6 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
-from analysis.models import Query, DrugList, ReactionList
+from analysis.models import Query, DrugName, ReactionName
 from analysis.serializers import QuerySerializer
 
 
@@ -11,10 +11,10 @@ class QuerySerializerTest(TestCase):
         cls.user = get_user_model().objects.create_user(
             email="testuser@example.com", password="password123"
         )
-        cls.drug1 = DrugList.objects.create(name="Drug A")
-        cls.drug2 = DrugList.objects.create(name="Drug B")
-        cls.reaction1 = ReactionList.objects.create(name="Reaction X")
-        cls.reaction2 = ReactionList.objects.create(name="Reaction Y")
+        cls.drug1 = DrugName.objects.create(name="Drug A")
+        cls.drug2 = DrugName.objects.create(name="Drug B")
+        cls.reaction1 = ReactionName.objects.create(name="Reaction X")
+        cls.reaction2 = ReactionName.objects.create(name="Reaction Y")
 
         cls.query = Query.objects.create(
             user=cls.user, name="Test Query", quarter_start=1, quarter_end=2

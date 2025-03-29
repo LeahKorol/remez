@@ -3,13 +3,12 @@ from django.db.utils import IntegrityError
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.contrib.auth import get_user_model
-from abc import ABC
 from django.utils import timezone
 import time
 
 from analysis.models import (
-    DrugList,
-    ReactionList,
+    DrugName,
+    ReactionName,
     Query,
     Case,
     Demo,
@@ -42,21 +41,21 @@ class NameListTests(TestCase):
 
     def test_create_objects(self):
         """Test creating both Drug and Reaction objects."""
-        for model, name in [(DrugList, "drug"), (ReactionList, "reaction")]:
+        for model, name in [(DrugName, "drug"), (ReactionName, "reaction")]:
             self.create_and_assert(model, name)
 
     def test_name_field_is_unique(self):
         """Test that the name field enforces uniqueness for both models."""
         for model, name in [
-            (DrugList, "duplicate_drug"),
-            (ReactionList, "duplicate_reaction"),
+            (DrugName, "duplicate_drug"),
+            (ReactionName, "duplicate_reaction"),
         ]:
             self.create_and_assert(model, name)  # First creation should succeed
             self.create_and_assert(model, name, IntegrityError)  # Second should fail
 
     def test_name_field_is_255_long(self):
         """Test that name field enforces max length of 255 characters"""
-        for model in [DrugList, ReactionList]:
+        for model in [DrugName, ReactionName]:
             obj = model(name="l" * 256)
             with self.assertRaises(ValidationError):  # Database will enforce max_length
                 obj.full_clean()
@@ -64,8 +63,8 @@ class NameListTests(TestCase):
 
 class QueryTests(TestCase):
     def setUp(self):
-        self.drug = DrugList.objects.create(name="drug")
-        self.reaction = ReactionList.objects.create(name="reaction")
+        self.drug = DrugName.objects.create(name="drug")
+        self.reaction = ReactionName.objects.create(name="reaction")
 
         email = "testanalysis@example.com"
         password = "t1234567"
@@ -233,9 +232,13 @@ class CaseTests(TestCase):
         self.assertEqual(ordered_ids, expected_order)
 
 
-class CaseRelatedModelTestCase(TestCase, ABC):
-    """An Abstract base class for testing models related to Case."""
+class CaseRelatedModelTestCase(TestCase):
+    """
+    A base class for testing models related to Case.
+    Creates a Case instance (self.case) and test annotated fields are available.
+    """
 
+    __test__ = False  # Prevent Django from collecting this as a test
     model = None  # To be set in each subclass
 
     def setUp(self):
@@ -247,12 +250,14 @@ class CaseRelatedModelTestCase(TestCase, ABC):
         )
 
     def test_annotation_fields_available(self):
-        instance = self.model.objects.create(
-            case=self.case, **getattr(self, "extra_create_kwargs", {})
-        )
-        annotated = self.model.objects.get(id=instance.id)
-        self.assertEqual(annotated.primaryid, self.case.faers_primaryid)
-        self.assertEqual(annotated.caseid, self.case.faers_caseid)
+        """Test that the annotated fields are available in the queryset."""
+        if self.model:  # Skip if model is not set
+            instance = self.model.objects.create(
+                case=self.case, **getattr(self, "extra_create_kwargs", {})
+            )
+            annotated = self.model.objects.get(id=instance.id)
+            self.assertEqual(annotated.primaryid, self.case.faers_primaryid)
+            self.assertEqual(annotated.caseid, self.case.faers_caseid)
 
 
 class DemoModelTests(CaseRelatedModelTestCase):
@@ -304,7 +309,7 @@ class DrugTests(CaseRelatedModelTestCase):
 
     def setUp(self):
         super().setUp()
-        self.drug = DrugList.objects.create(name="drug")
+        self.drug = DrugName.objects.create(name="drug")
         # Used in test_annotation_fields_available
         self.extra_create_kwargs = {"drug": self.drug}
 
@@ -361,7 +366,7 @@ class ReactionTests(CaseRelatedModelTestCase):
 
     def setUp(self):
         super().setUp()
-        self.reaction = ReactionList.objects.create(name="Test Reaction")
+        self.reaction = ReactionName.objects.create(name="Test Reaction")
         # Used in test_annotation_fields_available
         self.extra_create_kwargs = {"reaction": self.reaction}
 

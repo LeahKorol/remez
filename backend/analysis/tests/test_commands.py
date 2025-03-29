@@ -1,6 +1,6 @@
 from django.core.management import call_command, CommandError
 from django.test import TestCase
-from analysis.models import DrugList, ReactionList
+from analysis.models import DrugName, ReactionName
 
 from io import StringIO
 import tempfile
@@ -33,9 +33,9 @@ class LoadTermsCommandTests(TestCase):
             "load_faers_terms", "--dir_in", self.test_dir, "--no_reactions", stdout=out
         )
 
-        self.assertEqual(DrugList.objects.count(), 2)  # no duplicate drugs
-        self.assertTrue(DrugList.objects.filter(name="ASPIRIN").exists())
-        self.assertTrue(DrugList.objects.filter(name="IBUPROFEN").exists())
+        self.assertEqual(DrugName.objects.count(), 2)  # no duplicate drugs
+        self.assertTrue(DrugName.objects.filter(name="ASPIRIN").exists())
+        self.assertTrue(DrugName.objects.filter(name="IBUPROFEN").exists())
 
     def test_load_reaction_terms(self):
         self._create_csv(
@@ -47,9 +47,9 @@ class LoadTermsCommandTests(TestCase):
             "load_faers_terms", "--dir_in", self.test_dir, "--no_drugs", stdout=out
         )
 
-        self.assertEqual(ReactionList.objects.count(), 2)  # no duplicate reactions
-        self.assertTrue(ReactionList.objects.filter(name="NAUSEA").exists())
-        self.assertTrue(ReactionList.objects.filter(name="HEADACHE").exists())
+        self.assertEqual(ReactionName.objects.count(), 2)  # no duplicate reactions
+        self.assertTrue(ReactionName.objects.filter(name="NAUSEA").exists())
+        self.assertTrue(ReactionName.objects.filter(name="HEADACHE").exists())
 
     def test_raises_error_if_missing_field_column(self):
         # Missing 'pt' column for reaction
@@ -63,8 +63,8 @@ class LoadTermsCommandTests(TestCase):
 
     def test_does_not_duplicate_existing_drugs_and_reactions(self):
         # Create initial drug and reaction entries
-        DrugList.objects.create(name="ASPIRIN")
-        ReactionList.objects.create(name="NAUSEA")
+        DrugName.objects.create(name="ASPIRIN")
+        ReactionName.objects.create(name="NAUSEA")
 
         # CSV includes one existing and one new item for both drugs and reactions
         self._create_csv("drug_sample.csv", "drugname", ["ASPIRIN", "IBUPROFEN"])
@@ -74,10 +74,10 @@ class LoadTermsCommandTests(TestCase):
         call_command("load_faers_terms", "--dir_in", self.test_dir, stdout=out)
 
         # Ensure no duplicates and both new terms were added
-        self.assertEqual(DrugList.objects.count(), 2)
-        self.assertTrue(DrugList.objects.filter(name="ASPIRIN").exists())
-        self.assertTrue(DrugList.objects.filter(name="IBUPROFEN").exists())
+        self.assertEqual(DrugName.objects.count(), 2)
+        self.assertTrue(DrugName.objects.filter(name="ASPIRIN").exists())
+        self.assertTrue(DrugName.objects.filter(name="IBUPROFEN").exists())
 
-        self.assertEqual(ReactionList.objects.count(), 2)
-        self.assertTrue(ReactionList.objects.filter(name="NAUSEA").exists())
-        self.assertTrue(ReactionList.objects.filter(name="HEADACHE").exists())
+        self.assertEqual(ReactionName.objects.count(), 2)
+        self.assertTrue(ReactionName.objects.filter(name="NAUSEA").exists())
+        self.assertTrue(ReactionName.objects.filter(name="HEADACHE").exists())

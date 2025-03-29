@@ -13,12 +13,12 @@ from analysis.managers import CaseAwareManager
 # https://wiki.postgresql.org/wiki/Don't_Do_This#Don.27t_use_varchar.28n.29_by_default
 
 
-class NameList(models.Model):
+class TermName(models.Model):
     """
     An abstract model for storing unique terms' names as drugs and reactions.
 
     Used to normalize names across related models by storing names once and
-    using foreign key IDs elsewhere. This ensures consistency when querying or linking to NameList models.
+    using foreign key IDs elsewhere. This ensures consistency when querying or linking to TermName models.
     name = models.TextField(unique=True, validators=[MaxLengthValidator(255)])
     """
 
@@ -31,13 +31,13 @@ class NameList(models.Model):
         return self.name
 
 
-class DrugList(NameList):
+class DrugName(TermName):
     """Stores unique drug names extracted from FAERS data."""
 
     pass
 
 
-class ReactionList(NameList):
+class ReactionName(TermName):
     """Stores unique reaction names extracted from FAERS data."""
 
     pass
@@ -52,8 +52,8 @@ class Query(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     # Input parameters
-    drugs = models.ManyToManyField(DrugList)
-    reactions = models.ManyToManyField(ReactionList)
+    drugs = models.ManyToManyField(DrugName)
+    reactions = models.ManyToManyField(ReactionName)
     # TO-DO: DO NOT hard code the values
     quarter_start = models.IntegerField(
         validators=[MinValueValidator(0), MaxValueValidator(49)]
@@ -195,7 +195,7 @@ class Drug(CaseRelatedModel):
     """Stores data extracted from the FAERS drug CSV files (e.g., drug{year}q{quarter})."""
 
     # An indexed field. Deleting the Drug will raise a ProtectedError
-    drug = models.ForeignKey(DrugList, on_delete=models.PROTECT)
+    drug = models.ForeignKey(DrugName, on_delete=models.PROTECT)
 
     def __str__(self):
         return f"Case: {self.case_id}, Drug: {self.drug_id}"
@@ -216,7 +216,7 @@ class Reaction(CaseRelatedModel):
     """Stores data extracted from the FAERS reaction CSV files (e.g., reaction{year}q{quarter})."""
 
     # An indexed field. Deleting the Reaction will raise a ProtectedError
-    reaction = models.ForeignKey(ReactionList, on_delete=models.PROTECT)
+    reaction = models.ForeignKey(ReactionName, on_delete=models.PROTECT)
 
     def __str__(self):
         return f"Case: {self.case_id}, Reaction: {self.reaction_id}"
