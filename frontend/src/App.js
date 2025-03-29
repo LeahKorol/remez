@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 import Home from './HomePage';
 import Login from './Login';
-
+import Register from './Registration';
 
 
 function App() {
@@ -12,11 +12,12 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={
+        <Route path="/register" element={<Register />} />
+        {/* <Route path="/dashboard" element={
           <ProtectedRoute>
             <div>Dashboard Page (To be implemented)</div>
           </ProtectedRoute>
-        } />
+        } /> */}
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
