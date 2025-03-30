@@ -4,6 +4,7 @@ import './App.css';
 import Home from './HomePage';
 import Login from './Login';
 import Register from './Registration';
+import UserProfile from './UserProfile';
 
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
             <div>Dashboard Page (To be implemented)</div>
           </ProtectedRoute>
         } /> */}
+        <Route path="/profile" element={<UserProfile />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
