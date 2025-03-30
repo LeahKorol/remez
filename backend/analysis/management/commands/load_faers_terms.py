@@ -102,10 +102,14 @@ class Command(QuarterRangeArgMixin, BaseCommand):
         files: list[Path],
         column: str,
         model: Type[Model],
-        term_label: str = "term",
+        term_label: str,
     ) -> set[str]:
-        """Extracts and deduplicates new terms from CSV files based on the given column."""
+        """
+        Extracts and deduplicates new terms from CSV files based on the given column.
+        """
+        # Use set for quick lookups
         existing = set(model.objects.values_list("name", flat=True))
+        # Use set to ensure uniqueness across values from different files
         new_terms = set()
 
         self.stdout.write(f"Loading {term_label} terms from {len(files)} files...")
@@ -116,6 +120,7 @@ class Command(QuarterRangeArgMixin, BaseCommand):
             if column not in df.columns:
                 raise CommandError(f"Column '{column}' not found in {file.name}")
 
+            # TO_DO: Ask Dr. Gorelik whether to add more normalization (e.g., `lower()` and `strip()`)
             for name in df[column].dropna().astype(str):
                 if name not in existing:
                     new_terms.add(name)
