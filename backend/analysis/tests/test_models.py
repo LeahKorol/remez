@@ -238,7 +238,9 @@ class CaseRelatedModelTestCase(TestCase):
     Creates a Case instance (self.case) and test annotated fields are available.
     """
 
-    __test__ = False  # Prevent Django from collecting this as a test
+    # Prevent base class from being collected.
+    # Subclasses must set '__test__ = True' to be collected.
+    __test__ = False
     model = None  # To be set in each subclass
 
     def setUp(self):
@@ -262,6 +264,7 @@ class CaseRelatedModelTestCase(TestCase):
 
 class DemoModelTests(CaseRelatedModelTestCase):
     model = Demo
+    __test__ = True  # Ensure this class is collected
 
     def test_create_valid_demo(self):
         demo = Demo.objects.create(
@@ -306,6 +309,7 @@ class DemoModelTests(CaseRelatedModelTestCase):
 
 class DrugTests(CaseRelatedModelTestCase):
     model = Drug
+    __test__ = True  # Ensure this class is collected
 
     def setUp(self):
         super().setUp()
@@ -343,6 +347,7 @@ class DrugTests(CaseRelatedModelTestCase):
 
 class OutcomeModelTests(CaseRelatedModelTestCase):
     model = Outcome
+    __test__ = True  # Ensure this class is collected
 
     def test_create_valid_outcome(self):
         outcome = Outcome.objects.create(case=self.case, outc_cod=OutcomeCode.DEATH)
@@ -363,6 +368,7 @@ class OutcomeModelTests(CaseRelatedModelTestCase):
 
 class ReactionTests(CaseRelatedModelTestCase):
     model = Reaction
+    __test__ = True  # Ensure this class is collected
 
     def setUp(self):
         super().setUp()
