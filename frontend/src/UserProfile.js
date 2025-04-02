@@ -664,11 +664,11 @@ const UserProfile = () => {
           .select();
         */
           
-        // עדכון מקומי
+        // local updating
         const updatedQueries = savedQueries.map(query => {
           if (query.id === editingQueryId) {
-            // נדמה תשובה חדשה שתתקבל מהשרת
-            const updatedResult = `תוצאה מעודכנת אחרי בדיקה של ${validdrugs.length} תרופות ו-${validSideEffects.length} תופעות לוואי.`;
+            // fake response from supabase
+            const updatedResult = `Updated result after checking ${validdrugs.length} drugs and ${validSideEffects.length} side effects.`;
             
             return {
               ...query,
@@ -685,9 +685,9 @@ const UserProfile = () => {
         setIsEditing(false);
         setEditingQueryId(null);
       } else {
-        // במציאות, כאן נשלח בקשה לשרת שיעבד את הנתונים
-        const result = "תוצאה לדוגמה - ניתוח הקשר בין התרופות לתופעות הלוואי";
-        
+        // כאן נשלח בקשה לשרת שיעבד את הנתונים
+        const result = "Sample result - analysis of the relationship between drugs and side effects";
+
         // במקום להכניס לדאטה-בייס, פשוט מוסיפים לסטייט המקומי
         const newQuery = {
           id: Date.now(),
@@ -707,7 +707,7 @@ const UserProfile = () => {
       
     } catch (error) {
       console.error('Error saving query:', error);
-      alert('אירעה שגיאה בשמירת השאילתה');
+      alert('An error occurred while saving the query');
     }
   };
 
