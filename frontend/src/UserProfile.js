@@ -641,6 +641,11 @@ const UserProfile = () => {
     setReactions(['']);
   };
 
+  const handleNewQuery = () => {
+    setdrugs(['']);  // reset drugs list
+    setReactions(['']);  // reset reactions list
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -761,7 +766,7 @@ const UserProfile = () => {
                     className="input-field"
                     value={drug}
                     onChange={(e) => handleDrugChange(index, e.target.value)}
-                    placeholder="Enter drug name"
+                    placeholder="Enter drug name..."
                     dir="ltr"
                   />
                   {(index > 0 || drugs.length > 1) && (
@@ -793,7 +798,7 @@ const UserProfile = () => {
                     className="input-field"
                     value={reaction}
                     onChange={(e) => handleReactionChange(index, e.target.value)}
-                    placeholder="Enter a reaction"
+                    placeholder="Enter a reaction..."
                     dir="ltr"
                   />
                   {(index > 0 || reactions.length > 1) && (
@@ -900,7 +905,7 @@ const UserProfile = () => {
         </div>
 
         <div className="nav-buttons">
-          <button className="nav-button">
+          <button className="nav-button" onClick={handleNewQuery}>
             <span>New Query</span>
             <FaArrowRight />
           </button>
