@@ -720,7 +720,7 @@ const UserProfile = () => {
   }
 
   if (!user) {
-    return <div className="not-logged-in">התחבר כדי לצפות בפרופיל שלך</div>;
+    return <div className="not-logged-in">Log in to view your profile</div>;
   }
 
   return (
@@ -769,12 +769,12 @@ const UserProfile = () => {
                 className="add-button"
                 onClick={addMedicationField}
               >
-                <FaPlus /> הוסף תרופה
+                add drug <FaPlus /> 
               </button>
             </div>
 
             <div className="form-section">
-              <h3 className="section-label">רשימת תופעות לוואי</h3>
+              <h3 className="section-label">Reactions list</h3>
               {sideEffects.map((sideEffect, index) => (
                 <div key={`effect-${index}`} className="input-group">
                   <input
@@ -782,7 +782,7 @@ const UserProfile = () => {
                     className="input-field"
                     value={sideEffect}
                     onChange={(e) => handleSideEffectChange(index, e.target.value)}
-                    placeholder="הזן תופעת לוואי"
+                    placeholder="Enter a reaction"
                     dir="ltr"
                   />
                   {(index > 0 || sideEffects.length > 1) && (
@@ -801,7 +801,7 @@ const UserProfile = () => {
                 className="add-button"
                 onClick={addSideEffectField}
               >
-                <FaPlus /> הוסף תופעת לוואי
+                add reaction <FaPlus /> 
               </button>
             </div>
 
@@ -811,7 +811,7 @@ const UserProfile = () => {
                 className="submit-button"
                 disabled={!drugs[0]?.trim() || !sideEffects[0]?.trim()}
               >
-                {isEditing ? 'עדכון + חישוב מחדש' : 'בדוק קשר בין תרופות לתופעות לוואי'}
+                {isEditing ? 'Update + calc' : 'save + calc'}
               </button>
             </div>
           </form>
@@ -828,9 +828,9 @@ const UserProfile = () => {
         </div>
         
         <div className="saved-queries-section">
-          <h2 className="section-title">הבדיקות שלך</h2>
+          <h2 className="section-title">Your Queries</h2>
           {savedQueries.length === 0 ? (
-            <p className="no-queries">אין בדיקות</p>
+            <p className="no-queries">No Queries</p>
           ) : (
             <div className="queries-list">
               {savedQueries.map((item) => (
@@ -845,7 +845,7 @@ const UserProfile = () => {
                         type="button"
                         className="action-button edit-button"
                         onClick={() => handleEditQuery(item)}
-                        title="ערוך בדיקה"
+                        title="Edit Query"
                       >
                         <FaEdit />
                       </button>
@@ -853,7 +853,7 @@ const UserProfile = () => {
                         type="button"
                         className="action-button delete-button"
                         onClick={() => handleDeleteQuery(item.id)}
-                        title="מחק בדיקה"
+                        title="Delete Query"
                       >
                         <FaTrash />
                       </button>
