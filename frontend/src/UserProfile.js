@@ -623,10 +623,10 @@ const UserProfile = () => {
 
   const handleDeleteQuery = (queryId) => {
     if (window.confirm('Are you sure you want to delete this query?')) {
-      // במציאות היינו מבצעים מחיקה מהדאטה-בייס
+      // מבצעים מחיקה מהדאטה-בייס
       // const { error } = await supabase.from('queries').delete().eq('id', queryId);
       
-      // מחיקה מקומית
+      // local deleting
       setSavedQueries(savedQueries.filter(query => query.id !== queryId));
     }
   };
@@ -641,18 +641,18 @@ const UserProfile = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // בדיקה שהוזנו נתונים תקינים
+    // validation of fields before submission
     const validdrugs = drugs.filter(med => med.trim() !== '');
     const validSideEffects = sideEffects.filter(effect => effect.trim() !== '');
     
     if (!validdrugs.length || !validSideEffects.length || !user) {
-      alert('נא להזין לפחות תרופה אחת ותופעת לוואי אחת');
+      alert('Please enter at least one drug and one side reaction.');
       return;
     }
     
     try {
       if (isEditing) {
-        // במציאות, כאן נשלח בקשה לשרת לעדכון הנתונים
+        // כאן נשלח בקשה לשרת לעדכון הנתונים
         /* 
         const { data, error } = await supabase
           .from('queries')
