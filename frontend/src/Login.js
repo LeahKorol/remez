@@ -39,7 +39,7 @@ function Login() {
 
       // Handle successful login
       localStorage.setItem('token', data.token);
-      navigate('/dashboard');
+      navigate('/profile');
     } catch (err) {
       setError('Network error. Please try again.');
     } finally {
