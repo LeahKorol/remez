@@ -24,24 +24,24 @@
 //         // עדיין שומרים את הקוד המקורי בהערות
 //         /*
 //         const { data: { user } } = await supabase.auth.getUser();
-        
+
 //         if (user) {
 //           const { data: profileData, error: profileError } = await supabase
 //             .from('profiles')
 //             .select('*')
 //             .eq('id', user.id)
 //             .single();
-          
+
 //           if (profileError) throw profileError;
-          
+
 //           const { data: queries, error: queriesError } = await supabase
 //             .from('queries')
 //             .select('*')
 //             .eq('user_id', user.id)
 //             .order('created_at', { ascending: false });
-          
+
 //           if (queriesError) throw queriesError;
-          
+
 //           setSavedQueries(queries || []);
 //         }
 //         */
@@ -114,7 +114,7 @@
 //           }
 //         ])
 //         .select();
-      
+
 //       if (error) throw error;
 //       */
 
@@ -226,7 +226,7 @@
 
 // const UserProfile = () => {
 //   const [drugs, setdrugs] = useState(['']);
-//   const [sideEffects, setSideEffects] = useState(['']);
+//   const [reactions, setreactions] = useState(['']);
 //   const [user, setUser] = useState(null);
 //   const [savedQueries, setSavedQueries] = useState([]);
 //   const [loading, setLoading] = useState(true);
@@ -237,21 +237,21 @@
 //     const fetchUserData = async () => {
 //       try {
 //         setLoading(true);
-        
+
 //         // נתונים מדומים למשתמש
 //         const mockUser = {
 //           id: 'user-123',
 //           email: 'example@email.com',
 //           name: 'ישראל ישראלי',
 //         };
-        
+
 //         // נתונים מדומים לשאילתות - עם מבנה חדש המתאים לתרופות ותופעות לוואי
 //         const mockQueries = [
 //           {
 //             id: 1,
 //             user_id: 'user-123',
 //             drugs: ['אומפרזול', 'סימבסטטין', 'אספירין'],
-//             sideEffects: ['כאב ראש', 'עייפות', 'בחילה'],
+//             reactions: ['כאב ראש', 'עייפות', 'בחילה'],
 //             result: 'קיימת התאמה בין תופעת הלוואי "כאב ראש" לתרופה "אספירין". מומלץ להתייעץ עם רופא.',
 //             created_at: '2025-03-28T14:30:00Z'
 //           },
@@ -259,15 +259,15 @@
 //             id: 2,
 //             user_id: 'user-123',
 //             drugs: ['אמוקסיצילין', 'לבופלוקסצין'],
-//             sideEffects: ['פריחה בעור', 'סחרחורת'],
+//             reactions: ['פריחה בעור', 'סחרחורת'],
 //             result: 'נמצאה התאמה בין "פריחה בעור" לתרופה "אמוקסיצילין". זוהי תופעת לוואי ידועה שמופיעה ב-3% מהמטופלים.',
 //             created_at: '2025-03-25T10:15:00Z'
 //           }
 //         ];
-        
+
 //         setUser(mockUser);
 //         setSavedQueries(mockQueries);
-        
+
 //       } catch (error) {
 //         console.error('Error fetching user data:', error);
 //         setError('אירעה שגיאה בטעינת נתוני המשתמש');
@@ -283,17 +283,17 @@
 //   }, []);
 
 //   // פונקציות לניהול שדות התרופות
-//   const handleMedicationChange = (index, value) => {
+//   const handledrugChange = (index, value) => {
 //     const newdrugs = [...drugs];
 //     newdrugs[index] = value;
 //     setdrugs(newdrugs);
 //   };
 
-//   const addMedicationField = () => {
+//   const adddrugField = () => {
 //     setdrugs([...drugs, '']);
 //   };
 
-//   const removeMedicationField = (index) => {
+//   const removedrugField = (index) => {
 //     if (drugs.length > 1) {
 //       const newdrugs = [...drugs];
 //       newdrugs.splice(index, 1);
@@ -302,56 +302,56 @@
 //   };
 
 //   // פונקציות לניהול שדות תופעות הלוואי
-//   const handleSideEffectChange = (index, value) => {
-//     const newSideEffects = [...sideEffects];
-//     newSideEffects[index] = value;
-//     setSideEffects(newSideEffects);
+//   const handlereactionChange = (index, value) => {
+//     const newreactions = [...reactions];
+//     newreactions[index] = value;
+//     setreactions(newreactions);
 //   };
 
-//   const addSideEffectField = () => {
-//     setSideEffects([...sideEffects, '']);
+//   const addreactionField = () => {
+//     setreactions([...reactions, '']);
 //   };
 
-//   const removeSideEffectField = (index) => {
-//     if (sideEffects.length > 1) {
-//       const newSideEffects = [...sideEffects];
-//       newSideEffects.splice(index, 1);
-//       setSideEffects(newSideEffects);
+//   const removereactionField = (index) => {
+//     if (reactions.length > 1) {
+//       const newreactions = [...reactions];
+//       newreactions.splice(index, 1);
+//       setreactions(newreactions);
 //     }
 //   };
 
 //   const handleSubmit = async (e) => {
 //     e.preventDefault();
-    
+
 //     // בדיקה שהוזנו נתונים תקינים
 //     const validdrugs = drugs.filter(med => med.trim() !== '');
-//     const validSideEffects = sideEffects.filter(effect => effect.trim() !== '');
-    
-//     if (!validdrugs.length || !validSideEffects.length || !user) {
+//     const validreactions = reactions.filter(effect => effect.trim() !== '');
+
+//     if (!validdrugs.length || !validreactions.length || !user) {
 //       alert('נא להזין לפחות תרופה אחת ותופעת לוואי אחת');
 //       return;
 //     }
-    
+
 //     try {
 //       // במציאות, כאן נשלח בקשה לשרת שיעבד את הנתונים
 //       const result = "תוצאה לדוגמה - ניתוח הקשר בין התרופות לתופעות הלוואי";
-      
+
 //       // במקום להכניס לדאטה-בייס, פשוט מוסיפים לסטייט המקומי
 //       const newQuery = {
 //         id: Date.now(),
 //         user_id: user.id,
 //         drugs: validdrugs,
-//         sideEffects: validSideEffects,
+//         reactions: validreactions,
 //         result: result,
 //         created_at: new Date().toISOString()
 //       };
-      
+
 //       setSavedQueries([newQuery, ...savedQueries]);
-      
+
 //       // איפוס השדות לאחר שליחה
 //       setdrugs(['']);
-//       setSideEffects(['']);
-      
+//       setreactions(['']);
+
 //     } catch (error) {
 //       console.error('Error saving query:', error);
 //       alert('אירעה שגיאה בשמירת השאילתה');
@@ -377,13 +377,13 @@
 //           <form onSubmit={handleSubmit}>
 //             <div className="form-section">
 //               <h3 className="section-label">רשימת תרופות</h3>
-//               {drugs.map((medication, index) => (
+//               {drugs.map((drug, index) => (
 //                 <div key={`med-${index}`} className="input-group">
 //                   <input
 //                     type="text"
 //                     className="input-field"
-//                     value={medication}
-//                     onChange={(e) => handleMedicationChange(index, e.target.value)}
+//                     value={drug}
+//                     onChange={(e) => handledrugChange(index, e.target.value)}
 //                     placeholder="הזן שם תרופה"
 //                     dir="ltr"
 //                   />
@@ -391,7 +391,7 @@
 //                     <button
 //                       type="button"
 //                       className="remove-button"
-//                       onClick={() => removeMedicationField(index)}
+//                       onClick={() => removedrugField(index)}
 //                     >
 //                       <FaTimes />
 //                     </button>
@@ -401,7 +401,7 @@
 //               <button
 //                 type="button"
 //                 className="add-button"
-//                 onClick={addMedicationField}
+//                 onClick={adddrugField}
 //               >
 //                 <FaPlus /> הוסף תרופה
 //               </button>
@@ -409,13 +409,13 @@
 
 //             <div className="form-section">
 //               <h3 className="section-label">רשימת תופעות לוואי</h3>
-//               {sideEffects.map((sideEffect, index) => (
+//               {reactions.map((reaction, index) => (
 //                 <div key={`effect-${index}`} className="input-group">
 //                   <input
 //                     type="text"
 //                     className="input-field"
-//                     value={sideEffect}
-//                     onChange={(e) => handleSideEffectChange(index, e.target.value)}
+//                     value={reaction}
+//                     onChange={(e) => handlereactionChange(index, e.target.value)}
 //                     placeholder="הזן תופעת לוואי"
 //                     dir="ltr"
 //                   />
@@ -423,7 +423,7 @@
 //                     <button
 //                       type="button"
 //                       className="remove-button"
-//                       onClick={() => removeSideEffectField(index)}
+//                       onClick={() => removereactionField(index)}
 //                     >
 //                       <FaTimes />
 //                     </button>
@@ -433,7 +433,7 @@
 //               <button
 //                 type="button"
 //                 className="add-button"
-//                 onClick={addSideEffectField}
+//                 onClick={addreactionField}
 //               >
 //                 <FaPlus /> הוסף תופעת לוואי
 //               </button>
@@ -443,7 +443,7 @@
 //               <button
 //                 type="submit"
 //                 className="submit-button"
-//                 disabled={!drugs[0].trim() || !sideEffects[0].trim()}
+//                 disabled={!drugs[0].trim() || !reactions[0].trim()}
 //               >
 //                 בדוק קשר בין תרופות לתופעות לוואי
 //               </button>
@@ -451,7 +451,7 @@
 //           </form>
 //         </div>
 //       </div>
-      
+
 //       <div className="sidebar">
 //         <div className="user-info">
 //           <div className="avatar-circle">
@@ -460,7 +460,7 @@
 //           <h3 className="user-name">{user.name}</h3>
 //           <p className="user-email">{user.email}</p>
 //         </div>
-        
+
 //         <div className="saved-queries-section">
 //           <h2 className="section-title">הבדיקות שלך</h2>
 //           {savedQueries.length === 0 ? (
@@ -479,7 +479,7 @@
 //                       <strong>תרופות:</strong> {item.drugs.join(', ')}
 //                     </div>
 //                     <div className="query-side-effects">
-//                       <strong>תופעות לוואי:</strong> {item.sideEffects.join(', ')}
+//                       <strong>תופעות לוואי:</strong> {item.reactions.join(', ')}
 //                     </div>
 //                     <div className="result-divider"></div>
 //                     <p className="query-result">{item.result}</p>
@@ -489,7 +489,7 @@
 //             </div>
 //           )}
 //         </div>
-        
+
 //         <div className="nav-buttons">
 //           <button className="nav-button">
 //             <span>עמוד נוסף</span>
@@ -506,8 +506,9 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { FaUser, FaArrowRight, FaPlus, FaTimes, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaUser, FaArrowRight, FaPlus, FaTimes, FaEdit, FaTrash, FaSignOutAlt } from 'react-icons/fa';
 import { createClient } from '@supabase/supabase-js';
+import { useNavigate } from 'react-router-dom';
 import './UserProfile.css';
 
 // const supabaseUrl = 'https://your-supabase-url.supabase.co';
@@ -516,32 +517,34 @@ import './UserProfile.css';
 
 const UserProfile = () => {
   const [drugs, setdrugs] = useState(['']);
-  const [sideEffects, setSideEffects] = useState(['']);
+  const [reactions, setReactions] = useState(['']);
   const [user, setUser] = useState(null);
   const [savedQueries, setSavedQueries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editingQueryId, setEditingQueryId] = useState(null);
+  const [showLogoutPopup, setShowLogoutPopup] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         setLoading(true);
-        
+
         const mockUser = {
           id: 'user-123',
           email: 'john.doe@remez.com',
           name: 'John Doe',
         };
-        
+
         // in this level we use fake data. In real life we would fetch data from the supabase
         const mockQueries = [
           {
             id: 1,
             user_id: 'user-123',
             drugs: ['omeprazole', 'simvastatin', 'aspirin'],
-            sideEffects: ['headache', 'fatigue', 'nausea'],
+            reactions: ['headache', 'fatigue', 'nausea'],
             result: 'There is a match between the side effect "headache" and the drug "aspirin". It is recommended to consult a doctor.',
             created_at: '2025-03-28T14:30:00Z'
           },
@@ -549,18 +552,18 @@ const UserProfile = () => {
             id: 2,
             user_id: 'user-123',
             drugs: ['amoxicillin', 'levofloxacin'],
-            sideEffects: ['skin rash', 'dizziness'],
+            reactions: ['skin rash', 'dizziness'],
             result: 'A match was found between "skin rash" and the drug "amoxicillin". This is a known side effect that occurs in 3% of patients.',
             created_at: '2025-03-25T10:15:00Z'
           }
         ];
-        
+
         setUser(mockUser);
         setSavedQueries(mockQueries);
-        
+
       } catch (error) {
         console.error('Error fetching user data:', error);
-        setError('אירעה שגיאה בטעינת נתוני המשתמש');
+        setError('An error occurred while loading user data');
       } finally {
         // delay to show loading state
         setTimeout(() => {
@@ -573,17 +576,17 @@ const UserProfile = () => {
   }, []);
 
   // drugs management functions
-  const handleMedicationChange = (index, value) => {
+  const handleDrugChange = (index, value) => {
     const newdrugs = [...drugs];
     newdrugs[index] = value;
     setdrugs(newdrugs);
   };
 
-  const addMedicationField = () => {
+  const addDrugField = () => {
     setdrugs([...drugs, '']);
   };
 
-  const removeMedicationField = (index) => {
+  const removeDrugField = (index) => {
     if (drugs.length > 1) {
       const newdrugs = [...drugs];
       newdrugs.splice(index, 1);
@@ -592,21 +595,21 @@ const UserProfile = () => {
   };
 
   // reactions management functions
-  const handleSideEffectChange = (index, value) => {
-    const newSideEffects = [...sideEffects];
-    newSideEffects[index] = value;
-    setSideEffects(newSideEffects);
+  const handleReactionChange = (index, value) => {
+    const newReactions = [...reactions];
+    newReactions[index] = value;
+    setReactions(newReactions);
   };
 
-  const addSideEffectField = () => {
-    setSideEffects([...sideEffects, '']);
+  const addReactionField = () => {
+    setReactions([...reactions, '']);
   };
 
-  const removeSideEffectField = (index) => {
-    if (sideEffects.length > 1) {
-      const newSideEffects = [...sideEffects];
-      newSideEffects.splice(index, 1);
-      setSideEffects(newSideEffects);
+  const removeReactionField = (index) => {
+    if (reactions.length > 1) {
+      const newReactions = [...reactions];
+      newReactions.splice(index, 1);
+      setReactions(newReactions);
     }
   };
 
@@ -614,9 +617,9 @@ const UserProfile = () => {
   const handleEditQuery = (query) => {
     setIsEditing(true);
     setEditingQueryId(query.id);
-    setdrugs([...query.drugs, '']); 
-    setSideEffects([...query.sideEffects, '']); 
-    
+    setdrugs([...query.drugs, '']);
+    setReactions([...query.reactions, '']);
+
     // add scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -625,7 +628,7 @@ const UserProfile = () => {
     if (window.confirm('Are you sure you want to delete this query?')) {
       // מבצעים מחיקה מהדאטה-בייס
       // const { error } = await supabase.from('queries').delete().eq('id', queryId);
-      
+
       // local deleting
       setSavedQueries(savedQueries.filter(query => query.id !== queryId));
     }
@@ -635,21 +638,21 @@ const UserProfile = () => {
     setIsEditing(false);
     setEditingQueryId(null);
     setdrugs(['']);
-    setSideEffects(['']);
+    setReactions(['']);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // validation of fields before submission
     const validdrugs = drugs.filter(med => med.trim() !== '');
-    const validSideEffects = sideEffects.filter(effect => effect.trim() !== '');
-    
-    if (!validdrugs.length || !validSideEffects.length || !user) {
+    const validReactions = reactions.filter(effect => effect.trim() !== '');
+
+    if (!validdrugs.length || !validReactions.length || !user) {
       alert('Please enter at least one drug and one side reaction.');
       return;
     }
-    
+
     try {
       if (isEditing) {
         // כאן נשלח בקשה לשרת לעדכון הנתונים
@@ -658,57 +661,65 @@ const UserProfile = () => {
           .from('queries')
           .update({
             drugs: validdrugs,
-            sideEffects: validSideEffects,
+            reactions: validreactions,
           })
           .eq('id', editingQueryId)
           .select();
         */
-          
+
         // local updating
         const updatedQueries = savedQueries.map(query => {
           if (query.id === editingQueryId) {
             // fake response from supabase
-            const updatedResult = `Updated result after checking ${validdrugs.length} drugs and ${validSideEffects.length} side effects.`;
-            
+            const updatedResult = `Updated result after checking ${validdrugs.length} drugs and ${validReactions.length} reactions.`;
+
             return {
               ...query,
               drugs: validdrugs,
-              sideEffects: validSideEffects,
+              reactions: validReactions,
               result: updatedResult,
               updated_at: new Date().toISOString()
             };
           }
           return query;
         });
-        
+
         setSavedQueries(updatedQueries);
         setIsEditing(false);
         setEditingQueryId(null);
       } else {
         // כאן נשלח בקשה לשרת שיעבד את הנתונים
-        const result = "Sample result - analysis of the relationship between drugs and side effects";
+        const result = "Sample result - analysis of the relationship between drugs and reactions";
 
         // במקום להכניס לדאטה-בייס, פשוט מוסיפים לסטייט המקומי
         const newQuery = {
           id: Date.now(),
           user_id: user.id,
           drugs: validdrugs,
-          sideEffects: validSideEffects,
+          reactions: validReactions,
           result: result,
           created_at: new Date().toISOString()
         };
-        
+
         setSavedQueries([newQuery, ...savedQueries]);
       }
-      
+
       // reset fields after submission
       setdrugs(['']);
-      setSideEffects(['']);
-      
+      setReactions(['']);
+
     } catch (error) {
       console.error('Error saving query:', error);
       alert('An error occurred while saving the query');
     }
+  };
+
+  const handleLogout = () => {
+    setShowLogoutPopup(true);
+    setTimeout(() => {
+      localStorage.removeItem('token');
+      navigate('/');
+    }, 2000);
   };
 
   if (loading) {
@@ -730,8 +741,8 @@ const UserProfile = () => {
           <div className="form-header">
             <h2>{isEditing ? 'Update Query' : 'New Query'}</h2>
             {isEditing && (
-              <button 
-                type="button" 
+              <button
+                type="button"
                 className="cancel-button"
                 onClick={cancelEditing}
               >
@@ -739,17 +750,17 @@ const UserProfile = () => {
               </button>
             )}
           </div>
-          
+
           <form onSubmit={handleSubmit}>
             <div className="form-section">
               <h3 className="section-label">Drugs list</h3>
-              {drugs.map((medication, index) => (
+              {drugs.map((drug, index) => (
                 <div key={`med-${index}`} className="input-group">
                   <input
                     type="text"
                     className="input-field"
-                    value={medication}
-                    onChange={(e) => handleMedicationChange(index, e.target.value)}
+                    value={drug}
+                    onChange={(e) => handleDrugChange(index, e.target.value)}
                     placeholder="Enter drug name"
                     dir="ltr"
                   />
@@ -757,7 +768,7 @@ const UserProfile = () => {
                     <button
                       type="button"
                       className="remove-button"
-                      onClick={() => removeMedicationField(index)}
+                      onClick={() => removeDrugField(index)}
                     >
                       <FaTimes />
                     </button>
@@ -767,29 +778,29 @@ const UserProfile = () => {
               <button
                 type="button"
                 className="add-button"
-                onClick={addMedicationField}
+                onClick={addDrugField}
               >
-                add drug <FaPlus /> 
+                add drug <FaPlus />
               </button>
             </div>
 
             <div className="form-section">
               <h3 className="section-label">Reactions list</h3>
-              {sideEffects.map((sideEffect, index) => (
+              {reactions.map((reaction, index) => (
                 <div key={`effect-${index}`} className="input-group">
                   <input
                     type="text"
                     className="input-field"
-                    value={sideEffect}
-                    onChange={(e) => handleSideEffectChange(index, e.target.value)}
+                    value={reaction}
+                    onChange={(e) => handleReactionChange(index, e.target.value)}
                     placeholder="Enter a reaction"
                     dir="ltr"
                   />
-                  {(index > 0 || sideEffects.length > 1) && (
+                  {(index > 0 || reactions.length > 1) && (
                     <button
                       type="button"
                       className="remove-button"
-                      onClick={() => removeSideEffectField(index)}
+                      onClick={() => removeReactionField(index)}
                     >
                       <FaTimes />
                     </button>
@@ -799,9 +810,9 @@ const UserProfile = () => {
               <button
                 type="button"
                 className="add-button"
-                onClick={addSideEffectField}
+                onClick={addReactionField}
               >
-                add reaction <FaPlus /> 
+                add reaction <FaPlus />
               </button>
             </div>
 
@@ -809,16 +820,24 @@ const UserProfile = () => {
               <button
                 type="submit"
                 className="submit-button"
-                disabled={!drugs[0]?.trim() || !sideEffects[0]?.trim()}
+                disabled={!drugs[0]?.trim() || !reactions[0]?.trim()}
               >
-                {isEditing ? 'Update + calc' : 'save + calc'}
+                {isEditing ? 'Update + Calc' : 'Save + Calc'}
               </button>
             </div>
           </form>
         </div>
       </div>
-      
+
       <div className="sidebar">
+        {showLogoutPopup && (
+          <div className="logout-popup">Logging out... You are being redirected.</div>
+        )}
+        <div className="logout-container">
+          <button className="logout-button" onClick={handleLogout} title="Logout">
+            <FaSignOutAlt />
+          </button>
+        </div>
         <div className="user-info">
           <div className="avatar-circle">
             <FaUser className="user-icon" />
@@ -826,7 +845,7 @@ const UserProfile = () => {
           <h3 className="user-name">{user.name}</h3>
           <p className="user-email">{user.email}</p>
         </div>
-        
+
         <div className="saved-queries-section">
           <h2 className="section-title">Your Queries</h2>
           {savedQueries.length === 0 ? (
@@ -839,7 +858,7 @@ const UserProfile = () => {
                     <span className="query-date">
                       {new Date(item.created_at).toLocaleDateString('he-IL')}
                     </span>
-                    
+
                     <div className="query-actions">
                       <button
                         type="button"
@@ -863,8 +882,8 @@ const UserProfile = () => {
                     <div className="query-drugs">
                       <strong>Drugs:</strong> {item.drugs.join(', ')}
                     </div>
-                    <div className="query-side-effects">
-                      <strong>Reaction:</strong> {item.sideEffects.join(', ')}
+                    <div className="query-reactions">
+                      <strong>Reaction:</strong> {item.reactions.join(', ')}
                     </div>
                     <div className="result-divider"></div>
                     <p className="query-result">{item.result}</p>
@@ -879,7 +898,7 @@ const UserProfile = () => {
             </div>
           )}
         </div>
-        
+
         <div className="nav-buttons">
           <button className="nav-button">
             <span>New Query</span>
