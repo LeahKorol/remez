@@ -572,7 +572,7 @@ const UserProfile = () => {
     fetchUserData();
   }, []);
 
-  // פונקציות לניהול שדות התרופות
+  // drugs management functions
   const handleMedicationChange = (index, value) => {
     const newdrugs = [...drugs];
     newdrugs[index] = value;
@@ -591,7 +591,7 @@ const UserProfile = () => {
     }
   };
 
-  // פונקציות לניהול שדות תופעות הלוואי
+  // reactions management functions
   const handleSideEffectChange = (index, value) => {
     const newSideEffects = [...sideEffects];
     newSideEffects[index] = value;
@@ -610,19 +610,19 @@ const UserProfile = () => {
     }
   };
 
-  // פונקציות לעריכה ומחיקה של שאילתות
+  // update & delete queries
   const handleEditQuery = (query) => {
     setIsEditing(true);
     setEditingQueryId(query.id);
-    setdrugs([...query.drugs, '']); // מוסיף שדה ריק לנוחות
-    setSideEffects([...query.sideEffects, '']); // מוסיף שדה ריק לנוחות
+    setdrugs([...query.drugs, '']); 
+    setSideEffects([...query.sideEffects, '']); 
     
-    // גלילה למעלה לטופס העריכה
+    // add scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDeleteQuery = (queryId) => {
-    if (window.confirm('האם אתה בטוח שברצונך למחוק את הבדיקה?')) {
+    if (window.confirm('Are you sure you want to delete this query?')) {
       // במציאות היינו מבצעים מחיקה מהדאטה-בייס
       // const { error } = await supabase.from('queries').delete().eq('id', queryId);
       
