@@ -225,7 +225,7 @@
 // // const supabase = createClient(supabaseUrl, supabaseKey);
 
 // const UserProfile = () => {
-//   const [medications, setMedications] = useState(['']);
+//   const [drugs, setdrugs] = useState(['']);
 //   const [sideEffects, setSideEffects] = useState(['']);
 //   const [user, setUser] = useState(null);
 //   const [savedQueries, setSavedQueries] = useState([]);
@@ -250,7 +250,7 @@
 //           {
 //             id: 1,
 //             user_id: 'user-123',
-//             medications: ['אומפרזול', 'סימבסטטין', 'אספירין'],
+//             drugs: ['אומפרזול', 'סימבסטטין', 'אספירין'],
 //             sideEffects: ['כאב ראש', 'עייפות', 'בחילה'],
 //             result: 'קיימת התאמה בין תופעת הלוואי "כאב ראש" לתרופה "אספירין". מומלץ להתייעץ עם רופא.',
 //             created_at: '2025-03-28T14:30:00Z'
@@ -258,7 +258,7 @@
 //           {
 //             id: 2,
 //             user_id: 'user-123',
-//             medications: ['אמוקסיצילין', 'לבופלוקסצין'],
+//             drugs: ['אמוקסיצילין', 'לבופלוקסצין'],
 //             sideEffects: ['פריחה בעור', 'סחרחורת'],
 //             result: 'נמצאה התאמה בין "פריחה בעור" לתרופה "אמוקסיצילין". זוהי תופעת לוואי ידועה שמופיעה ב-3% מהמטופלים.',
 //             created_at: '2025-03-25T10:15:00Z'
@@ -284,20 +284,20 @@
 
 //   // פונקציות לניהול שדות התרופות
 //   const handleMedicationChange = (index, value) => {
-//     const newMedications = [...medications];
-//     newMedications[index] = value;
-//     setMedications(newMedications);
+//     const newdrugs = [...drugs];
+//     newdrugs[index] = value;
+//     setdrugs(newdrugs);
 //   };
 
 //   const addMedicationField = () => {
-//     setMedications([...medications, '']);
+//     setdrugs([...drugs, '']);
 //   };
 
 //   const removeMedicationField = (index) => {
-//     if (medications.length > 1) {
-//       const newMedications = [...medications];
-//       newMedications.splice(index, 1);
-//       setMedications(newMedications);
+//     if (drugs.length > 1) {
+//       const newdrugs = [...drugs];
+//       newdrugs.splice(index, 1);
+//       setdrugs(newdrugs);
 //     }
 //   };
 
@@ -324,10 +324,10 @@
 //     e.preventDefault();
     
 //     // בדיקה שהוזנו נתונים תקינים
-//     const validMedications = medications.filter(med => med.trim() !== '');
+//     const validdrugs = drugs.filter(med => med.trim() !== '');
 //     const validSideEffects = sideEffects.filter(effect => effect.trim() !== '');
     
-//     if (!validMedications.length || !validSideEffects.length || !user) {
+//     if (!validdrugs.length || !validSideEffects.length || !user) {
 //       alert('נא להזין לפחות תרופה אחת ותופעת לוואי אחת');
 //       return;
 //     }
@@ -340,7 +340,7 @@
 //       const newQuery = {
 //         id: Date.now(),
 //         user_id: user.id,
-//         medications: validMedications,
+//         drugs: validdrugs,
 //         sideEffects: validSideEffects,
 //         result: result,
 //         created_at: new Date().toISOString()
@@ -349,7 +349,7 @@
 //       setSavedQueries([newQuery, ...savedQueries]);
       
 //       // איפוס השדות לאחר שליחה
-//       setMedications(['']);
+//       setdrugs(['']);
 //       setSideEffects(['']);
       
 //     } catch (error) {
@@ -377,7 +377,7 @@
 //           <form onSubmit={handleSubmit}>
 //             <div className="form-section">
 //               <h3 className="section-label">רשימת תרופות</h3>
-//               {medications.map((medication, index) => (
+//               {drugs.map((medication, index) => (
 //                 <div key={`med-${index}`} className="input-group">
 //                   <input
 //                     type="text"
@@ -385,7 +385,7 @@
 //                     value={medication}
 //                     onChange={(e) => handleMedicationChange(index, e.target.value)}
 //                     placeholder="הזן שם תרופה"
-//                     dir="rtl"
+//                     dir="ltr"
 //                   />
 //                   {index > 0 && (
 //                     <button
@@ -417,7 +417,7 @@
 //                     value={sideEffect}
 //                     onChange={(e) => handleSideEffectChange(index, e.target.value)}
 //                     placeholder="הזן תופעת לוואי"
-//                     dir="rtl"
+//                     dir="ltr"
 //                   />
 //                   {index > 0 && (
 //                     <button
@@ -443,7 +443,7 @@
 //               <button
 //                 type="submit"
 //                 className="submit-button"
-//                 disabled={!medications[0].trim() || !sideEffects[0].trim()}
+//                 disabled={!drugs[0].trim() || !sideEffects[0].trim()}
 //               >
 //                 בדוק קשר בין תרופות לתופעות לוואי
 //               </button>
@@ -475,8 +475,8 @@
 //                     </span>
 //                   </div>
 //                   <div className="query-content">
-//                     <div className="query-medications">
-//                       <strong>תרופות:</strong> {item.medications.join(', ')}
+//                     <div className="query-drugs">
+//                       <strong>תרופות:</strong> {item.drugs.join(', ')}
 //                     </div>
 //                     <div className="query-side-effects">
 //                       <strong>תופעות לוואי:</strong> {item.sideEffects.join(', ')}
@@ -515,7 +515,7 @@ import './UserProfile.css';
 // const supabase = createClient(supabaseUrl, supabaseKey);
 
 const UserProfile = () => {
-  const [medications, setMedications] = useState(['']);
+  const [drugs, setdrugs] = useState(['']);
   const [sideEffects, setSideEffects] = useState(['']);
   const [user, setUser] = useState(null);
   const [savedQueries, setSavedQueries] = useState([]);
@@ -525,34 +525,32 @@ const UserProfile = () => {
   const [editingQueryId, setEditingQueryId] = useState(null);
 
   useEffect(() => {
-    // השורות של Supabase נשמרות, אבל במקומן משתמשים בנתונים מדומים
     const fetchUserData = async () => {
       try {
         setLoading(true);
         
-        // נתונים מדומים למשתמש
         const mockUser = {
           id: 'user-123',
-          email: 'example@email.com',
-          name: 'ישראל ישראלי',
+          email: 'john.doe@remez.com',
+          name: 'John Doe',
         };
         
-        // נתונים מדומים לשאילתות - עם מבנה חדש המתאים לתרופות ותופעות לוואי
+        // in this level we use fake data. In real life we would fetch data from the supabase
         const mockQueries = [
           {
             id: 1,
             user_id: 'user-123',
-            medications: ['אומפרזול', 'סימבסטטין', 'אספירין'],
-            sideEffects: ['כאב ראש', 'עייפות', 'בחילה'],
-            result: 'קיימת התאמה בין תופעת הלוואי "כאב ראש" לתרופה "אספירין". מומלץ להתייעץ עם רופא.',
+            drugs: ['omeprazole', 'simvastatin', 'aspirin'],
+            sideEffects: ['headache', 'fatigue', 'nausea'],
+            result: 'There is a match between the side effect "headache" and the drug "aspirin". It is recommended to consult a doctor.',
             created_at: '2025-03-28T14:30:00Z'
           },
           {
             id: 2,
             user_id: 'user-123',
-            medications: ['אמוקסיצילין', 'לבופלוקסצין'],
-            sideEffects: ['פריחה בעור', 'סחרחורת'],
-            result: 'נמצאה התאמה בין "פריחה בעור" לתרופה "אמוקסיצילין". זוהי תופעת לוואי ידועה שמופיעה ב-3% מהמטופלים.',
+            drugs: ['amoxicillin', 'levofloxacin'],
+            sideEffects: ['skin rash', 'dizziness'],
+            result: 'A match was found between "skin rash" and the drug "amoxicillin". This is a known side effect that occurs in 3% of patients.',
             created_at: '2025-03-25T10:15:00Z'
           }
         ];
@@ -564,7 +562,7 @@ const UserProfile = () => {
         console.error('Error fetching user data:', error);
         setError('אירעה שגיאה בטעינת נתוני המשתמש');
       } finally {
-        // מדמים עיכוב קצר כדי להראות את מצב הטעינה
+        // delay to show loading state
         setTimeout(() => {
           setLoading(false);
         }, 500);
@@ -576,20 +574,20 @@ const UserProfile = () => {
 
   // פונקציות לניהול שדות התרופות
   const handleMedicationChange = (index, value) => {
-    const newMedications = [...medications];
-    newMedications[index] = value;
-    setMedications(newMedications);
+    const newdrugs = [...drugs];
+    newdrugs[index] = value;
+    setdrugs(newdrugs);
   };
 
   const addMedicationField = () => {
-    setMedications([...medications, '']);
+    setdrugs([...drugs, '']);
   };
 
   const removeMedicationField = (index) => {
-    if (medications.length > 1) {
-      const newMedications = [...medications];
-      newMedications.splice(index, 1);
-      setMedications(newMedications);
+    if (drugs.length > 1) {
+      const newdrugs = [...drugs];
+      newdrugs.splice(index, 1);
+      setdrugs(newdrugs);
     }
   };
 
@@ -616,7 +614,7 @@ const UserProfile = () => {
   const handleEditQuery = (query) => {
     setIsEditing(true);
     setEditingQueryId(query.id);
-    setMedications([...query.medications, '']); // מוסיף שדה ריק לנוחות
+    setdrugs([...query.drugs, '']); // מוסיף שדה ריק לנוחות
     setSideEffects([...query.sideEffects, '']); // מוסיף שדה ריק לנוחות
     
     // גלילה למעלה לטופס העריכה
@@ -636,7 +634,7 @@ const UserProfile = () => {
   const cancelEditing = () => {
     setIsEditing(false);
     setEditingQueryId(null);
-    setMedications(['']);
+    setdrugs(['']);
     setSideEffects(['']);
   };
 
@@ -644,10 +642,10 @@ const UserProfile = () => {
     e.preventDefault();
     
     // בדיקה שהוזנו נתונים תקינים
-    const validMedications = medications.filter(med => med.trim() !== '');
+    const validdrugs = drugs.filter(med => med.trim() !== '');
     const validSideEffects = sideEffects.filter(effect => effect.trim() !== '');
     
-    if (!validMedications.length || !validSideEffects.length || !user) {
+    if (!validdrugs.length || !validSideEffects.length || !user) {
       alert('נא להזין לפחות תרופה אחת ותופעת לוואי אחת');
       return;
     }
@@ -659,7 +657,7 @@ const UserProfile = () => {
         const { data, error } = await supabase
           .from('queries')
           .update({
-            medications: validMedications,
+            drugs: validdrugs,
             sideEffects: validSideEffects,
           })
           .eq('id', editingQueryId)
@@ -670,11 +668,11 @@ const UserProfile = () => {
         const updatedQueries = savedQueries.map(query => {
           if (query.id === editingQueryId) {
             // נדמה תשובה חדשה שתתקבל מהשרת
-            const updatedResult = `תוצאה מעודכנת אחרי בדיקה של ${validMedications.length} תרופות ו-${validSideEffects.length} תופעות לוואי.`;
+            const updatedResult = `תוצאה מעודכנת אחרי בדיקה של ${validdrugs.length} תרופות ו-${validSideEffects.length} תופעות לוואי.`;
             
             return {
               ...query,
-              medications: validMedications,
+              drugs: validdrugs,
               sideEffects: validSideEffects,
               result: updatedResult,
               updated_at: new Date().toISOString()
@@ -694,7 +692,7 @@ const UserProfile = () => {
         const newQuery = {
           id: Date.now(),
           user_id: user.id,
-          medications: validMedications,
+          drugs: validdrugs,
           sideEffects: validSideEffects,
           result: result,
           created_at: new Date().toISOString()
@@ -703,8 +701,8 @@ const UserProfile = () => {
         setSavedQueries([newQuery, ...savedQueries]);
       }
       
-      // איפוס השדות לאחר שליחה
-      setMedications(['']);
+      // reset fields after submission
+      setdrugs(['']);
       setSideEffects(['']);
       
     } catch (error) {
@@ -714,7 +712,7 @@ const UserProfile = () => {
   };
 
   if (loading) {
-    return <div className="loading">טוען...</div>;
+    return <div className="loading">Loading...</div>;
   }
 
   if (error) {
@@ -730,32 +728,32 @@ const UserProfile = () => {
       <div className="main-content">
         <div className="prompt-container">
           <div className="form-header">
-            <h2>{isEditing ? 'עריכת בדיקה' : 'בדיקה חדשה'}</h2>
+            <h2>{isEditing ? 'Update Query' : 'New Query'}</h2>
             {isEditing && (
               <button 
                 type="button" 
                 className="cancel-button"
                 onClick={cancelEditing}
               >
-                ביטול עריכה
+                cancel
               </button>
             )}
           </div>
           
           <form onSubmit={handleSubmit}>
             <div className="form-section">
-              <h3 className="section-label">רשימת תרופות</h3>
-              {medications.map((medication, index) => (
+              <h3 className="section-label">Drugs list</h3>
+              {drugs.map((medication, index) => (
                 <div key={`med-${index}`} className="input-group">
                   <input
                     type="text"
                     className="input-field"
                     value={medication}
                     onChange={(e) => handleMedicationChange(index, e.target.value)}
-                    placeholder="הזן שם תרופה"
-                    dir="rtl"
+                    placeholder="Enter drug name"
+                    dir="ltr"
                   />
-                  {(index > 0 || medications.length > 1) && (
+                  {(index > 0 || drugs.length > 1) && (
                     <button
                       type="button"
                       className="remove-button"
@@ -785,7 +783,7 @@ const UserProfile = () => {
                     value={sideEffect}
                     onChange={(e) => handleSideEffectChange(index, e.target.value)}
                     placeholder="הזן תופעת לוואי"
-                    dir="rtl"
+                    dir="ltr"
                   />
                   {(index > 0 || sideEffects.length > 1) && (
                     <button
@@ -811,7 +809,7 @@ const UserProfile = () => {
               <button
                 type="submit"
                 className="submit-button"
-                disabled={!medications[0]?.trim() || !sideEffects[0]?.trim()}
+                disabled={!drugs[0]?.trim() || !sideEffects[0]?.trim()}
               >
                 {isEditing ? 'עדכון + חישוב מחדש' : 'בדוק קשר בין תרופות לתופעות לוואי'}
               </button>
@@ -862,17 +860,17 @@ const UserProfile = () => {
                     </div>
                   </div>
                   <div className="query-content">
-                    <div className="query-medications">
-                      <strong>תרופות:</strong> {item.medications.join(', ')}
+                    <div className="query-drugs">
+                      <strong>Drugs:</strong> {item.drugs.join(', ')}
                     </div>
                     <div className="query-side-effects">
-                      <strong>תופעות לוואי:</strong> {item.sideEffects.join(', ')}
+                      <strong>Reaction:</strong> {item.sideEffects.join(', ')}
                     </div>
                     <div className="result-divider"></div>
                     <p className="query-result">{item.result}</p>
                     {item.updated_at && (
                       <div className="updated-note">
-                        עודכן: {new Date(item.updated_at).toLocaleDateString('he-IL')}
+                        Updated: {new Date(item.updated_at).toLocaleDateString('he-IL')}
                       </div>
                     )}
                   </div>
@@ -884,7 +882,7 @@ const UserProfile = () => {
         
         <div className="nav-buttons">
           <button className="nav-button">
-            <span>עמוד נוסף</span>
+            <span>New Query</span>
             <FaArrowRight />
           </button>
         </div>

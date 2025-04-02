@@ -3,7 +3,7 @@
     min-height: 100vh;
     background-color: #f7f7f7;
     font-family: 'Poppins', Arial, sans-serif;
-    direction: rtl;
+    direction: ltr;
   }
   
   /* Sidebar Styles - Now on the left */
@@ -450,7 +450,7 @@
     padding: 15px;
   }
   
-  .query-medications, .query-side-effects {
+  .query-drugs, .query-side-effects {
     margin-bottom: 8px;
     font-size: 14px;
     text-align: right;
