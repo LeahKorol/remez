@@ -75,8 +75,13 @@ class QueryTests(TestCase):
         before_creation = timezone.now()
 
         q_start, q_end = 0, 2
+        year_start = year_end = 2020
         query = Query.objects.create(
-            user=self.user, quarter_start=q_start, quarter_end=q_end
+            user=self.user,
+            quarter_start=q_start,
+            quarter_end=q_end,
+            year_start=year_start,
+            year_end=year_end,
         )
 
         after_creation = timezone.now()
@@ -87,10 +92,18 @@ class QueryTests(TestCase):
         self.assertEqual(query.user, self.user)
         self.assertEqual(query.quarter_start, q_start)
         self.assertEqual(query.quarter_end, q_end)
+        self.assertEqual(query.year_start, year_start)
+        self.assertEqual(query.year_end, year_end)
 
     def test_drugs_and_reactions_m2m_with_query(self):
         """Test adding drugs and reactions to a query"""
-        query = Query.objects.create(user=self.user, quarter_start=0, quarter_end=2)
+        query = Query.objects.create(
+            user=self.user,
+            quarter_start=0,
+            quarter_end=2,
+            year_start=2020,
+            year_end=2020,
+        )
         query.drugs.add(self.drug)
         query.reactions.add(self.reaction)
 
@@ -99,14 +112,32 @@ class QueryTests(TestCase):
 
     def test_query_empty_name(self):
         """Test string representation when name is empty"""
-        query = Query.objects.create(user=self.user, quarter_start=0, quarter_end=2)
+        query = Query.objects.create(
+            user=self.user,
+            quarter_start=0,
+            quarter_end=2,
+            year_start=2020,
+            year_end=2020,
+        )
         self.assertEqual(str(query), f"Query #{query.id}")
 
     def test_queries_order_by_update_time(self):
         """Ensure queries are ordered by updated_at"""
-        query1 = Query.objects.create(user=self.user, quarter_start=0, quarter_end=2)
+        query1 = Query.objects.create(
+            user=self.user,
+            quarter_start=0,
+            quarter_end=2,
+            year_start=2020,
+            year_end=2020,
+        )
         time.sleep(0.1)  # Ensure timestamp difference
-        query2 = Query.objects.create(user=self.user, quarter_start=0, quarter_end=2)
+        query2 = Query.objects.create(
+            user=self.user,
+            quarter_start=0,
+            quarter_end=2,
+            year_start=2020,
+            year_end=2020,
+        )
 
         queries = Query.objects.order_by("-updated_at")
         self.assertEqual(query2, queries[0])  # Newest should be first
@@ -114,7 +145,13 @@ class QueryTests(TestCase):
 
     def test_updated_at_changes_on_update(self):
         """Ensure updated_at field changes when the object is updated"""
-        query = Query.objects.create(user=self.user, quarter_start=0, quarter_end=2)
+        query = Query.objects.create(
+            user=self.user,
+            quarter_start=0,
+            quarter_end=2,
+            year_start=2020,
+            year_end=2020,
+        )
         old_updated_at = query.updated_at
 
         time.sleep(0.1)  # Ensure timestamp difference
@@ -126,13 +163,25 @@ class QueryTests(TestCase):
 
     def test_quarter_start_greater_than_end(self):
         """Ensure IntegrityError is raised when quarter_start > quarter_end"""
-        query = Query(user=self.user, quarter_start=3, quarter_end=2)
+        query = Query(
+            user=self.user,
+            quarter_start=3,
+            quarter_end=2,
+            year_start=2020,
+            year_end=2020,
+        )
         with self.assertRaises(ValidationError):
             query.full_clean()
 
     def test_quarter_range_validation(self):
         """Ensure quarter_start cannot be less than 0"""
-        query = Query(user=self.user, quarter_start=-1, quarter_end=2)
+        query = Query(
+            user=self.user,
+            quarter_start=-1,
+            quarter_end=2,
+            year_start=2020,
+            year_end=2020,
+        )
         with self.assertRaises(ValidationError):
             query.full_clean()
 

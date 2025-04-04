@@ -11,3 +11,8 @@ class FaersTerms(Enum):
     @classmethod
     def values(cls) -> List[str]:
         return [term.value for term in cls]
+
+
+# The years there are records about in FAERS data
+YEAR_START = 2004
+YEAR_END = 2025

@@ -26,6 +26,8 @@ class QueryViewSetTests(APITestCase):
         cls.required_fields = {
             "quarter_start": 1,
             "quarter_end": 1,
+            "year_start": 2020,
+            "year_end": 2020,
             "drugs": [drug.id],
             "reactions": [reaction.id],
         }
@@ -35,18 +37,24 @@ class QueryViewSetTests(APITestCase):
             name="User1 Query 1",
             quarter_start=1,
             quarter_end=1,
+            year_start=2020,
+            year_end=2020,
         )
         cls.query2 = Query.objects.create(
             user=cls.user1,
             name="User1 Query 2",
             quarter_start=1,
             quarter_end=1,
+            year_start=2021,
+            year_end=2021,
         )
         cls.query3 = Query.objects.create(
             user=cls.user2,
             name="User2 Query",
             quarter_start=1,
             quarter_end=1,
+            year_start=2022,
+            year_end=2022,
         )
         for query in [cls.query1, cls.query2, cls.query3]:
             query.drugs.set([drug.id])

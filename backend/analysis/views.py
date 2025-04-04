@@ -56,7 +56,16 @@ class QueryViewSet(viewsets.ModelViewSet):
         # Modify results if relevant fields were changed
         validated_data = serializer.validated_data
         if (
-            any(("drugs", "reactions", "quarter_start", "quarter_ends"))
+            any(
+                (
+                    "drugs",
+                    "reactions",
+                    "quarter_start",
+                    "quarter_end",
+                    "year_star",
+                    "year_end",
+                )
+            )
             in validated_data
         ):
             # TO-DO: Recalaculte x_values and y_values

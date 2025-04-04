@@ -9,6 +9,8 @@ from django.db.models import Q, CheckConstraint
 
 from analysis.managers import CaseAwareManager
 
+from analysis.faers_analysis.constants import YEAR_START, YEAR_END
+
 # Use TextField and not CharField as recommended in Postgres documentation (copy the url, not click):
 # https://wiki.postgresql.org/wiki/Don't_Do_This#Don.27t_use_varchar.28n.29_by_default
 
@@ -54,12 +56,19 @@ class Query(models.Model):
     # Input parameters
     drugs = models.ManyToManyField(DrugName)
     reactions = models.ManyToManyField(ReactionName)
-    # TO-DO: DO NOT hard code the values
+
+    # Quarter parameters
     quarter_start = models.IntegerField(
-        validators=[MinValueValidator(0), MaxValueValidator(49)]
+        validators=[MinValueValidator(1), MaxValueValidator(4)]
     )
     quarter_end = models.IntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(50)]
+        validators=[MinValueValidator(1), MaxValueValidator(4)]
+    )
+    year_start = models.IntegerField(
+        validators=[MinValueValidator(YEAR_START), MaxValueValidator(YEAR_END)]
+    )
+    year_end = models.IntegerField(
+        validators=[MinValueValidator(YEAR_START), MaxValueValidator(YEAR_END)]
     )
 
     # Result parameters:
@@ -71,7 +80,7 @@ class Query(models.Model):
 
         constraints = [
             CheckConstraint(
-                check=Q(quarter_start__lte=models.F("quarter_end")),
+                condition=Q(quarter_start__lte=models.F("quarter_end")),
                 name="quarter_start_lte_quarter_end",
             )
         ]
