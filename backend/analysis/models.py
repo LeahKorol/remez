@@ -196,6 +196,22 @@ class Demo(CaseRelatedModel):
         null=True, choices=WeightCode.choices, validators=[MaxLengthValidator(5)]
     )
 
+    class Meta:
+        constraints = [
+            CheckConstraint(
+                condition=Q(sex__in=[choice.value for choice in Sex]),
+                name="valid_sex_choice",
+            ),
+            CheckConstraint(
+                condition=Q(age_cod__in=[choice.value for choice in AgeCode]),
+                name="valid_age_cod_choice",
+            ),
+            CheckConstraint(
+                condition=Q(wt_cod__in=[choice.value for choice in WeightCode]),
+                name="valid_wt_cod_choice",
+            ),
+        ]
+
     def __str__(self):
         return f"Demo: {self.case_id}"
 
@@ -216,6 +232,14 @@ class Outcome(CaseRelatedModel):
     outc_cod = models.TextField(
         null=True, choices=OutcomeCode.choices, validators=[MaxValueValidator(5)]
     )
+
+    class Meta:
+        constraints = [
+            CheckConstraint(
+                condition=Q(outc_cod__in=[choice.value for choice in OutcomeCode]),
+                name="valid_outc_cod_choice",
+            ),
+        ]
 
     def __str__(self):
         return f"Case: {self.case_id}, Outcome: {self.get_outc_cod_display()}"
