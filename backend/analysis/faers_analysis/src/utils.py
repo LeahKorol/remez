@@ -1,9 +1,12 @@
 """
 This file was originally sourced from:
 https://github.com/bgbg/faers_analysis/blob/main/src/utils.py
+Some functionality was addded.
 """
 
 import re
+import pandas as pd
+import numpy as np
 
 
 class Quarter:
@@ -63,3 +66,76 @@ def generate_quarters(start, end):
     while start < end:  # NOTE: not including *end*
         yield start
         start = start.increment()
+
+
+def validate_event_dt_num(event_dt_num: str):
+    """
+    Return True if the the string is in one of this format: MM/DD/YYYY, M/DD/YYYY, M/D/YYYY, MM/D/YYYY
+    """
+    pattern = r"^(0?[1-9]|1[0-2])/(0?[1-9]|[12][0-9]|3[01])/\d{4}$"
+    return bool(re.fullmatch(pattern, event_dt_num))
+
+
+def normalize_dataframe(df: pd.DataFrame, column_types: dict) -> None:
+    """
+    Normalize a dataframe to use required types instead of 'object' type.
+    - Replaces None with NaN
+    - Converts each column to its specified dtype
+    - Replaces NaNs with empty strings for 'string' columns before casting
+    """
+    if df is None:
+        return
+
+    df.replace({None: np.nan}, inplace=True)
+
+    for col, dtype in column_types.items():
+        if col not in df:
+            continue
+        if dtype == "string":
+            df.fillna({col: ""}, inplace=True)
+        df[col] = df[col].astype(dtype)
+
+
+def empty_to_none(val):
+    """
+    Return None if val is NaN or an empty string, otherwise return the val
+    """
+    if val is None:
+        return None
+    if isinstance(val, float) and np.isnan(val):
+        return None
+    if isinstance(val, str) and val.strip() == "":
+        return None
+    return val
+
+
+def normalize_string(s: str, lower=True) -> str:
+    """
+    Cleans a string by:
+    - Stripping whitespace
+    - Converting to lowercase if lower==True, else to uppercase
+    - Trimming non-alphanumeric characters from the start and end
+
+    Returns:
+        A normalized string, or None if the result has no alphanumeric content.
+    """
+    if s is None:
+        return None
+
+    s = s.strip()
+    if lower:
+        s = s.lower()
+    else:
+        s = s.upper()
+
+    start, end = 0, len(s) - 1
+
+    while start < end and not s[start].isalnum():
+        start += 1
+
+    while end > start and not s[end].isalnum():
+        end -= 1
+
+    if start <= end:
+        return s[start : end + 1]
+    return None

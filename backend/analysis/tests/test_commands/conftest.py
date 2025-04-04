@@ -2,7 +2,12 @@ import pytest
 from pathlib import Path
 import zipfile
 import pandas as pd
-from typing import Callable
+from typing import Callable, Dict
+import io
+
+from analysis.faers_analysis.src.utils import Quarter
+from analysis.management.commands.load_faers_data import Command
+from analysis.models import Case
 
 
 @pytest.fixture
@@ -27,3 +32,37 @@ def create_zipped_csv() -> Callable[[pd.DataFrame, str, Path], Path]:
         return zip_path
 
     return _create_zipped_csv
+
+
+# Ensure clean test output by redirecting the command outputs to a buffer
+@pytest.fixture
+def command():
+    output = io.StringIO()
+    cmd = Command(stdout=output)
+    return cmd, output
+
+
+@pytest.fixture
+def quarter():
+    return Quarter(2025, 1)
+
+
+@pytest.fixture
+def cases_ids(quarter: Quarter) -> Callable[[pd.DataFrame], Dict[int, int]]:
+    def _cases_ids(sample_data: pd.DataFrame):
+        """
+        Creates sample Case objects in the database, matching primaryids of the sample data
+        It intialises faers_case_id with the primary_id as well, enable consistency between models.
+        """
+        cases_ids = {}
+        for primary_id in sample_data["primaryid"]:
+            case = Case.objects.create(
+                faers_primaryid=primary_id,
+                faers_caseid=primary_id,
+                quarter=quarter.quarter,
+                year=quarter.year,
+            )
+            cases_ids[primary_id] = case.id
+        return cases_ids
+
+    return _cases_ids
