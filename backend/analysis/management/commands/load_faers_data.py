@@ -50,8 +50,10 @@ from analysis.faers_analysis.constants import (
     FaersTerms,
     DEMO_COLUMNS,
     DEMO_COLUMN_TYPES,
+    DRUG_COLUMNS,
+    DRUG_COLUMN_TYPES,
 )
-from analysis.models import Case, Demo, Drug, Outcome, Reaction
+from analysis.models import Case, Demo, Drug, DrugName, Outcome, Reaction
 
 
 class Command(QuarterRangeArgMixin, BaseCommand):
@@ -214,11 +216,38 @@ class Command(QuarterRangeArgMixin, BaseCommand):
             f"Loaded {num_demos} demographic records from file {file_path}"
         )
 
-    def _load_drug_data(self, file_path: Path) -> None:
+    def _load_drug_data(self, file_path: Path, cases_ids: Dict[int, int]) -> None:
         """
         Load drug data from the CSV file into the database.
         """
         self.stdout.write(f"Loading drug data from {file_path}...")
+        new_drugs = []
+        num_drugs = 0
+
+        for chunk in pd.read_csv(
+            file_path,
+            usecols=DRUG_COLUMNS,
+            dtype=DRUG_COLUMN_TYPES,
+            chunksize=self.CHUNK_SIZE,
+        ):
+            for row in chunk.itertuples(index=False):
+                case_id = cases_ids.get(row.primaryid, None)
+                if case_id is None:
+                    continue
+
+                clean_row = self._clean_row(row=row, lower=True)
+
+                drug = Drug(
+                    case_id=case_id,
+                    drug=DrugName.objects.get(name=clean_row["drugname"]),
+                )
+                new_drugs.append(drug)
+
+            Drug.objects.bulk_create(new_drugs)
+            num_drugs += len(new_drugs)
+            new_drugs = []
+
+        self.stdout.write(f"Loaded {num_drugs} drug records from file {file_path}")
 
     def _load_outcome_data(self, file_path: Path) -> None:
         """

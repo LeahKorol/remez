@@ -3,10 +3,11 @@ import pytest
 from typing import Callable
 from pathlib import Path
 from collections import namedtuple
+from django.db.models import F
 
 
-from analysis.models import Case, Demo
-from analysis.faers_analysis.constants import DEMO_COLUMN_TYPES
+from analysis.models import Case, Demo, Drug, DrugName
+from analysis.faers_analysis.constants import DEMO_COLUMN_TYPES, DRUG_COLUMN_TYPES
 from analysis.faers_analysis.src.utils import normalize_dataframe
 
 
@@ -211,7 +212,6 @@ class TestDemo:
         assert cleaned["sex"] == "M"
         assert cleaned["wt_cod"] == "KG"
 
-    @pytest.mark.django_db
     def test_demo_fields_accept_nulls(self, cases_ids, demo_data):
         """
         Ensure all nullable fields correctly store None in the database.
@@ -237,3 +237,92 @@ class TestDemo:
         assert fetched.sex is None
         assert fetched.wt is None
         assert fetched.wt_cod is None
+
+
+@pytest.mark.django_db
+class TestDrug:
+    @pytest.fixture
+    def drug_data(self):
+        """Provides sample drug data as a DataFrame."""
+        drugnames = ["aspirin", "tylenol"]
+        for drug in drugnames:
+            DrugName.objects.create(name=drug)
+
+        data = {
+            "primaryid": [1, 2],
+            "caseid": [1, 2],
+            "drugname": drugnames,
+        }
+        return pd.DataFrame(data)
+
+    def test_load_drug_data_stdout_messages(
+        self, drug_data, cases_ids, create_zipped_csv, tmp_path, command
+    ):
+        """Test stdout messages during drug data loading."""
+        zip_path = create_zipped_csv(drug_data, "drug2020q1", tmp_path)
+        custom_cases_ids = cases_ids(drug_data)
+
+        cmd, output = command
+        cmd._load_drug_data(zip_path, custom_cases_ids)
+
+        assert (
+            output.getvalue()
+            == f"Loading drug data from {zip_path}...\nLoaded 2 drug records from file {zip_path}\n"
+        )
+
+    def test_load_drug_data_correct_drug_objects(
+        self, drug_data, create_zipped_csv, tmp_path, cases_ids, command
+    ):
+        """Test that drug objects are created correctly."""
+        zip_path = create_zipped_csv(drug_data, "drug2020q1", tmp_path)
+        custom_cases_ids = cases_ids(drug_data)
+
+        cmd, _ = command
+        cmd._load_drug_data(zip_path, custom_cases_ids)
+
+        # Get stored values, rename 'drug__name' to 'drugname' and reconstruct DataFrame
+        stored_values = (
+            Drug.objects.all()
+            .annotate(drugname=F("drug__name"))
+            .values("primaryid", "caseid", "drugname")
+        )
+        stored_data = pd.DataFrame.from_records(stored_values)
+
+        # Normalise stored data for expected comparison
+        normalize_dataframe(stored_data, DRUG_COLUMN_TYPES)
+
+        # Match dtypes before comparing
+        for col, dtype in DRUG_COLUMN_TYPES.items():
+            drug_data[col] = drug_data[col].astype(dtype)
+            assert stored_data[col].equals(
+                drug_data[col]
+            ), f"Mismatch in column '{col}, {drug_data[col].to_string()}, {stored_data[col].to_string()}'"
+
+    def test_load_drug_data_strips_whitespace(
+        self, drug_data, create_zipped_csv, tmp_path, cases_ids, command
+    ):
+        """Test that whitespace is stripped from drug names, so the drug name can be found in the DrugName table"""
+        # Add whitespace to drug names
+        drug_data["drugname"] = drug_data["drugname"].apply(lambda x: f" {x} \n")
+
+        zip_path = create_zipped_csv(drug_data, "drug2020q1", tmp_path)
+        custom_cases_ids = cases_ids(drug_data)
+
+        cmd, _ = command
+        cmd._load_drug_data(zip_path, custom_cases_ids)
+
+        # Check that 2 drugs were created - the whitespace was striped
+        assert Drug.objects.count() == 2
+
+    def test_load_drug_data_skips_non_existing_cases(
+        self, drug_data, create_zipped_csv, tmp_path, command
+    ):
+        """Test that drugs for non-existing cases are skipped."""
+        zip_path = create_zipped_csv(drug_data, "drug2020q1", tmp_path)
+        # Empty cases_ids dictionary - should skip all records
+        custom_cases_ids = {}
+
+        cmd, _ = command
+        cmd._load_drug_data(zip_path, custom_cases_ids)
+
+        assert Drug.objects.count() == 0

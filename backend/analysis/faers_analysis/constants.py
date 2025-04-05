@@ -30,3 +30,11 @@ DEMO_COLUMN_TYPES = {
 }
 
 DEMO_COLUMNS = list(DEMO_COLUMN_TYPES.keys())
+
+DRUG_COLUMN_TYPES = {
+    "primaryid": int,
+    "caseid": int,
+    "drugname": "string",
+}
+
+DRUG_COLUMNS = list(DRUG_COLUMN_TYPES.keys())
