@@ -14,6 +14,19 @@ class TestHelpers:
     @pytest.mark.parametrize(
         "val, expected",
         [
+            ("hello     world", "hello world"),
+            ("hello\nworld", "hello world"),
+            ("hello\tworld", "hello world"),
+            ("hello\rworld", "hello world"),
+            ("", None),
+        ],
+    )
+    def test_normalise_string_remove_spaces(self, val, expected):
+        assert normalize_string(val, lower=True) == expected
+
+    @pytest.mark.parametrize(
+        "val, expected",
+        [
             ("  hello ", "hello"),
             ("\tHeLLo! ", "hello"),
             ("###HELLO!!", "hello"),
@@ -41,6 +54,8 @@ class TestHelpers:
         "val, expected",
         [
             (np.nan, None),
+            (pd.NA, None),
+            (None, None),
             ("", None),
             (" ", None),
             ("abc", "abc"),
@@ -60,6 +75,8 @@ class TestHelpers:
             ("2/30/2020", True),  # Pattern is valid, even if date isn't real
             ("2-2-2020", False),
             ("2020/2/2", False),
+            (None, False),
+            ("", False),
         ],
     )
     def test_validate_event_dt_num(self, s, expected):
@@ -74,18 +91,18 @@ class TestHelpers:
         )
 
         column_types = {
-            "age": "float64",  # pandas assigns float64 to columns with NaN values
+            "age": "float",  # numpy assigns float to NaN values
             "sex": "string",
         }
 
-        normalize_dataframe(df, column_types)
+        df = normalize_dataframe(df, column_types)
 
         # Check types
-        assert df["age"].dtype == "float64" 
+        assert df["age"].dtype == "float"
         assert df["sex"].dtype.name == "string"
 
         # Check age column: non-string columns converts None to NaN
         pdt.assert_series_equal(df["age"], pd.Series([25, np.nan, 35], name="age"))
 
-        # Check sex column: string column converts None to empty string
-        assert df["sex"].tolist() == ["M", "", "F"]
+        # Check sex column: string column converts None to pd.NA
+        assert df["sex"].tolist() == ["M", pd.NA, "F"]
