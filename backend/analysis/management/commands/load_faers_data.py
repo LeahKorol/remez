@@ -34,8 +34,9 @@ large volumes of data can be expensive, so it is not recommended to do this too 
 """
 
 from django.core.management.base import BaseCommand, CommandError
+from django.db.models import Model
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Type
 import pandas as pd
 
 from analysis.faers_analysis.src.utils import (
@@ -52,8 +53,12 @@ from analysis.faers_analysis.constants import (
     DEMO_COLUMN_TYPES,
     DRUG_COLUMNS,
     DRUG_COLUMN_TYPES,
+    OUTCOME_COLUMNS,
+    OUTCOME_COLUMN_TYPES,
+    RECTION_COLUMNS,
+    REACTION_COLUMN_TYPES,
 )
-from analysis.models import Case, Demo, Drug, DrugName, Outcome, Reaction
+from analysis.models import Case, Demo, Drug, DrugName, Outcome, Reaction, ReactionName
 
 
 class Command(QuarterRangeArgMixin, BaseCommand):
@@ -99,13 +104,33 @@ class Command(QuarterRangeArgMixin, BaseCommand):
 
         for file_path in term_file_paths:
             if FaersTerms.DEMO.value in file_path.name:
-                self._load_demo_data(file_path, cases_ids)
+                self._load_term_data(
+                    file_path, cases_ids, Demo, DEMO_COLUMNS, DEMO_COLUMN_TYPES, True
+                )
             elif FaersTerms.DRUG.value in file_path.name:
-                self._load_drug_data(file_path)
+                self._load_term_data(
+                    file_path, cases_ids, Drug, DRUG_COLUMNS, DRUG_COLUMN_TYPES, False
+                )
             elif FaersTerms.REACTION.value in file_path.name:
-                self._load_reaction_data(file_path)
+                self._load_term_data(
+                    file_path,
+                    cases_ids,
+                    Outcome,
+                    OUTCOME_COLUMNS,
+                    OUTCOME_COLUMN_TYPES,
+                    False,
+                )
             elif FaersTerms.OUTCOME.value in file_path.name:
-                self._load_outcome_data(file_path)
+                self._load_term_data(
+                    file_path,
+                    cases_ids,
+                    Reaction,
+                    RECTION_COLUMNS,
+                    REACTION_COLUMN_TYPES,
+                    True,
+                )
+            else:
+                raise CommandError(f"Unknown file type: {file_path}")
 
     def _get_quarter_files(self, dir_in: str, quarter: Quarter) -> None:
         """
@@ -175,19 +200,30 @@ class Command(QuarterRangeArgMixin, BaseCommand):
 
         return {case.faers_primaryid: case.id for case in created_cases}
 
-    def _load_demo_data(self, file_path: Path, cases_ids: Dict[int, int]) -> None:
+    def _load_term_data(
+        self,
+        file_path: Path,
+        cases_ids: Dict[int, int],
+        term: Type[Model],
+        columns: List[str],
+        column_types: Dict,
+        lower: bool = True,
+    ) -> None:
         """
-        Load demographic data from the CSV file into the database.
+        Load term data from the CSV file into the database.
         To ensure consistency, it loads only cases appear in cases_ids.
         """
-        self.stdout.write(f"Loading demographic data from {file_path}...")
-        new_demos = []
-        num_demos = 0
+        if term not in [Demo, Drug, Outcome, Reaction]:
+            raise CommandError(f"Invalid term type: {term}")
 
+        self.stdout.write(f"Loading {term.__name__} data from {file_path}...")
+
+        new_terms = []
+        num_terms = 0
         for chunk in pd.read_csv(
             file_path,
-            usecols=DEMO_COLUMNS,
-            dtype=DEMO_COLUMN_TYPES,
+            usecols=columns,
+            dtype=column_types,
             chunksize=self.CHUNK_SIZE,
         ):
             for row in chunk.itertuples(index=False):
@@ -195,71 +231,71 @@ class Command(QuarterRangeArgMixin, BaseCommand):
                 if case_id is None:
                     continue
 
-                clean_row = self._clean_row(row=row, lower=False)
+                clean_row = self._clean_row(row=row, lower=lower)
 
-                demo = Demo(
-                    case_id=case_id,
-                    event_dt_num=self._get_event_dt_num(clean_row),
-                    age=clean_row["age"],
-                    age_cod=clean_row["age_cod"],
-                    sex=clean_row["sex"],
-                    wt=clean_row["wt"],
-                    wt_cod=clean_row["wt_cod"],
-                )
-                new_demos.append(demo)
+                # Create a new instance of the term model with the cleaned data.
+                if term == Demo:
+                    term_instance = self._create_demo_instance(case_id, clean_row)
+                elif term == Drug:
+                    term_instance = self._create_drug_instance(case_id, clean_row)
+                elif term == Outcome:
+                    term_instance = self._create_outcome_instance(case_id, clean_row)
+                elif term == Reaction:
+                    term_instance = self._create_reaction_instance(case_id, clean_row)
 
-            Demo.objects.bulk_create(new_demos)
-            num_demos += len(new_demos)
-            new_demos = []
+                # TO_DO: Validate the instance before adding it to the list
+                # try:
+                #     term_instance.full_clean()
+                # except ValidationError as e:
+                #     self.stdout.write(f"Validation error for row {row}: {e}")
+                #     continue
+
+                new_terms.append(term_instance)
+
+            term.objects.bulk_create(new_terms)
+            num_terms += len(new_terms)
+            new_terms = []
 
         self.stdout.write(
-            f"Loaded {num_demos} demographic records from file {file_path}"
+            f"Loaded {num_terms} {term.__name__} records from file {file_path}"
         )
 
-    def _load_drug_data(self, file_path: Path, cases_ids: Dict[int, int]) -> None:
-        """
-        Load drug data from the CSV file into the database.
-        """
-        self.stdout.write(f"Loading drug data from {file_path}...")
-        new_drugs = []
-        num_drugs = 0
+    @staticmethod
+    def _create_demo_instance(case_id: int, clean_row: dict) -> Demo:
+        demo = Demo(
+            case_id=case_id,
+            event_dt_num=Command._get_event_dt_num(clean_row),
+            age=clean_row["age"],
+            age_cod=clean_row["age_cod"],
+            sex=clean_row["sex"],
+            wt=clean_row["wt"],
+            wt_cod=clean_row["wt_cod"],
+        )
+        return demo
 
-        for chunk in pd.read_csv(
-            file_path,
-            usecols=DRUG_COLUMNS,
-            dtype=DRUG_COLUMN_TYPES,
-            chunksize=self.CHUNK_SIZE,
-        ):
-            for row in chunk.itertuples(index=False):
-                case_id = cases_ids.get(row.primaryid, None)
-                if case_id is None:
-                    continue
+    @staticmethod
+    def _create_drug_instance(case_id: int, clean_row: dict) -> Drug:
+        drug = Drug(
+            case_id=case_id,
+            drug=DrugName.objects.get(name=clean_row["drugname"]),
+        )
+        return drug
 
-                clean_row = self._clean_row(row=row, lower=True)
+    @staticmethod
+    def _create_outcome_instance(case_id: int, clean_row: dict) -> Outcome:
+        outcome = Outcome(
+            case_id=case_id,
+            outc_cod=clean_row["outc_cod"],
+        )
+        return outcome
 
-                drug = Drug(
-                    case_id=case_id,
-                    drug=DrugName.objects.get(name=clean_row["drugname"]),
-                )
-                new_drugs.append(drug)
-
-            Drug.objects.bulk_create(new_drugs)
-            num_drugs += len(new_drugs)
-            new_drugs = []
-
-        self.stdout.write(f"Loaded {num_drugs} drug records from file {file_path}")
-
-    def _load_outcome_data(self, file_path: Path) -> None:
-        """
-        Load outcome data from the CSV file into the database.
-        """
-        self.stdout.write(f"Loading outcome data from {file_path}...")
-
-    def _load_reaction_data(self, file_path: Path) -> None:
-        """
-        Load reaction data from the CSV file into the database.
-        """
-        self.stdout.write(f"Loading reaction data from {file_path}...")
+    @staticmethod
+    def _create_reaction_instance(case_id: int, clean_row: dict) -> Reaction:
+        reaction = Reaction(
+            case_id=case_id,
+            reaction=ReactionName.objects.get(name=clean_row["pt"]),
+        )
+        return reaction
 
     @staticmethod
     def _clean_row(row: tuple, lower=True) -> dict:

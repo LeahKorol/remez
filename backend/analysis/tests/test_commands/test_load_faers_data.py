@@ -1,13 +1,12 @@
 import pandas as pd
 import pytest
-from typing import Callable
+from typing import Callable, Type
 from pathlib import Path
-from collections import namedtuple
-from django.db.models import F
+from django.db.models import F, Model
 
 
-from analysis.models import Case, Demo, Drug, DrugName
-from analysis.faers_analysis.constants import DEMO_COLUMN_TYPES, DRUG_COLUMN_TYPES
+from analysis.models import Case, Demo, Drug, DrugName, Outcome, Reaction, ReactionName
+from analysis.faers_analysis import constants as const
 from analysis.faers_analysis.src.utils import normalize_dataframe
 
 
@@ -94,62 +93,194 @@ class TestCreateNewCases:
         assert case_102.faers_caseid == 202
 
 
+@pytest.fixture
+def demo_data():
+    """Provides sample demographic data as a DataFrame."""
+    data = {
+        "primaryid": [1, 2],
+        "caseid": [1, 2],
+        "event_dt_num": ["8/01/2020", "1/01/2020"],
+        "age": [25, 30],
+        "age_cod": ["YR", "YR"],
+        "sex": ["M", "F"],
+        "wt": [70, 60],
+        "wt_cod": ["KG", "KG"],
+    }
+    return pd.DataFrame(data)
+
+
+@pytest.fixture
+def drug_data():
+    """Provides sample drug data as a DataFrame."""
+    drugnames = ["aspirin", "tylenol"]
+    for drug in drugnames:
+        DrugName.objects.create(name=drug)
+
+    data = {
+        "primaryid": [1, 2],
+        "caseid": [1, 2],
+        "drugname": drugnames,
+    }
+    return pd.DataFrame(data)
+
+
+@pytest.fixture
+def outcome_data():
+    """Provides sample outcome data as a DataFrame."""
+    data = {
+        "primaryid": [1, 2],
+        "caseid": [1, 2],
+        "outc_cod": ["DE", "LT"],
+    }
+    return pd.DataFrame(data)
+
+
+@pytest.fixture
+def reaction_data():
+    """Provides sample reaction data as a DataFrame."""
+    reactions = ["reaction1", "reaction2"]
+    for reaction in reactions:
+        ReactionName.objects.create(name=reaction)
+
+    data = {
+        "primaryid": [1, 2],
+        "caseid": [1, 2],
+        "pt": reactions,
+    }
+    return pd.DataFrame(data)
+
+
+@pytest.fixture
+def term_data(request):
+    """
+    Return the right <term>_data fixture for function test_load_term_data_correct_objects
+    """
+    return request.getfixturevalue(request.param)
+
+
+def get_stored_values(model: Type[Model]):
+    """
+    Return all the stored values of the model as dictionaries.
+    Each dict represents a row from the database
+    """
+    if model == Drug:
+        # Get stored values, rename 'drug__name' to 'drugname' and reconstruct DataFrame
+        stored_values = (
+            Drug.objects.all()
+            .annotate(drugname=F("drug__name"))
+            .values("primaryid", "caseid", "drugname")
+        )
+    elif model == Reaction:
+        # Get stored values, rename 'reaction__name' to 'pt' and reconstruct DataFrame
+        stored_values = (
+            Reaction.objects.all()
+            .annotate(pt=F("reaction__name"))
+            .values("primaryid", "caseid", "pt")
+        )
+    else:
+        stored_values = model.objects.all().values()
+    return stored_values
+
+
+@pytest.mark.parametrize(
+    "term_name, model, columns, column_types, term_data, to_lower",
+    [
+        (
+            "demo",
+            Demo,
+            const.DEMO_COLUMNS,
+            const.DEMO_COLUMN_TYPES,
+            "demo_data",
+            False,
+        ),
+        (
+            "drug",
+            Drug,
+            const.DRUG_COLUMNS,
+            const.DRUG_COLUMN_TYPES,
+            "drug_data",
+            True,
+        ),
+        (
+            "outcome",
+            Outcome,
+            const.OUTCOME_COLUMNS,
+            const.OUTCOME_COLUMN_TYPES,
+            "outcome_data",
+            False,
+        ),
+        (
+            "reaction",
+            Reaction,
+            const.RECTION_COLUMNS,
+            const.REACTION_COLUMN_TYPES,
+            "reaction_data",
+            True,
+        ),
+    ],
+    indirect=["term_data"],
+)
+@pytest.mark.django_db
+def test_load_term_data_correct_objects(
+    term_name,
+    model,
+    columns,
+    column_types,
+    term_data,
+    to_lower,
+    create_zipped_csv,
+    tmp_path,
+    cases_ids,
+    command,
+):
+    """
+    Test that term objects are created correctly
+    """
+    zip_path = create_zipped_csv(term_data, f"{term_name}2020q1", tmp_path)
+    custom_case_ids = cases_ids(term_data)
+
+    cmd, _ = command
+    cmd._load_term_data(
+        zip_path, custom_case_ids, model, columns, column_types, to_lower
+    )
+
+    stored_values = get_stored_values(model)
+    stored_data = pd.DataFrame.from_records(stored_values)
+
+    # Normalize and compare
+    stored_data = normalize_dataframe(stored_data, column_types)
+
+    for col, dtype in column_types.items():
+        term_data[col] = term_data[col].astype(dtype)
+        assert stored_data[col].equals(
+            term_data[col]
+        ), f"Mismatch in column '{col}':\nExpected:\n{term_data[col].to_string()}\nGot:\n{stored_data[col].to_string()}"
+
+
 @pytest.mark.django_db
 class TestDemo:
-    @pytest.fixture
-    def demo_data(self):
-        """Provides sample demographic data as a DataFrame."""
-        data = {
-            "primaryid": [1, 2, 3, 4, 5],
-            "caseid": [1, 2, 3, 4, 5],
-            "event_dt_num": [
-                "8/01/2020",
-                "1/01/2020",
-                "9/01/2020",
-                "04/06/2020",
-                "3/2/2020",
-            ],
-            "age": [25, 30, 35, 40, 45],
-            "age_cod": ["YR", "YR", "YR", "YR", "YR"],
-            "sex": ["M", "F", "M", "F", "M"],
-            "wt": [70, 60, 80, 75, 85],
-            "wt_cod": ["KG", "KG", "KG", "KG", "KG"],
-        }
-        return pd.DataFrame(data)
-
-    def test_load_demo_data_stdout_messages(
+    def test_load_term_data_stdout_messages(
         self, demo_data, cases_ids, create_zipped_csv, tmp_path, command
     ):
         zip_path = create_zipped_csv(demo_data, "demo2020q1", tmp_path)
         custom_cases_ids = cases_ids(demo_data)
 
         cmd, output = command
-        cmd._load_demo_data(zip_path, custom_cases_ids)
+        cmd._load_term_data(
+            zip_path,
+            custom_cases_ids,
+            Demo,
+            const.DEMO_COLUMNS,
+            const.DEMO_COLUMN_TYPES,
+            False,
+        )
 
         assert (
             output.getvalue()
-            == f"Loading demographic data from {zip_path}...\nLoaded 5 demographic records from file {zip_path}\n"
+            == f"Loading Demo data from {zip_path}...\nLoaded 2 Demo records from file {zip_path}\n"
         )
 
-    def test_load_demo_data_correct_demo_objects(
-        self, demo_data, create_zipped_csv, tmp_path, cases_ids, command
-    ):
-        zip_path = create_zipped_csv(demo_data, "demo2020q1", tmp_path)
-        custom_cases_ids = cases_ids(demo_data)
-
-        cmd, _ = command
-        cmd._load_demo_data(zip_path, custom_cases_ids)
-
-        # get all the values as dictionaries. Each dict represents a row from the database
-        stored_values = Demo.objects.all().values()
-        stored_data = pd.DataFrame.from_records(stored_values)
-
-        for col, dtype in DEMO_COLUMN_TYPES.items():
-            stored_data[col] = stored_data[col].astype(dtype)
-            demo_data[col] = demo_data[col].astype(dtype)
-            assert stored_data[col].equals(demo_data[col])
-
-    def test_load_demo_data_strips_whitespace(
+    def test_load_term_data_strips_whitespace(
         self, demo_data, create_zipped_csv, tmp_path, cases_ids, command
     ):
         # Add leading/trailing spaces to text fields
@@ -162,7 +293,14 @@ class TestDemo:
         custom_cases_ids = cases_ids(demo_data)
 
         cmd, _ = command
-        cmd._load_demo_data(zip_path, custom_cases_ids)
+        cmd._load_term_data(
+            zip_path,
+            custom_cases_ids,
+            Demo,
+            const.DEMO_COLUMNS,
+            const.DEMO_COLUMN_TYPES,
+            False,
+        )
 
         # Get stored values and reconstruct DataFrame
         stored_values = Demo.objects.all().values()
@@ -170,66 +308,81 @@ class TestDemo:
 
         # Strip demo_data manually for expected comparison
         str_cols = [
-            col for col, dtype in DEMO_COLUMN_TYPES.items() if dtype == "string"
+            col for col, dtype in const.DEMO_COLUMN_TYPES.items() if dtype == "string"
         ]
         for col in str_cols:
             demo_data[col] = demo_data[col].str.strip()
 
         # Normalise stored data for expected comparison
-        normalize_dataframe(stored_data, DEMO_COLUMN_TYPES)
+        stored_data = normalize_dataframe(stored_data, const.DEMO_COLUMN_TYPES)
 
         # Match dtypes before comparing
-        for col, dtype in DEMO_COLUMN_TYPES.items():
+        for col, dtype in const.DEMO_COLUMN_TYPES.items():
             demo_data[col] = demo_data[col].astype(dtype)
             assert stored_data[col].equals(
                 demo_data[col]
             ), f"Mismatch in column '{col}, {demo_data[col].to_string()}, {stored_data[col].to_string()}'"
 
-    def test_demo_fields_are_uppercased(self, command):
+    def test_demo_fields_are_uppercased(
+        self, demo_data, create_zipped_csv, tmp_path, cases_ids, command
+    ):
         """
         Ensure that clean_row applies uppercasing to all string fields.
         """
-        # Create a named tuple as ittertuples would yield
-        Row = namedtuple(
-            "Row",
-            [
-                "primaryid",
-                "caseid",
-                "age",
-                "age_cod",
-                "sex",
-                "wt",
-                "wt_cod",
-                "event_dt_num",
-            ],
-        )
-        row = Row(1, 1, 30, "  yr ", " m ", 70, " kg ", "1/2/2020")
+        demo_data["sex"] = "f"
+        demo_data["age_cod"] = "yr"
+        demo_data["wt_cod"] = "kg"
+
+        zip_path = create_zipped_csv(demo_data, "demo2020q1", tmp_path)
+        custom_cases_ids = cases_ids(demo_data)
 
         cmd, _ = command
-        cleaned = cmd._clean_row(row=row, lower=False)
+        cmd._load_term_data(
+            zip_path,
+            custom_cases_ids,
+            Demo,
+            const.DEMO_COLUMNS,
+            const.DEMO_COLUMN_TYPES,
+            False,
+        )
 
-        assert cleaned["age_cod"] == "YR"
-        assert cleaned["sex"] == "M"
-        assert cleaned["wt_cod"] == "KG"
+        demos = Demo.objects.all()
 
-    def test_demo_fields_accept_nulls(self, cases_ids, demo_data):
+        for demo in demos:
+            assert demo.sex == "F"
+            assert demo.age_cod == "YR"
+            assert demo.wt_cod == "KG"
+
+    def test_demo_fields_accept_nulls(
+        self, demo_data, create_zipped_csv, tmp_path, cases_ids, command
+    ):
         """
         Ensure all nullable fields correctly store None in the database.
         """
         custom_cases_ids = cases_ids(demo_data)
-        _, case_id = next(iter(custom_cases_ids.items()))
+        # Get the first custom case ID from the dictionary
+        custom_case_id = next(iter(custom_cases_ids.items()))
 
-        demo = Demo.objects.create(
-            case_id=case_id,
-            event_dt_num=None,
-            age=None,
-            age_cod=None,
-            sex=None,
-            wt=None,
-            wt_cod=None,
+        # Create a demo object with None values for nullable fields
+        demo_data["event_dt_num"] = None
+        demo_data["age"] = None
+        demo_data["age_cod"] = None
+        demo_data["sex"] = None
+        demo_data["wt"] = None
+        demo_data["wt_cod"] = None
+
+        zip_path = create_zipped_csv(demo_data.iloc[[0]], "demo2020q1", tmp_path)
+        cmd, _ = command
+        cmd._load_term_data(
+            zip_path,
+            {custom_case_id[0]: custom_case_id[1]},
+            Demo,
+            const.DEMO_COLUMNS,
+            const.DEMO_COLUMN_TYPES,
+            False,
         )
 
-        fetched = Demo.objects.get(id=demo.id)
+        fetched = Demo.objects.get(case_id=custom_case_id[1])
 
         assert fetched.event_dt_num is None
         assert fetched.age is None
@@ -241,21 +394,7 @@ class TestDemo:
 
 @pytest.mark.django_db
 class TestDrug:
-    @pytest.fixture
-    def drug_data(self):
-        """Provides sample drug data as a DataFrame."""
-        drugnames = ["aspirin", "tylenol"]
-        for drug in drugnames:
-            DrugName.objects.create(name=drug)
-
-        data = {
-            "primaryid": [1, 2],
-            "caseid": [1, 2],
-            "drugname": drugnames,
-        }
-        return pd.DataFrame(data)
-
-    def test_load_drug_data_stdout_messages(
+    def test_load_term_data_stdout_messages(
         self, drug_data, cases_ids, create_zipped_csv, tmp_path, command
     ):
         """Test stdout messages during drug data loading."""
@@ -263,42 +402,21 @@ class TestDrug:
         custom_cases_ids = cases_ids(drug_data)
 
         cmd, output = command
-        cmd._load_drug_data(zip_path, custom_cases_ids)
+        cmd._load_term_data(
+            zip_path,
+            custom_cases_ids,
+            Drug,
+            const.DRUG_COLUMNS,
+            const.DRUG_COLUMN_TYPES,
+            True,
+        )
 
         assert (
             output.getvalue()
-            == f"Loading drug data from {zip_path}...\nLoaded 2 drug records from file {zip_path}\n"
+            == f"Loading Drug data from {zip_path}...\nLoaded 2 Drug records from file {zip_path}\n"
         )
 
-    def test_load_drug_data_correct_drug_objects(
-        self, drug_data, create_zipped_csv, tmp_path, cases_ids, command
-    ):
-        """Test that drug objects are created correctly."""
-        zip_path = create_zipped_csv(drug_data, "drug2020q1", tmp_path)
-        custom_cases_ids = cases_ids(drug_data)
-
-        cmd, _ = command
-        cmd._load_drug_data(zip_path, custom_cases_ids)
-
-        # Get stored values, rename 'drug__name' to 'drugname' and reconstruct DataFrame
-        stored_values = (
-            Drug.objects.all()
-            .annotate(drugname=F("drug__name"))
-            .values("primaryid", "caseid", "drugname")
-        )
-        stored_data = pd.DataFrame.from_records(stored_values)
-
-        # Normalise stored data for expected comparison
-        normalize_dataframe(stored_data, DRUG_COLUMN_TYPES)
-
-        # Match dtypes before comparing
-        for col, dtype in DRUG_COLUMN_TYPES.items():
-            drug_data[col] = drug_data[col].astype(dtype)
-            assert stored_data[col].equals(
-                drug_data[col]
-            ), f"Mismatch in column '{col}, {drug_data[col].to_string()}, {stored_data[col].to_string()}'"
-
-    def test_load_drug_data_strips_whitespace(
+    def test_load_term_data_strips_whitespace(
         self, drug_data, create_zipped_csv, tmp_path, cases_ids, command
     ):
         """Test that whitespace is stripped from drug names, so the drug name can be found in the DrugName table"""
@@ -309,12 +427,19 @@ class TestDrug:
         custom_cases_ids = cases_ids(drug_data)
 
         cmd, _ = command
-        cmd._load_drug_data(zip_path, custom_cases_ids)
+        cmd._load_term_data(
+            zip_path,
+            custom_cases_ids,
+            Drug,
+            const.DRUG_COLUMNS,
+            const.DRUG_COLUMN_TYPES,
+            True,
+        )
 
         # Check that 2 drugs were created - the whitespace was striped
         assert Drug.objects.count() == 2
 
-    def test_load_drug_data_skips_non_existing_cases(
+    def test_load_term_data_skips_non_existing_cases(
         self, drug_data, create_zipped_csv, tmp_path, command
     ):
         """Test that drugs for non-existing cases are skipped."""
@@ -323,6 +448,13 @@ class TestDrug:
         custom_cases_ids = {}
 
         cmd, _ = command
-        cmd._load_drug_data(zip_path, custom_cases_ids)
+        cmd._load_term_data(
+            zip_path,
+            custom_cases_ids,
+            Drug,
+            const.DRUG_COLUMNS,
+            const.DRUG_COLUMN_TYPES,
+            True,
+        )
 
         assert Drug.objects.count() == 0
