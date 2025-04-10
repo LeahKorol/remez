@@ -25,6 +25,11 @@ function Login() {
 
       const data = await response.json();
 
+      if (response.ok) {
+        localStorage.setItem('token', data.access);
+        console.log('Token saved:', data.access);
+      }
+
       if (!response.ok) {
         if (response.status === 401) {
           setError('Invalid email or password');
