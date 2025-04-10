@@ -532,34 +532,47 @@ const UserProfile = () => {
       try {
         setLoading(true);
 
-        const mockUser = {
-          id: 'user-123',
-          email: 'john.doe@remez.com',
-          name: 'John Doe',
-        };
+        const token = localStorage.getItem('token');
+        console.log('token:', token);  
+
+        const userResponse = await fetch('http://127.0.0.1:8000/api/v1/auth/user/', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!userResponse.ok) {
+          throw new Error('Failed to fetch user data');
+        }
 
         // in this level we use fake data. In real life we would fetch data from the supabase
-        const mockQueries = [
-          {
-            id: 1,
-            user_id: 'user-123',
-            drugs: ['omeprazole', 'simvastatin', 'aspirin'],
-            reactions: ['headache', 'fatigue', 'nausea'],
-            result: 'There is a match between the side effect "headache" and the drug "aspirin". It is recommended to consult a doctor.',
-            created_at: '2025-03-28T14:30:00Z'
-          },
-          {
-            id: 2,
-            user_id: 'user-123',
-            drugs: ['amoxicillin', 'levofloxacin'],
-            reactions: ['skin rash', 'dizziness'],
-            result: 'A match was found between "skin rash" and the drug "amoxicillin". This is a known side effect that occurs in 3% of patients.',
-            created_at: '2025-03-25T10:15:00Z'
-          }
-        ];
+        // const mockQueries = [
+        //   {
+        //     id: 1,
+        //     user_id: 'user-123',
+        //     drugs: ['omeprazole', 'simvastatin', 'aspirin'],
+        //     reactions: ['headache', 'fatigue', 'nausea'],
+        //     result: 'There is a match between the side effect "headache" and the drug "aspirin". It is recommended to consult a doctor.',
+        //     created_at: '2025-03-28T14:30:00Z'
+        //   },
+        //   {
+        //     id: 2,
+        //     user_id: 'user-123',
+        //     drugs: ['amoxicillin', 'levofloxacin'],
+        //     reactions: ['skin rash', 'dizziness'],
+        //     result: 'A match was found between "skin rash" and the drug "amoxicillin". This is a known side effect that occurs in 3% of patients.',
+        //     created_at: '2025-03-25T10:15:00Z'
+        //   }
+        // ];
 
-        setUser(mockUser);
-        setSavedQueries(mockQueries);
+        // setUser(mockUser);
+
+        
+        const userData = await userResponse.json();
+        const userName = userData.email.split('@')[0];
+        setUser({ ...userData, name: userName });
+        // setSavedQueries(mockQueries);
 
       } catch (error) {
         console.error('Error fetching user data:', error);

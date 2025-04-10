@@ -28,6 +28,8 @@ function Login() {
       if (response.ok) {
         localStorage.setItem('token', data.access);
         console.log('Token saved:', data.access);
+        navigate('/profile');
+        return;
       }
 
       if (!response.ok) {
@@ -42,12 +44,11 @@ function Login() {
         return;
       }
 
-      // Handle successful login
-      localStorage.setItem('token', data.token);
-      navigate('/profile');
-    } catch (err) {
+    }
+    catch (err) {
       setError('Network error. Please try again.');
-    } finally {
+    }
+    finally {
       setIsLoading(false);
     }
   };
@@ -63,14 +64,14 @@ function Login() {
       <div className="login-header">
         <div className="logo">REMEZ</div>
       </div>
-      
+
       <div className="login-form-container">
         <div className="login-form">
           <h1>Welcome Back</h1>
           <p className="login-subtitle">Please login to access your personal area</p>
-          
+
           {error && <div className="error-message">{error}</div>}
-          
+
           <form onSubmit={handleLogin}>
             <div className="form-group">
               <label htmlFor="email">Email</label>
@@ -82,7 +83,7 @@ function Login() {
                 required
               />
             </div>
-            
+
             <div className="form-group">
               <label htmlFor="password">Password</label>
               <input
@@ -93,28 +94,28 @@ function Login() {
                 required
               />
             </div>
-            
-            <button 
-              type="submit" 
+
+            <button
+              type="submit"
               className="login-button"
               disabled={isLoading}
             >
               {isLoading ? 'Logging in...' : 'Login'}
             </button>
           </form>
-          
+
           <div className="separator">
             <span>or</span>
           </div>
-          
-          <button 
+
+          <button
             className="google-login-button"
             onClick={handleGoogleLogin}
           >
             <img src="/google-icon.svg" alt="Google" />
             Sign in with Google
           </button>
-          
+
           <p className="register-link">
             Don't have an account? <a href="/register">Register</a>
           </p>
