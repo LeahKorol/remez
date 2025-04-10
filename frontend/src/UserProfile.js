@@ -533,7 +533,7 @@ const UserProfile = () => {
         setLoading(true);
 
         const token = localStorage.getItem('token');
-        console.log('token:', token);  
+        console.log('token:', token);
 
         const userResponse = await fetch('http://127.0.0.1:8000/api/v1/auth/user/', {
           headers: {
@@ -566,9 +566,6 @@ const UserProfile = () => {
         //   }
         // ];
 
-        // setUser(mockUser);
-
-        
         const userData = await userResponse.json();
         const userName = userData.email.split('@')[0];
         setUser({ ...userData, name: userName });
@@ -732,13 +729,31 @@ const UserProfile = () => {
     }
   };
 
-  const handleLogout = () => {
-    setShowLogoutPopup(true);
-    setTimeout(() => {
-      localStorage.removeItem('token');
-      navigate('/');
-    }, 2000);
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/v1/auth/logout/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        localStorage.removeItem('token');  // remove the token from local storage
+        navigate('/');  // go to home page
+      } else {
+        // if the request failed, show an error message
+        const data = await response.json();
+        console.error('Logout failed:', data.message || 'Something went wrong');
+        alert('An error occurred while logging out');
+      }
+    } catch (error) {
+      console.error('Network error during logout:', error);
+      alert('Network error during logout');
+    }
   };
+
 
   if (loading) {
     return <div className="loading">Loading...</div>;
