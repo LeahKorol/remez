@@ -12,6 +12,7 @@ const UserProfile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [queryName, setQueryName] = useState('');
   const [editingQueryId, setEditingQueryId] = useState(null);
   const [showLogoutPopup, setShowLogoutPopup] = useState(false);
   const navigate = useNavigate();
@@ -76,6 +77,80 @@ const UserProfile = () => {
       console.error('Error fetching queries:', error);
       setError('An error occurred while loading queries');
     }
+  };
+
+
+  const getCSRFToken = () => {
+    const cookies = document.cookie.split('; ');
+    const csrfCookie = cookies.find(cookie => cookie.startsWith('csrftoken='));
+    return csrfCookie ? csrfCookie.split('=')[1] : null;
+  };
+
+
+  const handleSubmitQuery = async (e) => {
+    e.preventDefault();
+
+    const validdrugs = drugs.filter(med => med.trim() !== '');
+    const validReactions = reactions.filter(effect => effect.trim() !== '');
+
+    if (!validdrugs.length || !validReactions.length || !user) {
+      alert('Please enter at least one drug and one side reaction.');
+      return;
+    }
+
+    const csrfToken = getCSRFToken();  // get this token from cookies
+    const token = localStorage.getItem('token');  
+
+    if (!token || !csrfToken) {
+      alert('You are not logged in. Please log in first.');
+      return;
+    }
+
+    const data = {
+      name: 'New Query',
+      drugs: validdrugs,
+      reactions: validReactions,
+      quarter_start: 49,
+      quarter_end: 50,
+    };
+
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/v1/analysis/queries/', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,  
+          'X-CSRFTOKEN': csrfToken,
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (response.ok) {
+        const newQuery = await response.json();
+        setSavedQueries([newQuery, ...savedQueries]);
+        setdrugs(['']);
+        setReactions(['']);
+      } else {
+        const error = await response.json();
+        console.error('Error saving query : ', error);
+        alert('Failed to save query : ', error.massage || 'unknown error');
+      }
+    } catch (error) {
+      console.error('Error saving query:', error);
+      alert('An error occurred while saving the query : ', error.message || 'unknown error');
+    }
+  };
+
+
+  const handleEditQueryName = (queryId, newName) => {
+    const updatedQueries = savedQueries.map(query => {
+      if (query.id === queryId) {
+        return { ...query, name: newName };
+      }
+      return query;
+    });
+    setSavedQueries(updatedQueries);
   };
 
 
@@ -150,78 +225,6 @@ const UserProfile = () => {
     setReactions(['']);  // reset reactions list
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    // validation of fields before submission
-    const validdrugs = drugs.filter(med => med.trim() !== '');
-    const validReactions = reactions.filter(effect => effect.trim() !== '');
-
-    if (!validdrugs.length || !validReactions.length || !user) {
-      alert('Please enter at least one drug and one side reaction.');
-      return;
-    }
-
-    try {
-      if (isEditing) {
-        // כאן נשלח בקשה לשרת לעדכון הנתונים
-        /* 
-        const { data, error } = await supabase
-          .from('queries')
-          .update({
-            drugs: validdrugs,
-            reactions: validreactions,
-          })
-          .eq('id', editingQueryId)
-          .select();
-        */
-
-        // local updating
-        const updatedQueries = savedQueries.map(query => {
-          if (query.id === editingQueryId) {
-            // fake response from supabase
-            const updatedResult = `Updated result after checking ${validdrugs.length} drugs and ${validReactions.length} reactions.`;
-
-            return {
-              ...query,
-              drugs: validdrugs,
-              reactions: validReactions,
-              result: updatedResult,
-              updated_at: new Date().toISOString()
-            };
-          }
-          return query;
-        });
-
-        setSavedQueries(updatedQueries);
-        setIsEditing(false);
-        setEditingQueryId(null);
-      } else {
-        // כאן נשלח בקשה לשרת שיעבד את הנתונים
-        const result = "Sample result - analysis of the relationship between drugs and reactions";
-
-        // במקום להכניס לדאטה-בייס, פשוט מוסיפים לסטייט המקומי
-        const newQuery = {
-          id: Date.now(),
-          user_id: user.id,
-          drugs: validdrugs,
-          reactions: validReactions,
-          result: result,
-          created_at: new Date().toISOString()
-        };
-
-        setSavedQueries([newQuery, ...savedQueries]);
-      }
-
-      // reset fields after submission
-      setdrugs(['']);
-      setReactions(['']);
-
-    } catch (error) {
-      console.error('Error saving query:', error);
-      alert('An error occurred while saving the query');
-    }
-  };
 
   const handleLogout = async () => {
     setShowLogoutPopup(true);
@@ -282,7 +285,7 @@ const UserProfile = () => {
             )}
           </div>
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmitQuery}>
             <div className="form-section">
               <h3 className="section-label">Drugs list</h3>
               {drugs.map((drug, index) => (
@@ -394,8 +397,13 @@ const UserProfile = () => {
                       <button
                         type="button"
                         className="action-button edit-button"
-                        onClick={() => handleEditQuery(item)}
-                        title="Edit Query"
+                        onClick={() => {
+                          const newName = prompt('Enter new name for the query:', item.name);
+                          if (newName) {
+                            handleEditQueryName(item.id, newName);
+                          }
+                        }}
+                        title="Edit Query Name"
                       >
                         <FaEdit />
                       </button>
@@ -410,6 +418,9 @@ const UserProfile = () => {
                     </div>
                   </div>
                   <div className="query-content">
+                    <div className="query-name">
+                      <strong>Query Name:</strong> {item.name}
+                    </div>
                     <div className="query-drugs">
                       <strong>Drugs:</strong> {item.drugs.join(', ')}
                     </div>
