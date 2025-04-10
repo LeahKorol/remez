@@ -7,6 +7,7 @@ This project reimplements the logic from faers-analysis by Dr. Boris Gorelik.
 It adapts the original CSV-based computations into a scalable, queryable database-backed approach.
 
 ## Technology Stack
+- **Frontend**: REACT, JavaScript, CSS
 - **Backend**: Django (Python)
 - **Database**: Supabase (PostgreSQL)
 - **Data Source**: FDA Adverse Event Reporting System (FAERS)
