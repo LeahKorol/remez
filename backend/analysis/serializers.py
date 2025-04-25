@@ -85,3 +85,17 @@ class QuerySerializer(serializers.ModelSerializer):
 
             return instance
         return None
+
+
+class DrugNameSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DrugName
+        fields = "__all__"
+        read_only_fields = ("id", "name")
+
+
+class ReactionNameSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReactionName
+        fields = "__all__"
+        read_only_fields = ("id", "name")

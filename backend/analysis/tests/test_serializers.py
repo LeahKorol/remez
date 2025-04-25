@@ -1,7 +1,12 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from analysis.models import Query, DrugName, ReactionName
-from analysis.serializers import QuerySerializer
+from analysis.serializers import (
+    QuerySerializer,
+    DrugNameSerializer,
+    ReactionNameSerializer,
+)
+import pytest
 
 
 class QuerySerializerTest(TestCase):
@@ -161,3 +166,53 @@ class QuerySerializerTest(TestCase):
         data = {"drugs": [], "reactions": []}  # Explicitly removing relations
         serializer = QuerySerializer(instance=self.query, data=data, partial=True)
         self.assertFalse(serializer.is_valid())
+
+
+@pytest.fixture
+def term_instances(request):
+    """Fixture to create test instances for each model"""
+    model_class = request.param[0]
+    instance1 = model_class.objects.create(name="Test 1")
+    instance2 = model_class.objects.create(name="Test 2")
+    return {
+        "model_class": model_class,
+        "serializer_class": request.param[1],
+        "instance1": instance1,
+        "instance2": instance2,
+    }
+
+
+@pytest.mark.parametrize(
+    "term_instances",
+    [
+        (DrugName, DrugNameSerializer),
+        (ReactionName, ReactionNameSerializer),
+    ],
+    indirect=True,
+)
+@pytest.mark.django_db
+class TestTermNameModelSerializer:
+    """Test TermName model serializers"""
+
+    def test_serialization(self, term_instances):
+        """Test that serialization produces expected data"""
+        serializer = term_instances["serializer_class"](
+            instance=term_instances["instance1"]
+        )
+        expected_data = {
+            "id": term_instances["instance1"].id,
+            "name": term_instances["instance1"].name,
+        }
+        assert serializer.data == expected_data
+
+    def test_read_only_fields(self, term_instances):
+        """Test that read-only fields cannot be updated"""
+        data = {"id": 9999, "name": "new name"}
+        serializer = term_instances["serializer_class"](
+            instance=term_instances["instance1"], data=data, partial=True
+        )
+        assert serializer.is_valid()
+        serializer.save()
+        # term fields should remain unchanged
+        assert term_instances["instance1"].id != 9999
+        assert term_instances["instance1"].name != "new name"

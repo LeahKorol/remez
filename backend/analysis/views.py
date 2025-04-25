@@ -1,15 +1,20 @@
 from rest_framework.permissions import IsAuthenticated
-from rest_framework import viewsets
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
 from rest_framework.response import Response
-from analysis.models import Query
-from analysis.serializers import QuerySerializer
+from analysis.models import Query, DrugName, ReactionName
+from analysis.serializers import (
+    QuerySerializer,
+    DrugNameSerializer,
+    ReactionNameSerializer,
+)
 from drf_spectacular.utils import extend_schema_view, extend_schema
 from django.shortcuts import get_object_or_404
 
 
 @extend_schema_view(
     **{
-        method: extend_schema(tags=["Analysis"])
+        method: extend_schema(tags=["Query"])
         for method in [
             "list",
             "retrieve",
@@ -74,3 +79,64 @@ class QueryViewSet(viewsets.ModelViewSet):
         # Save the data
         serializer.save(**validated_data)
         return Response(data=serializer.data)
+
+
+class TermNameSearchViewSet(viewsets.GenericViewSet):
+    """Base viewset for searching term names by prefix."""
+    permission_classes = [IsAuthenticated]
+
+    @action(detail=False, methods=["get"], url_path="search/(?P<prefix>[^/.]+)")
+    def search_by_prefix(self, request, prefix=None):
+        # Input validation
+        if not isinstance(prefix, str):
+            return Response(
+                {"error": "Invalid prefix type"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        prefix = prefix.strip()
+        if len(prefix) < 3:
+            return Response(
+                {"error": "Prefix must be at least 3 characters long"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Perform case-insensitive search
+        term_names = self.queryset.filter(name__istartswith=prefix).order_by("name")[
+            :100
+        ]
+        if not term_names.exists():
+            return Response(
+                {"message": f"No matching term {self.model_name} found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Handle pagination
+        page = self.paginate_queryset(term_names)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(term_names, many=True)
+        return Response(serializer.data)
+
+
+@extend_schema_view(
+    search_by_prefix=extend_schema(
+        tags=["Drug Names"]
+    )
+)
+class DrugNameViewSet(TermNameSearchViewSet):
+    serializer_class = DrugNameSerializer
+    queryset = DrugName.objects.all()
+    model_name = "drug name"
+
+
+@extend_schema_view(
+    search_by_prefix=extend_schema(
+        tags=["Reaction Names"]
+    )
+)
+class ReactionNameViewSet(TermNameSearchViewSet):
+    serializer_class = ReactionNameSerializer
+    queryset = ReactionName.objects.all()
+    model_name = "reaction name"
