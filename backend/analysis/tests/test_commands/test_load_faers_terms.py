@@ -21,13 +21,13 @@ class TestLoadFaersTerms:
         and ignore files outside that range.
         """
         create_zipped_csv(
-            pd.DataFrame({"drugname": ["ASPIRIN"]}), "drug2020q1", tmp_path
+            pd.DataFrame({"drugname": ["aspirin"]}), "drug2020q1", tmp_path
         )
         create_zipped_csv(
-            pd.DataFrame({"drugname": ["IBUPROFEN"]}), "drug2020q2", tmp_path
+            pd.DataFrame({"drugname": ["ibupropen"]}), "drug2020q2", tmp_path
         )
         create_zipped_csv(
-            pd.DataFrame({"drugname": ["PARACETAMOL"]}), "drug2020q3", tmp_path
+            pd.DataFrame({"drugname": ["paracetamol"]}), "drug2020q3", tmp_path
         )  # ignored
 
         out = StringIO()
@@ -42,9 +42,9 @@ class TestLoadFaersTerms:
         )
 
         assert DrugName.objects.count() == 2
-        assert DrugName.objects.filter(name="ASPIRIN").exists()
-        assert DrugName.objects.filter(name="IBUPROFEN").exists()
-        assert not DrugName.objects.filter(name="PARACETAMOL").exists()
+        assert DrugName.objects.filter(name="aspirin").exists()
+        assert DrugName.objects.filter(name="ibupropen").exists()
+        assert not DrugName.objects.filter(name="paracetamol").exists()
 
     def test_loads_reaction_terms_for_specific_quarters(
         self,
@@ -55,8 +55,8 @@ class TestLoadFaersTerms:
         Should load only reaction terms within the given quarter range (2022q1),
         and skip earlier ones like 2021q4.
         """
-        create_zipped_csv(pd.DataFrame({"pt": ["NAUSEA"]}), "reac2021q4", tmp_path)
-        create_zipped_csv(pd.DataFrame({"pt": ["HEADACHE"]}), "reac2022q1", tmp_path)
+        create_zipped_csv(pd.DataFrame({"pt": ["nausea"]}), "reac2021q4", tmp_path)
+        create_zipped_csv(pd.DataFrame({"pt": ["headache"]}), "reac2022q1", tmp_path)
 
         out = StringIO()
         call_command(
@@ -70,8 +70,8 @@ class TestLoadFaersTerms:
         )
 
         assert ReactionName.objects.count() == 1
-        assert ReactionName.objects.filter(name="HEADACHE").exists()
-        assert not ReactionName.objects.filter(name="NAUSEA").exists()
+        assert ReactionName.objects.filter(name="headache").exists()
+        assert not ReactionName.objects.filter(name="nausea").exists()
 
     def test_skips_existing_terms(
         self,
@@ -81,14 +81,14 @@ class TestLoadFaersTerms:
         """
         Should not duplicate terms that already exist in the database.
         """
-        DrugName.objects.create(name="ASPIRIN")
-        ReactionName.objects.create(name="NAUSEA")
+        DrugName.objects.create(name="aspirin")
+        ReactionName.objects.create(name="nausea")
 
         create_zipped_csv(
-            pd.DataFrame({"drugname": ["ASPIRIN", "IBUPROFEN"]}), "drug2020q1", tmp_path
+            pd.DataFrame({"drugname": ["aspirin", "ibupropen"]}), "drug2020q1", tmp_path
         )
         create_zipped_csv(
-            pd.DataFrame({"pt": ["NAUSEA", "HEADACHE"]}), "reac2020q1", tmp_path
+            pd.DataFrame({"pt": ["nausea", "headache"]}), "reac2020q1", tmp_path
         )
 
         out = StringIO()
@@ -102,10 +102,10 @@ class TestLoadFaersTerms:
         )
 
         assert DrugName.objects.count() == 2
-        assert DrugName.objects.filter(name="IBUPROFEN").exists()
+        assert DrugName.objects.filter(name="ibupropen").exists()
 
         assert ReactionName.objects.count() == 2
-        assert ReactionName.objects.filter(name="HEADACHE").exists()
+        assert ReactionName.objects.filter(name="headache").exists()
 
     def test_raises_error_if_required_file_missing(self, tmp_path):
         """

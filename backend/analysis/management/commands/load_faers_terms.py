@@ -5,7 +5,7 @@ from typing import Type
 from django.db.models import Model
 
 from analysis.models import DrugName, ReactionName
-from analysis.faers_analysis.src.utils import Quarter, generate_quarters
+from analysis.faers_analysis.src.utils import Quarter, generate_quarters, normalize_string
 from ..cli_utils import QuarterRangeArgMixin
 
 
@@ -120,9 +120,9 @@ class Command(QuarterRangeArgMixin, BaseCommand):
             if column not in df.columns:
                 raise CommandError(f"Column '{column}' not found in {file.name}")
 
-            # TO_DO: Ask Dr. Gorelik whether to add more normalization (e.g., `lower()` and `strip()`)
             for name in df[column].dropna().astype(str):
-                if name not in existing:
+                name = normalize_string(name)
+                if name and name not in existing:
                     new_terms.add(name)
 
             self.stdout.write(f"Loaded new terms from file {file.name}.")
