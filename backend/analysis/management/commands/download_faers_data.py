@@ -13,22 +13,16 @@ import tqdm
 
 from django.core.management.base import BaseCommand, CommandError
 from analysis.faers_analysis.src.utils import Quarter, generate_quarters
+from ..cli_utils import QuarterRangeArgMixin
 
 
-class Command(BaseCommand):
+class Command(QuarterRangeArgMixin, BaseCommand):
     help = "Download FAERS quarterly CSV files"
 
     def add_arguments(self, parser):
-        parser.add_argument(
-            "year_q_from",
-            type=str,
-            help='XXXXqQ, where XXXX is the year, q is the literal "q" and Q is 1, 2, 3 or 4',
-        )
-        parser.add_argument(
-            "year_q_to",
-            type=str,
-            help='XXXXqQ, where XXXX is the year, q is the literal "q" and Q is 1, 2, 3 or 4',
-        )
+        # Add year_q_from and year_q_to
+        super().add_arguments(parser)
+
         parser.add_argument(
             "--dir_out",
             type=str,

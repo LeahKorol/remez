@@ -17,7 +17,12 @@ class QuerySerializerTest(TestCase):
         cls.reaction2 = ReactionName.objects.create(name="Reaction Y")
 
         cls.query = Query.objects.create(
-            user=cls.user, name="Test Query", quarter_start=1, quarter_end=2
+            user=cls.user,
+            name="Test Query",
+            quarter_start=1,
+            quarter_end=2,
+            year_start=2020,
+            year_end=2020,
         )
         cls.query.drugs.set([cls.drug1.id])
         cls.query.reactions.set([cls.reaction1.id])
@@ -38,6 +43,8 @@ class QuerySerializerTest(TestCase):
             "user": self.query.user.id,  # ForeignKey should be serialized as ID
             "quarter_start": self.query.quarter_start,
             "quarter_end": self.query.quarter_end,
+            "year_start": self.query.year_start,
+            "year_end": self.query.year_end,
             "x_values": self.query.x_values,
             "y_values": self.query.y_values,
         }
@@ -49,6 +56,8 @@ class QuerySerializerTest(TestCase):
             "name": "New Query",
             "quarter_start": 1,
             "quarter_end": 2,
+            "year_start": 2020,
+            "year_end": 2020,
             "reactions": [self.reaction1.id],  # No drugs
         }
         serializer = QuerySerializer(data=data)
@@ -61,6 +70,8 @@ class QuerySerializerTest(TestCase):
             "name": "New Query",
             "quarter_start": 1,
             "quarter_end": 2,
+            "year_start": 2020,
+            "year_end": 2020,
             "drugs": [self.drug1.id],  # No reactions
         }
         serializer = QuerySerializer(data=data)
@@ -73,6 +84,8 @@ class QuerySerializerTest(TestCase):
             "name": "Created Query",
             "quarter_start": 1,
             "quarter_end": 2,
+            "year_start": 2020,
+            "year_end": 2020,
             "drugs": [self.drug1.id, self.drug2.id],
             "reactions": [self.reaction1.id, self.reaction2.id],
         }
@@ -95,6 +108,8 @@ class QuerySerializerTest(TestCase):
             "name": "Updated Query",
             "quarter_start": 3,
             "quarter_end": 4,
+            "year_start": 2020,
+            "year_end": 2020,
             "drugs": [self.drug2.id],  # Change drugs
             "reactions": [self.reaction2.id],  # Change reactions
         }
