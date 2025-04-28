@@ -119,7 +119,7 @@ def normalize_string(s: str, lower=True) -> str:
     Cleans a string by:
     - Stripping whitespace and replacing multiple spaces with a single space
     - Converting to lowercase if lower==True, else to uppercase
-    - Trimming non-alphanumeric characters from the start and end
+    - Trimming non-alphanumeric characters from the start and end (excluding brackets)
 
     Returns:
         A normalized string, or None if the result has no alphanumeric content.
@@ -136,10 +136,10 @@ def normalize_string(s: str, lower=True) -> str:
 
     start, end = 0, len(s) - 1
 
-    while start < end and not s[start].isalnum():
+    while start < end and not s[start].isalnum() and not s[start] in ["(", "[", "{"]:
         start += 1
 
-    while end > start and not s[end].isalnum():
+    while end > start and not s[end].isalnum() and not s[end] in [")", "]", "}"]:
         end -= 1
 
     if start <= end:
