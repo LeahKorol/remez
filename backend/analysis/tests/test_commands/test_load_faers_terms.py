@@ -135,7 +135,7 @@ class TestLoadFaersTerms:
         create_zipped_csv(pd.DataFrame({"wrong_col": ["oops"]}), "reac2020q1", tmp_path)
 
         out = StringIO()
-        with pytest.raises(CommandError):
+        with pytest.raises(ValueError):
             call_command(
                 "load_faers_terms",
                 "2020q1",

@@ -5,7 +5,11 @@ from typing import Type
 from django.db.models import Model
 
 from analysis.models import DrugName, ReactionName
-from analysis.faers_analysis.src.utils import Quarter, generate_quarters, normalize_string
+from analysis.faers_analysis.src.utils import (
+    Quarter,
+    generate_quarters,
+    normalize_string,
+)
 from ..cli_utils import QuarterRangeArgMixin
 
 
@@ -68,9 +72,12 @@ class Command(QuarterRangeArgMixin, BaseCommand):
         files = self._get_term_files(input_dir, q_first, q_last, prefix)
         new_terms = self._collect_new_terms(files, column, model, term)
 
+        # ignore_conflicts=True so inserting terms that already exist won't throw errors.
+        # That enables inserting identdied terms from multiple files.
         model.objects.bulk_create(
             [model(name=name) for name in new_terms],
             batch_size=1000,
+            ignore_conflicts=True,
         )
         self.stdout.write(
             self.style.SUCCESS(f"Inserted {len(new_terms)} new {term} terms.")
@@ -107,22 +114,17 @@ class Command(QuarterRangeArgMixin, BaseCommand):
         """
         Extracts and deduplicates new terms from CSV files based on the given column.
         """
-        # Use set for quick lookups
-        existing = set(model.objects.values_list("name", flat=True))
         # Use set to ensure uniqueness across values from different files
         new_terms = set()
 
         self.stdout.write(f"Loading {term_label} terms from {len(files)} files...")
 
         for file in files:
-            df = pd.read_csv(file)
-
-            if column not in df.columns:
-                raise CommandError(f"Column '{column}' not found in {file.name}")
+            df = pd.read_csv(file, usecols=[column], dtype=str)
 
             for name in df[column].dropna().astype(str):
                 name = normalize_string(name)
-                if name and name not in existing:
+                if name:
                     new_terms.add(name)
 
             self.stdout.write(f"Loaded new terms from file {file.name}.")
