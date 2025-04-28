@@ -151,6 +151,9 @@ class Case(models.Model):
 
     class Meta:
         ordering = ["year", "quarter"]
+        indexes = [
+            models.Index(fields=["year", "quarter"]),
+        ]
 
     def __str__(self):
         return f"Case: {self.faers_primary_id}"
@@ -178,22 +181,30 @@ class CaseRelatedModel(models.Model):
 class Demo(CaseRelatedModel):
     """Stores data extracted from the FAERS demo CSV files (e.g., demo{year}q{quarter})."""
 
-    event_dt_num = models.TextField(null=True, validators=[MaxLengthValidator(10)])
-
-    age = models.IntegerField(
-        null=True, validators=[MinValueValidator(0), MaxValueValidator(130)]
+    event_dt_num = models.TextField(
+        null=True, blank=True, validators=[MaxLengthValidator(10)]
     )
+
+    age = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(0)])
     age_cod = models.TextField(
-        null=True, choices=AgeCode.choices, validators=[MaxLengthValidator(5)]
+        null=True,
+        blank=True,
+        choices=AgeCode.choices,
+        validators=[MaxLengthValidator(5)],
     )
     sex = models.TextField(
-        null=True, choices=Sex.choices, validators=[MaxLengthValidator(5)]
+        null=True, blank=True, choices=Sex.choices, validators=[MaxLengthValidator(5)]
     )
     wt = models.FloatField(
-        null=True, validators=[MinValueValidator(0), MaxValueValidator(1000)]
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(1000)],
     )
     wt_cod = models.TextField(
-        null=True, choices=WeightCode.choices, validators=[MaxLengthValidator(5)]
+        null=True,
+        blank=True,
+        choices=WeightCode.choices,
+        validators=[MaxLengthValidator(5)],
     )
 
     class Meta:
@@ -209,6 +220,19 @@ class Demo(CaseRelatedModel):
             CheckConstraint(
                 condition=Q(wt_cod__in=[choice.value for choice in WeightCode]),
                 name="valid_wt_cod_choice",
+            ),
+            # Check that the age is valid for the age code. Age can be up to 120 years
+            CheckConstraint(
+                condition=(
+                    Q(age_cod__isnull=True)
+                    | (Q(age_cod=AgeCode.DECADE) & Q(age__lte=12))
+                    | (Q(age_cod=AgeCode.YEAR) & Q(age__lte=120))
+                    | (Q(age_cod=AgeCode.MONTH) & Q(age__lte=1440))
+                    | (Q(age_cod=AgeCode.WEEK) & Q(age__lte=6240))
+                    | (Q(age_cod=AgeCode.DAY) & Q(age__lte=43800))
+                    | (Q(age_cod=AgeCode.HOUR) & Q(age__lte=1051200))
+                ),
+                name="valid_age_for_age_code",
             ),
         ]
 
@@ -230,7 +254,7 @@ class Outcome(CaseRelatedModel):
     """Stores data extracted from the FAERS outcome CSV files (e.g., outc{year}q{quarter})."""
 
     outc_cod = models.TextField(
-        null=True, choices=OutcomeCode.choices, validators=[MaxValueValidator(5)]
+        null=True, choices=OutcomeCode.choices, validators=[MaxLengthValidator(5)]
     )
 
     class Meta:

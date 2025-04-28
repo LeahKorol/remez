@@ -330,7 +330,7 @@ class DemoModelTests(CaseRelatedModelTestCase):
         self.assertEqual(demo.sex, Sex.MALE)
 
     def test_age_validation(self):
-        demo = Demo(case=self.case, age=150)
+        demo = Demo(case=self.case, age=150, age_cod="YR")
         with self.assertRaises(ValidationError):
             demo.full_clean()
 
