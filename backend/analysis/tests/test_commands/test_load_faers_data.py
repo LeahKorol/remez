@@ -4,8 +4,15 @@ from typing import Callable, Type
 from pathlib import Path
 from django.db.models import F, Model
 
-
-from analysis.models import Case, Demo, Drug, DrugName, Outcome, Reaction, ReactionName
+from analysis.models import (
+    Case,
+    Demo,
+    Drug,
+    DrugName,
+    Outcome,
+    Reaction,
+    ReactionName,
+)
 from analysis.faers_analysis import constants as const
 from analysis.faers_analysis.src.utils import normalize_dataframe
 
@@ -113,15 +120,17 @@ def demo_data():
 def drug_data():
     """Provides sample drug data as a DataFrame."""
     drugnames = ["aspirin", "tylenol"]
+    drug_ids = {}
     for drug in drugnames:
-        DrugName.objects.create(name=drug)
+        drug_obj = DrugName.objects.create(name=drug)
+        drug_ids[drug_obj.name] = drug_obj.id
 
     data = {
         "primaryid": [1, 2],
         "caseid": [1, 2],
         "drugname": drugnames,
     }
-    return pd.DataFrame(data)
+    return pd.DataFrame(data), drug_ids
 
 
 @pytest.fixture
@@ -139,15 +148,17 @@ def outcome_data():
 def reaction_data():
     """Provides sample reaction data as a DataFrame."""
     reactions = ["reaction1", "reaction2"]
+    reaction_ids = {}
     for reaction in reactions:
-        ReactionName.objects.create(name=reaction)
+        reaction_obj = ReactionName.objects.create(name=reaction)
+        reaction_ids[reaction_obj.name] = reaction_obj.id
 
     data = {
         "primaryid": [1, 2],
         "caseid": [1, 2],
         "pt": reactions,
     }
-    return pd.DataFrame(data)
+    return pd.DataFrame(data), reaction_ids
 
 
 @pytest.fixture
@@ -236,12 +247,15 @@ def test_load_term_data_correct_objects(
     """
     Test that term objects are created correctly
     """
+    term_ids = None
+    if term_name in ["drug", "reaction"]:
+        term_data, term_ids = term_data
     zip_path = create_zipped_csv(term_data, f"{term_name}2020q1", tmp_path)
     custom_case_ids = cases_ids(term_data)
 
     cmd, _ = command
     cmd._load_term_data(
-        zip_path, custom_case_ids, model, columns, column_types, to_lower
+        zip_path, custom_case_ids, model, columns, column_types, to_lower, term_ids
     )
 
     stored_values = get_stored_values(model)
@@ -382,7 +396,8 @@ class TestDemo:
             False,
         )
 
-        fetched = Demo.objects.get(case_id=custom_case_id[1])
+        assert Demo.objects.count() == 1
+        fetched = Demo.objects.get(case__id=custom_case_id[1])
 
         assert fetched.event_dt_num is None
         assert fetched.age is None
@@ -398,6 +413,7 @@ class TestDrug:
         self, drug_data, cases_ids, create_zipped_csv, tmp_path, command
     ):
         """Test stdout messages during drug data loading."""
+        drug_data, drug_ids = drug_data
         zip_path = create_zipped_csv(drug_data, "drug2020q1", tmp_path)
         custom_cases_ids = cases_ids(drug_data)
 
@@ -409,6 +425,7 @@ class TestDrug:
             const.DRUG_COLUMNS,
             const.DRUG_COLUMN_TYPES,
             True,
+            drug_ids,
         )
 
         assert (
@@ -421,6 +438,7 @@ class TestDrug:
     ):
         """Test that whitespace is stripped from drug names, so the drug name can be found in the DrugName table"""
         # Add whitespace to drug names
+        drug_data, drug_ids = drug_data
         drug_data["drugname"] = drug_data["drugname"].apply(lambda x: f" {x} \n")
 
         zip_path = create_zipped_csv(drug_data, "drug2020q1", tmp_path)
@@ -434,6 +452,7 @@ class TestDrug:
             const.DRUG_COLUMNS,
             const.DRUG_COLUMN_TYPES,
             True,
+            drug_ids,
         )
 
         # Check that 2 drugs were created - the whitespace was striped
@@ -443,6 +462,7 @@ class TestDrug:
         self, drug_data, create_zipped_csv, tmp_path, command
     ):
         """Test that drugs for non-existing cases are skipped."""
+        drug_data, drug_ids = drug_data
         zip_path = create_zipped_csv(drug_data, "drug2020q1", tmp_path)
         # Empty cases_ids dictionary - should skip all records
         custom_cases_ids = {}
@@ -455,6 +475,28 @@ class TestDrug:
             const.DRUG_COLUMNS,
             const.DRUG_COLUMN_TYPES,
             True,
+            drug_ids,
         )
 
         assert Drug.objects.count() == 0
+
+    def test_create_drug_instance(self, drug_data, cases_ids, command):
+        "Test that a Drug instance is created correctly."
+        drug_data, drug_ids = drug_data
+        cmd, _ = command
+        case_id = cases_ids(drug_data)[drug_data.iloc[0]["primaryid"]]
+
+        drug = cmd._create_drug_instance(case_id, drug_data.iloc[0], drug_ids)
+        assert drug.drug.id == drug_ids[drug_data.iloc[0]["drugname"]]
+        assert drug.case.faers_primaryid == drug_data.iloc[0]["primaryid"]
+
+    def test_unexisting_drugname(self, drug_data, cases_ids, command):
+        """Test that a Drug instance is not created if the drug name does not exist."""
+        drug_data, drug_ids = drug_data
+        case_id = cases_ids(drug_data)[drug_data.iloc[0]["primaryid"]]
+        cmd, _ = command
+        # Remove the drug name from the dictionary to simulate a non-existing drug name
+        del drug_ids[drug_data.iloc[0]["drugname"]]
+
+        drug = cmd._create_drug_instance(case_id, drug_data.iloc[0], drug_ids)
+        assert drug is None
