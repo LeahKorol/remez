@@ -7,6 +7,10 @@ import './UserProfile.css';
 const UserProfile = () => {
   const [drugs, setdrugs] = useState(['']);
   const [reactions, setReactions] = useState(['']);
+  const [yearStart, setYearStart] = useState('');
+  const [yearEnd, setYearEnd] = useState('');
+  const [quarterStart, setQuarterStart] = useState('');
+  const [quarterEnd, setQuarterEnd] = useState('');
   const [user, setUser] = useState(null);
   const [savedQueries, setSavedQueries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -99,7 +103,7 @@ const UserProfile = () => {
     }
 
     const csrfToken = getCSRFToken();  // get this token from cookies
-    const token = localStorage.getItem('token');  
+    const token = localStorage.getItem('token');
 
     if (!token || !csrfToken) {
       alert('You are not logged in. Please log in first.');
@@ -107,12 +111,19 @@ const UserProfile = () => {
     }
 
     const data = {
-      name: 'New Query',
+      name: queryName || 'New Query',
       drugs: validdrugs,
       reactions: validReactions,
-      quarter_start: 49,
-      quarter_end: 50,
+      year_start: parseInt(yearStart),
+      year_end: parseInt(yearEnd),
+      quarter_start: parseInt(quarterStart),
+      quarter_end: parseInt(quarterEnd),
     };
+
+    if (!yearStart || !yearEnd || !quarterStart || !quarterEnd) {
+      alert('Please fill all year and quarter fields.');
+      return;
+    }
 
     try {
       const response = await fetch('http://127.0.0.1:8000/api/v1/analysis/queries/', {
@@ -120,7 +131,7 @@ const UserProfile = () => {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,  
+          'Authorization': `Bearer ${token}`,
           'X-CSRFTOKEN': csrfToken,
         },
         body: JSON.stringify(data),
@@ -289,13 +300,13 @@ const UserProfile = () => {
             <div className="form-section">
               <h3 className="section-label">Drugs list</h3>
               {drugs.map((drug, index) => (
-                <div key={`med-${index}`} className="input-group">
+                <div key={`drug-${index}`} className="input-group">
                   <input
                     type="text"
                     className="input-field"
                     value={drug}
                     onChange={(e) => handleDrugChange(index, e.target.value)}
-                    placeholder="Enter drug name..."
+                    placeholder="Enter a drug..."
                     dir="ltr"
                   />
                   {(index > 0 || drugs.length > 1) && (
@@ -317,6 +328,7 @@ const UserProfile = () => {
                 add drug <FaPlus />
               </button>
             </div>
+            
 
             <div className="form-section">
               <h3 className="section-label">Reactions list</h3>
