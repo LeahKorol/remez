@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000', // Default to localhost if not specified
+  baseURL: import.meta.env.VITE_API_URL, // Default to localhost if not specified
   withCredentials: true, // This is important for cookies to be sent with requests
   headers: {
     'Content-Type': 'application/json',

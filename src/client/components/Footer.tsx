@@ -1,3 +1,5 @@
+import React from "react";
+
 const Footer = () => {
     return (
       <footer className="bg-white bg-opacity-90 backdrop-blur-sm border-t border-gray-200 py-4 text-sm text-gray-500 text-center">
