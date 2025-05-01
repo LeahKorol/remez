@@ -1,7 +1,8 @@
 
-import { useAuth } from "@/client/context/AuthContext";
+import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
-import { Button } from "@/client/components/ui/button";
+import { Button } from "../components/ui/button";
+import React from "react";
 
 export const Navbar = () => {
   const { isAuthenticated, logout } = useAuth();
