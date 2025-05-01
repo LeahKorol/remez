@@ -1,8 +1,9 @@
-import { useAuth } from "@/client/context/AuthContext";  
-import { Button } from "@/client/components/ui/button";
-import { Navbar } from "@/client/components/Navbar";
+import { useAuth } from "../context/AuthContext"; 
+import { Button } from "../components/ui/button";
+import { Navbar } from "../components/Navbar";
 import { useNavigate } from "react-router-dom"; // navigate in the app
 import { BeakerIcon, ShieldCheckIcon, ActivityIcon } from "lucide-react";
+import React from "react";
 
 const Index = () => {
   const { isAuthenticated } = useAuth(); // checks if the user is already connected

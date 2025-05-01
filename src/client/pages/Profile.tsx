@@ -1,13 +1,14 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/client/context/AuthContext";
-import { Navbar } from "@/client/components/Navbar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/client/components/ui/card";
-import { Button } from "@/client/components/ui/button";
+import { useAuth } from "../context/AuthContext";
+import { Navbar } from "../components/Navbar";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Button } from "../components/ui/button";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { searchService, SavedSearch } from "@/client/services/searchService";
+import { searchService, SavedSearch } from "../services/searchService";
+import React from "react";
 
 const Profile = () => {
   const { user, isAuthenticated } = useAuth();

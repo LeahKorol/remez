@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "@/client/context/AuthContext";
-import { Navbar } from "@/client/components/Navbar";
-import { Button } from "@/client/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/client/components/ui/card";
+import { useAuth } from "../context/AuthContext";
+import { Navbar } from "../components/Navbar";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { 
   LineChart, 
   Line, 
@@ -14,9 +14,11 @@ import {
   ResponsiveContainer, 
   ReferenceArea 
 } from "recharts";
+
 import { toast } from "sonner";
 import { Pencil, Search, ZoomIn, ZoomOut } from "lucide-react";
-import { searchService, SearchInput } from "@/client/services/searchService";
+import { searchService, SearchInput } from "../services/searchService";
+import React from "react";
 
 const Results = () => {
   const location = useLocation();

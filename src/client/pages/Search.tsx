@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Navbar } from "@/client/components/Navbar";
-import { Input } from "@/client/components/ui/input";
-import { Button } from "@/client/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/client/components/ui/card";
+import { Navbar } from "../components/Navbar";
+import { Input } from "../components/ui/input";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { toast } from "sonner";
+import React from "react";
 
 const Search = () => {
   const navigate = useNavigate();

@@ -96,12 +96,13 @@
 
 
 import { useState } from "react";
-import Layout from "@/client/components/Layout";
-import { Input } from "@/client/components/ui/input";
-import { Button } from "@/client/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/client/components/ui/card";
+import Layout from "../components/Layout";
+import { Input } from "../components/ui/input";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import React from "react";
 
 const Login = () => {
   const [email, setEmail] = useState(""); // Save the user email
