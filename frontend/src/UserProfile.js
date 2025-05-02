@@ -6,7 +6,7 @@ import './UserProfile.css';
 
 const UserProfile = () => {
   // form state
-  const [drugs, setdrugs] = useState([{ name: '', id: null }]);
+  const [drugs, setDrugs] = useState([{ name: '', id: null }]);
   const [reactions, setReactions] = useState([{ name: '', id: null }]);
   const [yearStart, setYearStart] = useState('');
   const [yearEnd, setYearEnd] = useState('');
@@ -32,7 +32,7 @@ const UserProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editingQueryId, setEditingQueryId] = useState(null);
   const [showLogoutPopup, setShowLogoutPopup] = useState(false);
-  
+
   const navigate = useNavigate();
 
   // fetch user data on component mount
@@ -103,6 +103,68 @@ const UserProfile = () => {
   };
 
 
+  // Search for drugs as the user types
+  const searchDrugs = async (prefix, index) => {
+    // Only if there are at least 3 characters do the search take place
+    if (!prefix.trim() || prefix.trim().length < 3) {
+      setDrugSearchResults([]);
+      setActiveDrugSearchIndex(null);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://127.0.0.1:8000/api/v1/analysis/drug-names/seach/${prefix}/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setDrugSearchResults(data);
+        setActiveDrugSearchIndex(index);
+      } else {
+        console.error('Error fetching drug search results:', response.statusText);
+        setDrugSearchResults([]);
+      }
+
+    } catch (error) {
+      console.error('Error fetching drug search results:', error);
+      setDrugSearchResults([]);
+    }
+  };
+
+  // Handle drug input changes with debouncing
+  const handleDrugChange = (index, value) => {
+    const newDrugs = [...drugs];
+    newDrugs[index] = { name: value, id: null }; // Reset ID when changing name
+    setDrugs(newDrugs);
+
+    // Debounce the search API call
+    if (drugSearchTimeout.current) {
+      clearTimeout(drugSearchTimeout.current);
+    }
+
+    drugSearchTimeout.current = setTimeout(() => {
+      searchDrugs(value, index);
+    }, 300);
+  };
+
+  // Select a drug from search results
+  const selectDrug = (drug) => {
+    if (activeDrugSearchIndex === null) return;
+
+    const newDrugs = [...drugs];
+    newDrugs[activeDrugSearchIndex] = { name: drug.name, id: drug.id };
+    setDrugs(newDrugs);
+    setDrugSearchResults([]);
+    setActiveDrugSearchIndex(null);
+  };
+
+
+  // Get CSRF token from cookies
   const getCSRFToken = () => {
     const cookies = document.cookie.split('; ');
     const csrfCookie = cookies.find(cookie => cookie.startsWith('csrftoken='));
@@ -113,11 +175,27 @@ const UserProfile = () => {
   const handleSubmitQuery = async (e) => {
     e.preventDefault();
 
-    const validdrugs = drugs.filter(med => med.trim() !== '');
-    const validReactions = reactions.filter(effect => effect.trim() !== '');
+    const validDrugs = drugs.filter(drug => drug.id !== null);
+    const validReactions = reactions.filter(reaction => reaction.id !== null);
 
-    if (!validdrugs.length || !validReactions.length || !user) {
-      alert('Please enter at least one drug and one side reaction.');
+    // Validate form inputs
+    if (validDrugs.length === 0) {
+      alert('Please select at least one valid drug from the search results.');
+      return;
+    }
+
+    if (validReactions.length === 0) {
+      alert('Please select at least one valid reaction from the search results.');
+      return;
+    }
+
+    if (!yearStart || !yearEnd || !quarterStart || !quarterEnd) {
+      alert('Please fill all year and quarter fields.');
+      return;
+    }
+
+    if (!queryName.trim()) {
+      alert('Please provide a name for your query.');
       return;
     }
 
@@ -130,23 +208,25 @@ const UserProfile = () => {
     }
 
     const data = {
-      name: queryName || 'New Query',
-      drugs: validdrugs,
-      reactions: validReactions,
+      name: queryName,
+      drug_ids: validDrugs.map(drug => drug.id),
+      reaction_ids: validReactions.map(reaction => reaction.id),
       year_start: parseInt(yearStart),
       year_end: parseInt(yearEnd),
       quarter_start: parseInt(quarterStart),
       quarter_end: parseInt(quarterEnd),
     };
 
-    if (!yearStart || !yearEnd || !quarterStart || !quarterEnd) {
-      alert('Please fill all year and quarter fields.');
-      return;
-    }
-
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/v1/analysis/queries/', {
-        method: 'POST',
+      // Determine if we're creating or updating a query
+      const url = isEditing
+        ? `http://127.0.0.1:8000/api/v1/analysis/queries/${editingQueryId}/`
+        : 'http://127.0.0.1:8000/api/v1/analysis/queries/';
+
+      const method = isEditing ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method: method,
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
@@ -159,7 +239,7 @@ const UserProfile = () => {
       if (response.ok) {
         const newQuery = await response.json();
         setSavedQueries([newQuery, ...savedQueries]);
-        setdrugs(['']);
+        setDrugs(['']);
         setReactions(['']);
       } else {
         const error = await response.json();
@@ -184,22 +264,16 @@ const UserProfile = () => {
   };
 
 
-  // drugs management functions
-  const handleDrugChange = (index, value) => {
-    const newdrugs = [...drugs];
-    newdrugs[index] = value;
-    setdrugs(newdrugs);
-  };
-
+  // Add a new drug field
   const addDrugField = () => {
-    setdrugs([...drugs, '']);
+    setDrugs([...drugs, { name: '', id: null }]);
   };
 
   const removeDrugField = (index) => {
     if (drugs.length > 1) {
-      const newdrugs = [...drugs];
-      newdrugs.splice(index, 1);
-      setdrugs(newdrugs);
+      const newDrugs = [...drugs];
+      newDrugs.splice(index, 1);
+      setDrugs(newDrugs);
     }
   };
 
@@ -226,7 +300,7 @@ const UserProfile = () => {
   const handleEditQuery = (query) => {
     setIsEditing(true);
     setEditingQueryId(query.id);
-    setdrugs([...query.drugs, '']);
+    setDrugs([...query.drugs, '']);
     setReactions([...query.reactions, '']);
 
     // add scroll to top
@@ -246,12 +320,12 @@ const UserProfile = () => {
   const cancelEditing = () => {
     setIsEditing(false);
     setEditingQueryId(null);
-    setdrugs(['']);
+    setDrugs(['']);
     setReactions(['']);
   };
 
   const handleNewQuery = () => {
-    setdrugs(['']);  // reset drugs list
+    setDrugs(['']);  // reset drugs list
     setReactions(['']);  // reset reactions list
   };
 
@@ -347,7 +421,7 @@ const UserProfile = () => {
                 add drug <FaPlus />
               </button>
             </div>
-            
+
 
             <div className="form-section">
               <h3 className="section-label">Reactions list</h3>
