@@ -35,6 +35,7 @@ const UserProfile = () => {
   
   const navigate = useNavigate();
 
+  // fetch user data on component mount
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -42,6 +43,10 @@ const UserProfile = () => {
 
         const token = localStorage.getItem('token');
         console.log('token:', token);
+
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
 
         const userResponse = await fetch('http://127.0.0.1:8000/api/v1/auth/user/', {
           headers: {
@@ -72,7 +77,7 @@ const UserProfile = () => {
     fetchUserData();
   }, []);
 
-
+  // fetch queries when user data is loaded
   const fetchQueries = async () => {
     try {
       const token = localStorage.getItem('token');
