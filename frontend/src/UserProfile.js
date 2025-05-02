@@ -1,24 +1,38 @@
-import React, { useState, useEffect } from 'react';
-import { FaUser, FaArrowRight, FaPlus, FaTimes, FaEdit, FaTrash, FaSignOutAlt } from 'react-icons/fa';
+import React, { useState, useEffect, useRef } from 'react';
+import { FaUser, FaArrowRight, FaPlus, FaTimes, FaEdit, FaTrash, FaSignOutAlt, FaSearch } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import './UserProfile.css';
 
 
 const UserProfile = () => {
-  const [drugs, setdrugs] = useState(['']);
-  const [reactions, setReactions] = useState(['']);
+  // form state
+  const [drugs, setdrugs] = useState([{ name: '', id: null }]);
+  const [reactions, setReactions] = useState([{ name: '', id: null }]);
   const [yearStart, setYearStart] = useState('');
   const [yearEnd, setYearEnd] = useState('');
   const [quarterStart, setQuarterStart] = useState('');
   const [quarterEnd, setQuarterEnd] = useState('');
+  const [queryName, setQueryName] = useState('New Query');
+
+  // search results state
+  const [drugSearchResults, setDrugSearchResults] = useState([]);
+  const [reactionSearchResults, setReactionSearchResults] = useState([]);
+  const [activeDrugSearchIndex, setActiveDrugSearchIndex] = useState(null);
+  const [activeReactionSearchIndex, setActiveReactionSearchIndex] = useState(null);
+
+  // search timeout refs (for debouncing)
+  const drugSearchTimeout = useRef(null);
+  const reactionSearchTimeout = useRef(null);
+
+  // user and queries state
   const [user, setUser] = useState(null);
   const [savedQueries, setSavedQueries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [queryName, setQueryName] = useState('');
   const [editingQueryId, setEditingQueryId] = useState(null);
   const [showLogoutPopup, setShowLogoutPopup] = useState(false);
+  
   const navigate = useNavigate();
 
   useEffect(() => {
