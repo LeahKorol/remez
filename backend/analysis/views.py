@@ -14,7 +14,9 @@ from django.shortcuts import get_object_or_404
 
 @extend_schema_view(
     **{
-        method: extend_schema(tags=["Query"])
+        method: extend_schema(
+            tags=["Query"], parameters=[{"name": "id", "in": "path", "type": "integer"}]
+        )
         for method in [
             "list",
             "retrieve",
@@ -83,6 +85,7 @@ class QueryViewSet(viewsets.ModelViewSet):
 
 class TermNameSearchViewSet(viewsets.GenericViewSet):
     """Base viewset for searching term names by prefix."""
+
     permission_classes = [IsAuthenticated]
 
     @action(detail=False, methods=["get"], url_path="search/(?P<prefix>[^/.]+)")
@@ -122,7 +125,8 @@ class TermNameSearchViewSet(viewsets.GenericViewSet):
 
 @extend_schema_view(
     search_by_prefix=extend_schema(
-        tags=["Drug Names"]
+        tags=["Drug Names"],
+        parameters=[{"name": "prefix", "in": "path", "type": "string"}],
     )
 )
 class DrugNameViewSet(TermNameSearchViewSet):
@@ -133,7 +137,8 @@ class DrugNameViewSet(TermNameSearchViewSet):
 
 @extend_schema_view(
     search_by_prefix=extend_schema(
-        tags=["Reaction Names"]
+        tags=["Reaction Names"],
+        parameters=[{"name": "prefix", "in": "path", "type": "string"}],
     )
 )
 class ReactionNameViewSet(TermNameSearchViewSet):
