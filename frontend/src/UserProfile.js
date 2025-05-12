@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FaUser, FaArrowRight, FaPlus, FaTimes, FaEdit, FaTrash, FaSignOutAlt, FaSearch } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import { fetchWithRefresh } from './Login';
 import './UserProfile.css';
 
 
@@ -280,7 +281,7 @@ const UserProfile = () => {
   // reactions management functions
   const handleReactionChange = (index, value) => {
     const newReactions = [...reactions];
-    newReactions[index] = value;
+    newReactions[index] = { name: value, id: null };
     setReactions(newReactions);
   };
 
@@ -397,7 +398,7 @@ const UserProfile = () => {
                   <input
                     type="text"
                     className="input-field"
-                    value={drug}
+                    value={drug.name}
                     onChange={(e) => handleDrugChange(index, e.target.value)}
                     placeholder="Enter a drug..."
                     dir="ltr"
@@ -430,7 +431,7 @@ const UserProfile = () => {
                   <input
                     type="text"
                     className="input-field"
-                    value={reaction}
+                    value={reaction.name}
                     onChange={(e) => handleReactionChange(index, e.target.value)}
                     placeholder="Enter a reaction..."
                     dir="ltr"
@@ -459,7 +460,7 @@ const UserProfile = () => {
               <button
                 type="submit"
                 className="submit-button"
-                disabled={!drugs[0]?.trim() || !reactions[0]?.trim()}
+                disabled={!drugs[0]?.name?.trim() || !reactions[0]?.name?.trim()}
               >
                 {isEditing ? 'Update + Calc' : 'Save + Calc'}
               </button>

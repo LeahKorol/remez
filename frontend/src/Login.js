@@ -59,6 +59,62 @@ function Login() {
     console.log('Google login clicked');
   };
 
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError('Please enter your email.');
+      return;
+    }
+
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/v1/auth/password/reset/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      if (res.ok) {
+        alert('If an account with this email exists, a reset link was sent.');
+      } else {
+        const data = await res.json();
+        setError(data.message || 'Something went wrong.');
+      }
+    } catch {
+      setError('Network error.');
+    }
+  };
+
+  // Function to fetch data with token refresh logic
+  const fetchWithRefresh = async (url, options = {}) => {
+    let response = await fetch(url, {
+      ...options,
+      credentials: 'include'  
+    });
+
+    if (response.status === 401) {
+      // token expired, try to refresh
+      const refreshResponse = await fetch('http://127.0.0.1:8000/api/v1/auth/token/refresh/', {
+        method: 'POST',
+        credentials: 'include'  // send cookies
+      });
+
+      if (refreshResponse.ok) {
+        // try to get a new access token
+        response = await fetch(url, {
+          ...options,
+          credentials: 'include'
+        });
+      } else {
+        // if the refresh token is invalid, redirect to login
+        window.location.href = '/login';
+        return;
+      }
+    }
+
+    return response;
+  };
+
+
   return (
     <div className="login-container">
       <div className="login-header">
@@ -100,8 +156,14 @@ function Login() {
               className="login-button"
               disabled={isLoading}
             >
+
               {isLoading ? 'Logging in...' : 'Login'}
             </button>
+
+            <p className="forgot-password" onClick={handleForgotPassword}>
+              Forgot your password?
+            </p>
+
           </form>
 
           <div className="separator">
@@ -126,3 +188,4 @@ function Login() {
 }
 
 export default Login;
+export { fetchWithRefresh };
