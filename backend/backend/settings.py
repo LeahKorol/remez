@@ -80,7 +80,7 @@ ROOT_URLCONF = "backend.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [os.path.join(BASE_DIR, "templates")],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -216,6 +216,7 @@ REST_AUTH = {
     "USER_DETAILS_SERIALIZER": "users.serializers.UserSerializer",
     "REGISTER_SERIALIZER": "users.serializers.CustomRegisterSerializer",
     "LOGIN_SERIALIZER": "users.serializers.CustomLoginSerializer",
+    "PASSWORD_RESET_SERIALIZER": "users.serializers.CustomPasswordResetSerializer",
     # Do not need session authentication because we use JWT cookies
     "SESSION_LOGIN": False,
     # JWT configuration
@@ -245,3 +246,18 @@ SIGNING_KEY = os.getenv("SIGNING_KEY")
 # CORS settings
 CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
 CORS_ALLOW_CREDENTIALS = True  # Allow using cookies for authentication
+
+# Use SMTP server for sending emails, print to console for development
+# EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.getenv("EMAIL_HOST")
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
+EMAIL_PORT = os.getenv("EMAIL_PORT")
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
+
+# Frontend urls
+PASSWORD_RESET_CONFIRM_REDIRECT_BASE_URL = os.getenv(
+    "PASSWORD_RESET_CONFIRM_REDIRECT_BASE_URL"
+)
