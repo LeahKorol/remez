@@ -69,6 +69,92 @@ def generate_quarters(start, end):
         start = start.increment()
 
 
+class QuestionConfig:
+    def __init__(self, name, drugs, reactions, control):
+        self.name = name
+        self.drugs = drugs
+        self.reactions = reactions
+        self.control = control
+
+    @classmethod
+    def load_config_items(cls, dir_config):
+        ret = []
+        for f in sorted(glob(os.path.join(dir_config, "*.json"))):
+            ret.append(cls.config_from_json_file(f))
+
+        for f in glob(os.path.join(dir_config, "[a-zA-Z0-9]*.xls?")):
+            ret.extend(cls.configs_from_excel_file(f))
+        return ret
+
+    @staticmethod
+    def normalize_reaction_name(r):
+        return r.strip().lower()
+
+    @staticmethod
+    def normalize_drug_name(d):
+        ret = d.strip().lower()
+        if ret.endswith("."):
+            ret = ret[:-1]
+        return ret
+
+    @classmethod
+    def config_from_json_file(cls, fn):
+        name = os.path.split(fn)[-1].replace(".json", "")
+        config = json.load(open(fn))
+        drugs = [cls.normalize_drug_name(d) for d in config["drug"]]
+        reactions = [cls.normalize_reaction_name(r) for r in config["reaction"]]
+        if "control" in config:
+            control = [cls.normalize_drug_name(d) for d in config["control"]]
+        else:
+            control = None
+        return QuestionConfig(name, drugs=drugs, reactions=reactions, control=control)
+
+    @classmethod
+    def configs_from_excel_file(cls, fn):
+        name = os.path.splitext(os.path.split(fn)[-1])[0]
+        xl = pd.ExcelFile(fn)
+        ret = []
+        for sheetname in xl.sheet_names:
+            tbl = xl.parse(sheetname)
+            tbl.columns = [c.lower().strip() for c in tbl.columns]
+            if len(tbl.columns) > 3:
+                logging.warning(
+                    f"Skipping {fn} sheet {sheetname} that has {len(tbl.columns)} columns"
+                )
+                continue
+            drugs = tbl["drug"].dropna().tolist()
+            reactions = tbl["reaction"].dropna().tolist()
+            drugs = [cls.normalize_drug_name(d) for d in drugs]
+            reactions = [cls.normalize_reaction_name(r) for r in reactions]
+            if len(tbl.columns) == 3:
+                control = [
+                    cls.normalize_drug_name(d) for d in tbl["control"].dropna().tolist()
+                ]
+            else:
+                control = None
+            ret.append(
+                QuestionConfig(
+                    f"{name} - {sheetname}",
+                    drugs=drugs,
+                    reactions=reactions,
+                    control=control,
+                )
+            )
+        return ret
+
+    def filename_from_config(self, directory, extension=".csv"):
+        if extension:
+            assert extension.startswith(".")
+        config_name = self.name
+        return os.path.join(directory, f"{config_name}{extension}")
+
+    def __repr__(self):
+        return repr(self.__dict__)
+
+    def __str__(self):
+        return str(self.__dict__)
+
+
 # --- Custom Additions ---
 def validate_event_dt_num(event_dt_num: str):
     """
