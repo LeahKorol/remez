@@ -4,9 +4,15 @@ Modified to validate and normalize FAERS data.
 Added functionality starts  after marker # --- Custom Additions ---
 """
 
-import re
+import json
+import logging
+import os
+from glob import glob
+
 import pandas as pd
 import numpy as np
+import re
+
 from typing import Type
 
 
@@ -82,7 +88,7 @@ class QuestionConfig:
         for f in sorted(glob(os.path.join(dir_config, "*.json"))):
             ret.append(cls.config_from_json_file(f))
 
-        for f in glob(os.path.join(dir_config, "[a-zA-Z0-9]*.xls?")):
+        for f in glob(os.path.join(dir_config, "[a-zA-Z0-9_]*.xls?")):
             ret.extend(cls.configs_from_excel_file(f))
         return ret
 
@@ -153,6 +159,47 @@ class QuestionConfig:
 
     def __str__(self):
         return str(self.__dict__)
+
+
+def process_demo_data(df_demo, **kwargs):
+    """ "This function was modified from read_demo_data"""
+    to_year_conversion_factor = {
+        "YR": 1.0,
+        "DY": 365.25,
+        "MON": 12,
+        "DEC": 0.1,
+        "WK": 52.2,
+        "HR": 24 * 365.25,
+    }
+    to_year_conversion_factor = pd.Series(to_year_conversion_factor)
+
+    to_kg_conversion_factor = {"KG": 1.0, "LBS": 2.20462}
+    to_kg_conversion_factor = pd.Series(to_kg_conversion_factor)
+    df_demo.wt = (
+        df_demo.wt / to_kg_conversion_factor.reindex(df_demo.wt_cod.values).values
+    )
+    df_demo.age = (
+        df_demo.age / to_year_conversion_factor.reindex(df_demo.age_cod.values).values
+    )
+    df_demo["event_date"] = pd.to_datetime(
+        df_demo.event_dt_num, dayfirst=False, errors="ignore"
+    )
+    df_demo.drop(["age_cod", "wt_cod", "event_dt_num"], axis=1, inplace=True)
+    return df_demo
+
+
+def compute_df_uniqueness(df, cols=None, do_print=False, print_prefix=None):
+    if do_print and print_prefix is None:
+        print_prefix = ""
+    n_total = len(df)
+    n_unique = len(df.drop_duplicates(subset=cols))
+    n_unique, n_total
+    frac_unique = n_unique / n_total
+    if do_print:
+        print(
+            f"{print_prefix}Of {n_total:6,d} entries {n_unique:6,d} are unique ({frac_unique*100:.1f}%)"
+        )
+    return frac_unique
 
 
 # --- Custom Additions ---

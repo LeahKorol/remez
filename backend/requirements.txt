@@ -11,4 +11,5 @@ python-dotenv==1.1.0 # for loading environment variables from .env files
 # FAERS analysis requirements: https://github.com/bgbg/faers_analysis/blob/main/requirements.txt
 tqdm==4.67.1
 numpy==2.2.4
+openpyxl==3.1.5 
 pandas==2.2.3
