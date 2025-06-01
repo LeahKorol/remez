@@ -1,9 +1,11 @@
 import pytest
 import pandas as pd
+from pathlib import Path
+
 from analysis.models import Case, Demo, Drug, Outcome, Reaction, DrugName, ReactionName
 import analysis.faers_analysis.constants as const
 from analysis.faers_analysis.src.utils import Quarter
-from analysis.faers_analysis.src.mark_data import load_quarder_files
+from analysis.faers_analysis.src.mark_data import load_quarder_files, main
 
 
 def test_load_quarter_files_invalid_model_name():
@@ -12,10 +14,18 @@ def test_load_quarter_files_invalid_model_name():
 
 
 @pytest.fixture
+def quarter():
+    return Quarter(2021, 2)
+
+
+@pytest.fixture
 @pytest.mark.django_db
-def case():
+def case(quarter):
     return Case.objects.create(
-        faers_primaryid=111, faers_caseid=222, year=2021, quarter=2
+        faers_primaryid=111,
+        faers_caseid=222,
+        year=quarter.year,
+        quarter=quarter.quarter,
     )
 
 
@@ -80,29 +90,33 @@ def test_load_quarder_files(model_fixture, model, columns, column_types, request
         assert col in columns
         assert df[col].dtype == column_types[col]
 
+
 @pytest.mark.django_db
 def test_load_quarter_files_multiple_quarters(drug, case):
     """Test the reuested quarters only are returned when sending multiple quarters"""
-    quarters = [Quarter(case.year+1, 1), Quarter(case.year+2, 3)]
+    quarters = [Quarter(case.year + 1, 1), Quarter(case.year + 2, 3)]
     unexist_drug = DrugName.objects.create(name="unexist_drug")
-    
+
     drugs = [
         Drug.objects.create(
             case=Case.objects.create(
-                faers_primaryid=222, faers_caseid=222, year=quarters[0].year, quarter=quarters[0].quarter   
+                faers_primaryid=222,
+                faers_caseid=222,
+                year=quarters[0].year,
+                quarter=quarters[0].quarter,
             ),
             drug=drug.drug,
         ),
         Drug.objects.create(
             case=Case.objects.create(
-                faers_primaryid=333, faers_caseid=333, year=quarters[1].year, quarter=quarters[1].quarter
+                faers_primaryid=333,
+                faers_caseid=333,
+                year=quarters[1].year,
+                quarter=quarters[1].quarter,
             ),
             drug=drug.drug,
         ),
-            Drug.objects.create(
-            case=case,
-            drug=unexist_drug
-        ),
+        Drug.objects.create(case=case, drug=unexist_drug),
     ]
 
     df = load_quarder_files(Drug, quarters)
@@ -112,3 +126,22 @@ def test_load_quarter_files_multiple_quarters(drug, case):
     assert drugs[1].drug.name in df["drugname"].values
     assert unexist_drug.name not in df["drugname"].values
 
+
+@pytest.mark.django_db(transaction=True)
+def test_main(demo, drug, outcome, reaction, quarter, django_db_setup):
+    """
+    Test the main function to ensure it runs without errors.
+    This test assumes the config files exist in the spesified directory.
+    """
+    year_q_from = f"{quarter.year}q{quarter.quarter}"
+    year_q_to = f"{quarter.year}q{Quarter.increment(quarter).quarter}"
+
+    main(
+        year_q_from=year_q_from,
+        year_q_to=year_q_to,
+        config_dir=f"{Path(__file__).resolve().parent}/config",
+        dir_out=f"{Path(__file__).resolve().parent}/output",
+    )
+
+    # If no exceptions are raised, the test passes
+    assert True

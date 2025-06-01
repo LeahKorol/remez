@@ -19,6 +19,10 @@ import tqdm
 from . import utils
 from .utils import Quarter, generate_quarters, QuestionConfig
 
+from ...django_setup import setup_django_environemnt
+
+setup_django_environemnt()
+
 from django.db.models import F
 from analysis.models import Demo, Drug, Outcome, Reaction
 from analysis.faers_analysis import constants as const
@@ -204,6 +208,12 @@ def process_quarter_wrapper(
     q, dir_in, dir_out, config_items, drug_names, reaction_types
 ):
     """Wrapper function for process_quarter to use with multiprocessing"""
+
+    # Ensure the environment is set up for Django, as this function runs in a separate process
+    from django.conf import settings
+
+    settings.DATABASES["default"]["NAME"] = os.environ.get("DB_NAME", "test_postgres")
+
     # Process the single quarter
     template_drug = os.path.join(dir_in, "drugQ.csv.zip")
     usecols = ["primaryid", "caseid", "drugname"]
