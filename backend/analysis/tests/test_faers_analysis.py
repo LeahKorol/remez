@@ -72,7 +72,7 @@ def reaction(case):
         ("demo", Demo, const.DEMO_COLUMNS, const.DEMO_COLUMN_TYPES),
         ("drug", Drug, const.DRUG_COLUMNS, const.DRUG_COLUMN_TYPES),
         ("outcome", Outcome, const.OUTCOME_COLUMNS, const.OUTCOME_COLUMN_TYPES),
-        ("reaction", Reaction, const.RECTION_COLUMNS, const.REACTION_COLUMN_TYPES),
+        ("reaction", Reaction, const.REACTION_COLUMNS, const.REACTION_COLUMN_TYPES),
     ],
 )
 def test_load_quarder_files(model_fixture, model, columns, column_types, request):

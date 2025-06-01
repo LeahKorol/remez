@@ -223,7 +223,7 @@ def get_stored_values(model: Type[Model]):
         (
             "reaction",
             Reaction,
-            const.RECTION_COLUMNS,
+            const.REACTION_COLUMNS,
             const.REACTION_COLUMN_TYPES,
             "reaction_data",
             True,

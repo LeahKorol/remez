@@ -56,7 +56,7 @@ from analysis.faers_analysis.constants import (
     DRUG_COLUMN_TYPES,
     OUTCOME_COLUMNS,
     OUTCOME_COLUMN_TYPES,
-    RECTION_COLUMNS,
+    REACTION_COLUMNS,
     REACTION_COLUMN_TYPES,
 )
 from analysis.models import Case, Demo, Drug, DrugName, Outcome, Reaction, ReactionName
@@ -170,7 +170,7 @@ class Command(QuarterRangeArgMixin, BaseCommand):
                             file_path,
                             cases_ids,
                             Reaction,
-                            RECTION_COLUMNS,
+                            REACTION_COLUMNS,
                             REACTION_COLUMN_TYPES,
                             True,
                             reaction_names,

@@ -54,4 +54,4 @@ REACTION_COLUMN_TYPES = {
     "pt": "string",  # FAERS call 'reaction' column as 'pt'
 }
 
-RECTION_COLUMNS = list(REACTION_COLUMN_TYPES.keys())
+REACTION_COLUMNS = list(REACTION_COLUMN_TYPES.keys())
