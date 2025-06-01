@@ -12,7 +12,6 @@ from functools import partial
 
 import pandas as pd
 
-# import defopt
 import numpy as np
 import tqdm
 
@@ -107,7 +106,7 @@ def mark_data(df_drug, df_reac, df_demo, config_items):
     return ret
 
 
-def load_quarder_files(model, quarters) -> pd.DataFrame:
+def load_quarder_files(model, quarters, **kwargs) -> pd.DataFrame:
     if model not in [Demo, Drug, Outcome, Reaction]:
         raise ValueError(
             f"Invalid model: {model}. Must be one of [Demo, Drug, Outcome, Reaction]"
@@ -130,7 +129,6 @@ def load_quarder_files(model, quarters) -> pd.DataFrame:
             .filter(case__quarter__in=quarters)
             .values(*const.DEMO_COLUMNS)
         )
-        column_types = const.DEMO_COLUMN_TYPES
     elif model == Drug:
         data = (
             Drug.objects.all()
@@ -139,7 +137,6 @@ def load_quarder_files(model, quarters) -> pd.DataFrame:
             .filter(case__quarter__in=quarters)
             .values(*const.DRUG_COLUMNS)
         )
-        column_types = const.DRUG_COLUMN_TYPES
     elif model == Outcome:
         data = (
             Outcome.objects.all()
@@ -147,45 +144,40 @@ def load_quarder_files(model, quarters) -> pd.DataFrame:
             .filter(case__quarter__in=quarters)
             .values(*const.OUTCOME_COLUMNS)
         )
-        column_types = const.OUTCOME_COLUMN_TYPES
     elif model == Reaction:
         data = (
             Reaction.objects.all()
             .annotate(pt=F("reaction__name"))
             .filter(case__year__in=years)
             .filter(case__quarter__in=quarters)
-            .values(*const.RECTION_COLUMNS)
+            .values(*const.REACTION_COLUMNS)
         )
-        column_types = const.REACTION_COLUMN_TYPES
 
-    data = pd.DataFrame.from_records(data)
+    model_name = model.__name__.upper()
+    column_types = getattr(const, f"{model_name}_COLUMN_TYPES")
+    columns = getattr(const, f"{model_name}_COLUMNS")
+
+    data = pd.DataFrame.from_records(data=data, columns=columns)
     normalised_data = normalize_dataframe(data, column_types)
     return normalised_data
 
 
-def process_quarters(
-    quarters, dir_in, dir_out, config_items, drug_names, reaction_types
-):
+def process_quarters(quarters, dir_out, config_items, drug_names, reaction_types):
     DEBUG = None
-    template_drug = os.path.join(dir_in, "drugQ.csv.zip")
-    usecols = ["primaryid", "caseid", "drugname"]
-    df_drug = load_quarder_files(
-        template_drug, quarters, usecols=usecols, nrows=DEBUG
-    ).dropna()
+    df_drug = load_quarder_files(Drug, quarters, nrows=DEBUG).dropna()
     df_drug = mark_drug_data(df_drug, drug_names)
 
-    template_reac = os.path.join(dir_in, "reacQ.csv.zip")
-    usecols = ["primaryid", "caseid", "pt"]
-    df_reac = load_quarder_files(template_reac, quarters, usecols=usecols, nrows=DEBUG)
+    df_reac = load_quarder_files(Reaction, quarters, nrows=DEBUG)
     df_reac = mark_reaction_data(df_reac, reaction_types)
 
     df_demo = []
     for q in quarters:
-        fn_demo = os.path.join(dir_in, f"demo{q}.csv.zip")
-        tmp = utils.read_demo_data(fn_demo, nrows=DEBUG).set_index("caseid")
+        fn_demo = load_quarder_files(Demo, quarters, nrows=DEBUG)
+        tmp = utils.process_demo_data(fn_demo, nrows=DEBUG).set_index("caseid")
         tmp["q"] = str(q)
         df_demo.append(tmp)
     df_demo = pd.concat(df_demo)
+
     df_marked = mark_data(
         df_drug=df_drug, df_reac=df_reac, df_demo=df_demo, config_items=config_items
     )
@@ -204,9 +196,7 @@ def process_quarters(
     return df_marked
 
 
-def process_quarter_wrapper(
-    q, dir_in, dir_out, config_items, drug_names, reaction_types
-):
+def process_quarter_wrapper(q, dir_out, config_items, drug_names, reaction_types):
     """Wrapper function for process_quarter to use with multiprocessing"""
 
     # Ensure the environment is set up for Django, as this function runs in a separate process
@@ -215,18 +205,14 @@ def process_quarter_wrapper(
     settings.DATABASES["default"]["NAME"] = os.environ.get("DB_NAME", "test_postgres")
 
     # Process the single quarter
-    template_drug = os.path.join(dir_in, "drugQ.csv.zip")
-    usecols = ["primaryid", "caseid", "drugname"]
-    df_drug = load_quarder_files(template_drug, [q], usecols=usecols).dropna()
+    df_drug = load_quarder_files(Drug, [q]).dropna()
     df_drug = mark_drug_data(df_drug, drug_names)
 
-    template_reac = os.path.join(dir_in, "reacQ.csv.zip")
-    usecols = ["primaryid", "caseid", "pt"]
-    df_reac = load_quarder_files(template_reac, [q], usecols=usecols)
+    df_reac = load_quarder_files(Reaction, [q])
     df_reac = mark_reaction_data(df_reac, reaction_types)
 
-    fn_demo = os.path.join(dir_in, f"demo{q}.csv.zip")
-    df_demo = utils.read_demo_data(fn_demo).set_index("caseid")
+    fn_demo = load_quarder_files(Demo, [q])
+    df_demo = utils.process_demo_data(fn_demo).set_index("caseid")
     df_demo["q"] = str(q)
 
     df_marked = mark_data(
@@ -245,7 +231,6 @@ def main(
     *,
     year_q_from,
     year_q_to,
-    dir_in,
     config_dir,
     dir_out,
     threads=1,
@@ -259,8 +244,6 @@ def main(
         XXXXqQ, where XXXX is the year, q is the literal "q" and Q is 1, 2, 3 or 4
     :param str year_q_to:
         XXXXqQ, where XXXX is the year, q is the literal "q" and Q is 1, 2, 3 or 4
-    :param str dir_in:
-        Input directory
     :param str config_dir:
         Directory with config files
     :param str dir_out:
@@ -293,16 +276,15 @@ def main(
         quarters = list(generate_quarters(q_from, q_to))
         process_quarters(
             quarters,
-            dir_in=dir_in,
             dir_out=dir_out,
             config_items=config_items,
             drug_names=drug_names,
             reaction_types=reaction_types,
         )
+
         with Pool(threads) as pool:
             wrapper_func = partial(
                 process_quarter_wrapper,
-                dir_in=dir_in,
                 dir_out=dir_out,
                 config_items=config_items,
                 drug_names=drug_names,
