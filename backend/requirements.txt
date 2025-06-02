@@ -1,4 +1,4 @@
-Django==5.1.7
+Django==5.2.1
 djangorestframework==3.15.2
 djangorestframework-simplejwt==5.5.0   # JWT token implementation for DRF
 dj-rest-auth[with_social]==7.0.1     # REST API authentication utils
@@ -6,6 +6,7 @@ drf_spectacular==0.28.0     # API documentation
 django-cors-headers==4.7.0   # Enable Cross-Origin Resource Sharing (CORS)
 psycopg[binary]==3.2.6 # A PostgreSQL  Adapter
 pytest-django==4.10.0 # a testing library
+python-dotenv==1.1.0 # for loading environment variables from .env files
 
 # FAERS analysis requirements: https://github.com/bgbg/faers_analysis/blob/main/requirements.txt
 tqdm==4.67.1

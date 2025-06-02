@@ -1,6 +1,10 @@
 from dj_rest_auth.registration.views import RegisterView
 from dj_rest_auth.jwt_auth import set_jwt_cookies
 from django.conf import settings
+from django.http import HttpResponseRedirect
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class CustomRegisterView(RegisterView):
@@ -32,3 +36,12 @@ class CustomRegisterView(RegisterView):
                 refresh_token = response.data["refresh"]
                 set_jwt_cookies(response, access_token, refresh_token)
         return response
+
+
+def password_reset_confirm_redirect(request, uidb64, token):
+    logger.info(
+        f"Password reset confirm redirect called with uidb64: {uidb64} and token: {token}"
+    )
+    return HttpResponseRedirect(
+        f"{settings.PASSWORD_RESET_CONFIRM_REDIRECT_BASE_URL}{uidb64}/{token}/"
+    )
