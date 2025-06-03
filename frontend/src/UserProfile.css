@@ -51,12 +51,31 @@
 .logout-button {
   background-color: white;
   color: #6a50e0;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 12px;
+  border: 1px solid #eaeaea;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
   cursor: pointer;
-  font-size: 20px;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 10;
+}
+
+.logout-button:hover {
+  background-color: #f8f8f8;
+  border-color: #6a50e0;
+  color: #e74c3c;
+}
+
+.logout-button svg {
+  font-size: 10rem; 
+  vertical-align: middle; 
 }
 
 /* Sidebar Styles - Now on the left */
@@ -79,9 +98,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 20px;
   border-bottom: 1px solid #eaeaea;
+  position: relative;
 }
 
 .avatar-circle {
@@ -92,7 +110,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 15px;
+  margin-bottom: 0px;
 }
 
 .user-icon {
@@ -121,6 +139,7 @@
   margin-bottom: 20px;
   flex: 1;
   overflow-y: auto;
+  min-height: 10rem; 
 }
 
 .section-title {
@@ -283,6 +302,28 @@
   color: #e74c3c;
 }
 
+.search-results {
+  border: 1px solid #ccc;
+  background-color: white;
+  max-height: 150px;
+  overflow-y: auto;
+  margin-top: 4px;
+  padding: 0;
+  list-style: none;
+  position: absolute;
+  z-index: 10;
+  width: 100%;
+}
+
+.search-result-item {
+  padding: 8px;
+  cursor: pointer;
+}
+
+.search-result-item:hover {
+  background-color: #f0f0f0;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .user-profile-container {
@@ -300,13 +341,6 @@
     padding: 15px;
   }
 
-  .user-info {
-    flex-direction: row;
-    align-items: center;
-    padding-bottom: 15px;
-    margin-bottom: 15px;
-  }
-
   .avatar-circle {
     margin-bottom: 0;
     margin-left: 15px;
@@ -314,6 +348,11 @@
 
   .saved-queries-section {
     max-height: 300px;
+  }
+
+  .logout-button {
+    position: static;
+    margin-bottom: 15px;
   }
 }
 
@@ -438,14 +477,12 @@
   cursor: not-allowed;
 }
 
-/* עיצוב קלטים בפוקוס */
 .input-field:focus {
   border-color: #3498db;
   outline: none;
   box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
 }
 
-/* עיצוב כרטיסיות בצד */
 .query-card {
   margin-bottom: 15px;
   background-color: white;
