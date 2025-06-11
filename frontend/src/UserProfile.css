@@ -302,26 +302,63 @@
   color: #e74c3c;
 }
 
+select option:hover {
+  background-color: #7b61ff !important;
+  color: white !important;
+}
+
+select:focus option:checked,
+select option:checked {
+  background-color: #7b61ff;
+  color: white;
+}
+
+select option:hover {
+  background: #7b61ff;
+  color: white;
+}
+
+/* Enhanced Search Results Dropdown */
 .search-results {
-  border: 1px solid #ccc;
-  background-color: white;
-  max-height: 150px;
-  overflow-y: auto;
-  margin-top: 4px;
-  padding: 0;
-  list-style: none;
   position: absolute;
-  z-index: 10;
-  width: 100%;
+  top: 100%;
+  left: 4.6rem;
+  right: 0;
+  border: 2px solid #7b61ff;
+  border-top: none;
+  background-color: white;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  border-radius: 0 0 6px 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: 62%;
 }
 
 .search-result-item {
-  padding: 8px;
+  padding: 12px 16px;
   cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 14px;
+  color: #333;
+  transition: background-color 0.2s ease;
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
 }
 
 .search-result-item:hover {
-  background-color: #f0f0f0;
+  background-color: #f8f9ff;
+  color: #7b61ff;
+  font-weight: 500;
+}
+
+.input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
 }
 
 /* Responsive Design */
@@ -353,6 +390,10 @@
   .logout-button {
     position: static;
     margin-bottom: 15px;
+  }
+
+  .search-results {
+    width: 85%;
   }
 }
 
@@ -398,12 +439,6 @@
   color: #333;
   text-align: left;
   font-weight: 600;
-}
-
-.input-group {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
 }
 
 .input-field {

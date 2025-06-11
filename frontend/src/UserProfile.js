@@ -367,6 +367,8 @@ const UserProfile = () => {
     }
   };
 
+
+
   // Add a new drug field
   const addDrugField = () => {
     setDrugs([...drugs, { name: '', id: null }]);
