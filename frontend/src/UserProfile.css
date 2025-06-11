@@ -302,20 +302,57 @@
   color: #e74c3c;
 }
 
-select option:hover {
-  background-color: #7b61ff !important;
-  color: white !important;
+.custom-select-container {
+  position: relative;
+  width: 100%;
 }
 
-select:focus option:checked,
-select option:checked {
+.custom-select-header {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background-color: white;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 16px;
+}
+
+.custom-select-header:hover {
+  border-color: #7b61ff;
+}
+
+.custom-select-options {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  border: 1px solid #7b61ff;
+  border-top: none;
+  background-color: white;
+  border-radius: 0 0 6px 6px;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.custom-select-option {
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.custom-select-option:hover {
   background-color: #7b61ff;
   color: white;
 }
 
-select option:hover {
-  background: #7b61ff;
-  color: white;
+.chevron {
+  transition: transform 0.2s;
+}
+
+.chevron.open {
+  transform: rotate(180deg);
 }
 
 /* Enhanced Search Results Dropdown */
@@ -416,6 +453,83 @@ select option:hover {
   font-weight: 600;
   color: #333;
   margin: 0;
+}
+
+.form-field {
+  margin-bottom: 15px;
+}
+
+.form-field label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.form-field input,
+.form-field .custom-select-container {
+  width: 100%;
+}
+
+.mb-2 {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 15px;
+}
+
+.mb-2 label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 8px;
+  min-width: 120px;
+  text-align: left;
+}
+
+.mb-2 input,
+.mb-2 .custom-select-container {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 16px;
+  text-align: left; 
+  box-sizing: border-box;
+}
+
+.mb-2 input:focus,
+.mb-2 .custom-select-container:focus-within {
+  border-color: #3498db;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.mb-2.inline {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+.mb-2.inline label {
+  margin-bottom: 0;
+  flex-shrink: 0; 
+  width: 120px; 
+}
+
+.mb-2.inline input,
+.mb-2.inline .custom-select-container {
+  flex: 1; 
+}
+
+.form-field {
+  margin-bottom: 20px;
+}
+
+.form-field .mb-2:last-child {
+  margin-bottom: 0;
 }
 
 .cancel-button {
@@ -582,7 +696,7 @@ select option:hover {
 .query-reactions {
   margin-bottom: 8px;
   font-size: 14px;
-  text-align: right;
+  text-align: left;
 }
 
 .result-divider {
@@ -597,7 +711,7 @@ select option:hover {
   background-color: #f0f9ff;
   padding: 10px;
   border-radius: 4px;
-  text-align: right;
+  text-align: left;
 }
 
 .updated-note {
