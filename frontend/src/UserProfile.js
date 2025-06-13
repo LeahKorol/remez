@@ -106,21 +106,20 @@ const UserProfile = () => {
         try {
             const token = localStorage.getItem('token');
             const response = await fetch('http://127.0.0.1:8000/api/v1/analysis/queries/', {
+                method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
             });
-
+    
             if (response.ok) {
                 const data = await response.json();
                 setSavedQueries(data);
-            }
-            else {
+            } else {
                 throw new Error('Failed to fetch queries');
             }
-        }
-        catch (error) {
+        } catch (error) {
             console.error('Error fetching queries:', error);
             setError('An error occurred while loading queries');
         }
@@ -618,7 +617,7 @@ const UserProfile = () => {
                                     <label className="block text-sm font-medium text-gray-700">End Quarter</label>
                                     <CustomSelect
                                         name="endQuarter"
-                                        value={quarterStart}
+                                        value={quarterEnd}
                                         onChange={handleInputChange}
                                         placeholder="Select Quarter"
                                         options={[
