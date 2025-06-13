@@ -32,7 +32,6 @@ const UserProfile = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [editingQueryId, setEditingQueryId] = useState(null);
     const [showLogoutPopup, setShowLogoutPopup] = useState(false);
-    const [expandedQueries, setExpandedQueries] = useState(new Set());
 
     const navigate = useNavigate();
 
@@ -112,7 +111,7 @@ const UserProfile = () => {
                     'Content-Type': 'application/json'
                 },
             });
-    
+
             if (response.ok) {
                 const data = await response.json();
                 setSavedQueries(data);
@@ -458,10 +457,10 @@ const UserProfile = () => {
         if (!window.confirm('Are you sure you want to delete this query?')) {
             return;
         }
-    
+
         try {
             const token = localStorage.getItem('token');
-            
+
             const response = await fetch(`http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`, {
                 method: 'DELETE',
                 headers: {
@@ -469,7 +468,7 @@ const UserProfile = () => {
                     'Content-Type': 'application/json'
                 }
             });
-    
+
             if (response.ok) {
                 // Remove the query from the local state
                 setSavedQueries(savedQueries.filter(q => q.id !== queryId));
@@ -521,15 +520,6 @@ const UserProfile = () => {
         }
     };
 
-    const toggleQueryExpansion = (queryId) => {
-        const newExpanded = new Set(expandedQueries);
-        if (newExpanded.has(queryId)) {
-            newExpanded.delete(queryId);
-        } else {
-            newExpanded.add(queryId);
-        }
-        setExpandedQueries(newExpanded);
-    };
 
     if (loading) {
         return <div className="loading">Loading...</div>;
@@ -761,66 +751,31 @@ const UserProfile = () => {
                         <p className="no-queries">No Queries</p>
                     ) : (
                         <div className="queries-list">
-                            {savedQueries.map((item) => {
-                                const isExpanded = expandedQueries.has(item.id);
-                                return (
-                                    <div key={item.id} className="query-card">
-                                        <div className="query-header"
-                                            onClick={() => toggleQueryExpansion(item.id)}
-                                            style={{ cursor: 'pointer' }}>
-
-                                            <div className="query-name-wrapper">
-                                                {isExpanded ? <FaChevronDown /> : <FaChevronRight />}
-                                                <span className="query-name-compact">
-                                                    {item.name}
-                                                </span>
-                                            </div>
-
-                                            <div className="query-actions">
-                                                <button
-                                                    type="button"
-                                                    className="action-button edit-button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleEditQuery(item);
-                                                    }}
-                                                    title="Edit Query"
-                                                >
-                                                    <FaEdit />
-                                                </button>
-
-                                                <button
-                                                    type="button"
-                                                    className="action-button delete-button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        if (window.confirm('Are you sure you want to delete this query?')) {
-                                                            handleDeleteQuery(item.id)
-                                                        }
-                                                    }}
-                                                    title="Delete Query"
-                                                >
-                                                    <FaTrash />
-                                                </button>
-                                            </div>
+                            {savedQueries.map((item) => (
+                                <div key={item.id} className="query-card">
+                                    <div className="query-item">
+                                        <span className="query-name">{item.name}</span>
+                                        <div className="query-actions">
+                                            <button
+                                                type="button"
+                                                className="action-button edit-button"
+                                                onClick={() => handleEditQuery(item)}
+                                                title="Edit Query"
+                                            >
+                                                <FaEdit />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="action-button delete-button"
+                                                onClick={() => handleDeleteQuery(item.id)}
+                                                title="Delete Query"
+                                            >
+                                                <FaTrash />
+                                            </button>
                                         </div>
-
-                                        {/*                     {isExpanded && (
-                      <div className="query-content">
-                        <div className="query-date">
-                          Created: {new Date(item.created_at).toLocaleDateString('en-US')}
-                        </div>
-                        <div className="query-details">
-                          <p><strong>Years:</strong> {item.year_start} - {item.year_end}</p>
-                          <p><strong>Quarters:</strong> {item.quarter_start} - {item.quarter_end}</p>
-                          <p><strong>Drugs:</strong> {item.drugs?.map(d => d.name || d).join(', ')}</p>
-                          <p><strong>Reactions:</strong> {item.reactions?.map(r => r.name || r).join(', ')}</p>
-                        </div>
-                      </div>
-                    )} */}
                                     </div>
-                                );
-                            })}
+                                </div>
+                            ))}
                         </div>
                     )}
                 </div>
