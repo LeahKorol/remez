@@ -1,3 +1,4 @@
+/* Main Container */
 .user-profile-container {
   display: flex;
   min-height: 100vh;
@@ -6,6 +7,7 @@
   direction: ltr;
 }
 
+/* Logout Components */
 .logout-popup {
   position: fixed;
   top: 50%;
@@ -78,7 +80,7 @@
   vertical-align: middle; 
 }
 
-/* Sidebar Styles - Now on the left */
+/* Sidebar Styles */
 .sidebar {
   width: 300px;
   background-color: white;
@@ -134,7 +136,7 @@
   text-align: center;
 }
 
-/* Saved Queries Section - Now inside sidebar */
+/* Saved Queries Section */
 .saved-queries-section {
   margin-bottom: 20px;
   flex: 1;
@@ -156,15 +158,6 @@
   gap: 10px;
 }
 
-.query-card {
-  padding: 12px;
-  border: 1px solid #eaeaea;
-  border-radius: 8px;
-  background-color: #fafafa;
-  transition: all 0.2s ease;
-  font-size: 0.9em;
-}
-
 .query-card:hover {
   background-color: #f0f0f0;
   border-color: #d0d0d0;
@@ -183,6 +176,7 @@
   font-weight: 500;
   color: #444;
   margin: 0 0 5px 0;
+  flex: 1;
 }
 
 .query-date {
@@ -240,7 +234,6 @@
   flex: 1;
   padding: 30px;
   margin-left: 300px;
-  /* Match sidebar width */
 }
 
 .prompt-container {
@@ -267,6 +260,7 @@
   outline: none;
 }
 
+/* Submit Button */
 .submit-button {
   background-color: #7b61ff;
   color: white;
@@ -286,7 +280,7 @@
   cursor: not-allowed;
 }
 
-/* Loading and Error States */
+/* State Classes */
 .loading,
 .error,
 .not-logged-in {
@@ -302,6 +296,7 @@
   color: #e74c3c;
 }
 
+/* Custom Select Components */
 .custom-select-container {
   position: relative;
   width: 100%;
@@ -355,7 +350,7 @@
   transform: rotate(180deg);
 }
 
-/* Enhanced Search Results Dropdown */
+/* Search Results Dropdown */
 .search-results {
   position: absolute;
   top: 100%;
@@ -398,42 +393,7 @@
   margin-bottom: 10px;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .user-profile-container {
-    flex-direction: column-reverse;
-  }
-
-  .sidebar {
-    width: 100%;
-    position: relative;
-    max-height: none;
-  }
-
-  .main-content {
-    margin-left: 0;
-    padding: 15px;
-  }
-
-  .avatar-circle {
-    margin-bottom: 0;
-    margin-left: 15px;
-  }
-
-  .saved-queries-section {
-    max-height: 300px;
-  }
-
-  .logout-button {
-    position: static;
-    margin-bottom: 15px;
-  }
-
-  .search-results {
-    width: 85%;
-  }
-}
-
+/* Form Components */
 .form-section {
   margin-bottom: 20px;
   background-color: #f5f5f5;
@@ -456,7 +416,7 @@
 }
 
 .form-field {
-  margin-bottom: 15px;
+  margin-bottom: 20px;
 }
 
 .form-field label {
@@ -472,6 +432,11 @@
   width: 100%;
 }
 
+.form-field .mb-2:last-child {
+  margin-bottom: 0;
+}
+
+/* MB-2 Component */
 .mb-2 {
   display: flex;
   flex-direction: column;
@@ -524,14 +489,7 @@
   flex: 1; 
 }
 
-.form-field {
-  margin-bottom: 20px;
-}
-
-.form-field .mb-2:last-child {
-  margin-bottom: 0;
-}
-
+/* Buttons */
 .cancel-button {
   background-color: #777;
   color: white;
@@ -545,23 +503,6 @@
 
 .cancel-button:hover {
   background-color: #555;
-}
-
-.section-label {
-  font-size: 18px;
-  margin-bottom: 12px;
-  color: #333;
-  text-align: left;
-  font-weight: 600;
-}
-
-.input-field {
-  flex: 1;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 16px;
-  text-align: left;
 }
 
 .remove-button {
@@ -599,66 +540,6 @@
   font-weight: bold;
 }
 
-.submit-container {
-  margin-top: 20px;
-  text-align: center;
-}
-
-.submit-button {
-  background-color: #27ae60;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 12px 20px;
-  font-size: 16px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  width: 100%;
-}
-
-.submit-button:hover {
-  background-color: #219653;
-}
-
-.submit-button:disabled {
-  background-color: #aaa;
-  cursor: not-allowed;
-}
-
-.input-field:focus {
-  border-color: #3498db;
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-}
-
-.query-card {
-  margin-bottom: 15px;
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-}
-
-.query-header {
-  padding: 10px 15px;
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #eee;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.query-date {
-  font-size: 14px;
-  color: #666;
-}
-
-.query-actions {
-  display: flex;
-  gap: 8px;
-}
-
 .action-button {
   background: none;
   border: none;
@@ -688,6 +569,78 @@
   background-color: rgba(231, 76, 60, 0.1);
 }
 
+/* Labels and Fields */
+.section-label {
+  font-size: 18px;
+  margin-bottom: 12px;
+  color: #333;
+  text-align: left;
+  font-weight: 600;
+}
+
+.input-field {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 16px;
+  text-align: left;
+}
+
+.input-field:focus {
+  border-color: #3498db;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+/* Submit Container - Updated */
+.submit-container {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.submit-container .submit-button {
+  background-color: #27ae60;
+  border-radius: 6px;
+  padding: 12px 20px;
+  font-size: 16px;
+  font-weight: bold;
+  width: 100%;
+}
+
+.submit-container .submit-button:hover {
+  background-color: #219653;
+}
+
+.submit-container .submit-button:disabled {
+  background-color: #aaa;
+  cursor: not-allowed;
+}
+
+/* Query Components */
+.query-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  width: 90%;
+}
+
+.query-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #444;
+  margin: 0;
+  flex: 1;
+  text-align: left;
+}
+
+.query-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: 10px;
+}
+
 .query-content {
   padding: 15px;
 }
@@ -705,7 +658,7 @@
   margin: 12px 0;
 }
 
-.query-result {
+.query-content .query-result {
   font-size: 14px;
   color: #333;
   background-color: #f0f9ff;
@@ -720,4 +673,40 @@
   text-align: left;
   margin-top: 8px;
   font-style: italic;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .user-profile-container {
+    flex-direction: column-reverse;
+  }
+
+  .sidebar {
+    width: 100%;
+    position: relative;
+    max-height: none;
+  }
+
+  .main-content {
+    margin-left: 0;
+    padding: 15px;
+  }
+
+  .avatar-circle {
+    margin-bottom: 0;
+    margin-left: 15px;
+  }
+
+  .saved-queries-section {
+    max-height: 300px;
+  }
+
+  .logout-button {
+    position: static;
+    margin-bottom: 15px;
+  }
+
+  .search-results {
+    width: 85%;
+  }
 }
