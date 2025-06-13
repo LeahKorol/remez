@@ -455,23 +455,27 @@ const UserProfile = () => {
     };
 
     const handleDeleteQuery = async (queryId) => {
+        if (!window.confirm('Are you sure you want to delete this query?')) {
+            return;
+        }
+    
         try {
             const token = localStorage.getItem('token');
-            const csrfToken = getCSRFToken();
-
-            const res = await fetch(`http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`, {
-                method: "DELETE",
+            
+            const response = await fetch(`http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`, {
+                method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`,
-                    'X-CSRFTOKEN': csrfToken,
+                    'Content-Type': 'application/json'
                 }
             });
-
-            if (!res.ok) throw new Error("Failed to delete query");
-
-            // Remove the query from the local state
-            setSavedQueries(savedQueries.filter(q => q.id !== queryId));
-
+    
+            if (response.ok) {
+                // Remove the query from the local state
+                setSavedQueries(savedQueries.filter(q => q.id !== queryId));
+            } else {
+                throw new Error('Failed to delete query');
+            }
         } catch (error) {
             console.error('Error deleting query:', error);
             alert('Failed to delete query');
