@@ -1,11 +1,14 @@
-import pytest
-import pandas as pd
 from pathlib import Path
 
-from analysis.models import Case, Demo, Drug, Outcome, Reaction, DrugName, ReactionName
+import pandas as pd
+import pytest
+
 import analysis.faers_analysis.constants as const
+from analysis.faers_analysis.src.mark_data import load_quarder_files
+from analysis.faers_analysis.src.mark_data import main as mark_data_main
+from analysis.faers_analysis.src.report import main as report_main
 from analysis.faers_analysis.src.utils import Quarter
-from analysis.faers_analysis.src.mark_data import load_quarder_files, main
+from analysis.models import Case, Demo, Drug, DrugName, Outcome, Reaction, ReactionName
 
 
 def test_load_quarter_files_invalid_model_name():
@@ -128,19 +131,41 @@ def test_load_quarter_files_multiple_quarters(drug, case):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_main(demo, drug, outcome, reaction, quarter, django_db_setup):
+def test_mark_data_main(demo, drug, outcome, reaction, quarter, django_db_setup):
     """
     Test the main function to ensure it runs without errors.
-    This test assumes the config files exist in the spesified directory.
+    This test assumes the config files exist in the spesified directories.
     """
     year_q_from = f"{quarter.year}q{quarter.quarter}"
     year_q_to = f"{quarter.year}q{Quarter.increment(quarter).quarter}"
 
-    main(
+    mark_data_main(
         year_q_from=year_q_from,
         year_q_to=year_q_to,
-        config_dir=f"{Path(__file__).resolve().parent}/config",
-        dir_out=f"{Path(__file__).resolve().parent}/output",
+        config_dir=f"{Path(__file__).resolve().parent}/output/config",
+        dir_out=f"{Path(__file__).resolve().parent}/output/mark_data",
+    )
+
+    # If no exceptions are raised, the test passes
+    assert True
+
+
+@pytest.mark.django_db
+def test_report_main(outcome):
+    """
+    Test the report main function to ensure it runs without errors.
+    This test assumes the config files exist in the specified directories.
+    """
+    year_q_from = f"{outcome.case.year}q{outcome.case.quarter}"
+    year_q_to = f"{outcome.case.year}q{Quarter.increment(outcome.case).quarter}"
+
+    report_main(
+        dir_marked_data=f"{Path(__file__).resolve().parent}/output/mark_data",
+        year_q_from=year_q_from,
+        year_q_to=year_q_to,
+        config_dir=f"{Path(__file__).resolve().parent}/output/config",
+        dir_reports=f"{Path(__file__).resolve().parent}/output/reports",
+        output_raw_exposure_data=False,
     )
 
     # If no exceptions are raised, the test passes

@@ -4,16 +4,35 @@ Modified to validate and normalize FAERS data.
 Added functionality starts  after marker # --- Custom Additions ---
 """
 
+import base64
+import io
 import json
 import logging
 import os
-from glob import glob
-
-import pandas as pd
-import numpy as np
 import re
-
+from glob import glob
 from typing import Type
+
+import numpy as np
+import pandas as pd
+import scipy.stats as stats
+
+
+def html_from_fig(fig, caption=None, width=None):
+    figfile = io.BytesIO()
+    fig.savefig(figfile, format="png")
+    figfile.seek(0)  # rewind to beginning of file
+    figdata_png = figfile.getvalue()  # extract string (stream of bytes)
+    figdata_png = base64.b64encode(figdata_png).decode("utf8")
+    if width is None:
+        width = ""
+    else:
+        width = f'width="{width}"'
+    ret = f'<figure><img src="data:image/png;base64,{figdata_png}"{width}>'
+    if caption is not None:
+        ret += f"<figcaption>{caption}</figcaption>"
+    ret += "</figure>"
+    return ret
 
 
 class Quarter:
@@ -73,6 +92,110 @@ def generate_quarters(start, end):
     while start < end:  # NOTE: not including *end*
         yield start
         start = start.increment()
+
+
+class ContingencyMatrix:
+    def __init__(self, tbl=None):
+        if tbl is None or tbl.empty:
+            tbl = pd.DataFrame(columns=["exposure", "outcome", "n"])
+        else:
+            if tbl.shape == (2, 2):
+                try:
+                    tbl = (
+                        pd.melt(
+                            tbl.reset_index().fillna(0),
+                            id_vars=["exposure"],
+                            value_vars=[False, True],
+                            value_name="n",
+                        )
+                        .set_index(["exposure", "outcome"])
+                        .sort_index()
+                    )
+                except:
+                    tbl = pd.DataFrame(columns=["exposure", "outcome", "n"])
+            else:
+                for c in ["exposure", "outcome", "n"]:
+                    assert c in tbl.columns
+                for c in ["exposure", "outcome"]:
+                    tbl[c] = tbl[c].astype(bool)
+                tbl = tbl.set_index(["exposure", "outcome"]).sort_index()
+                for expo in (True, False):
+                    for outcome in (True, False):
+                        pair = (expo, outcome)
+                        if pair not in tbl.index:
+                            row = pd.Series({"n": 0}, name=pair)
+                            tbl = tbl.append(row)
+        self.tbl = tbl.sort_index()
+
+    def __add__(self, other):
+        self.tbl.n += other.tbl.n
+        return self
+
+    @classmethod
+    def from_results_table(cls, data, config):
+        exposure = data[f"exposed {config.name}"]
+        exposure.name = "exposure"
+        outcome = data[f"reacted {config.name}"]
+        outcome.name = "outcome"
+        crosstab = (
+            pd.crosstab(exposure, outcome)
+            .reindex([False, True], axis=0, fill_value=0)
+            .reindex([False, True], axis=1, fill_value=0)
+        )
+        return ContingencyMatrix(crosstab)
+
+    def get_count_value(self, exposure, outcome):
+        ret = self.tbl.loc[(exposure, outcome)]["n"]
+        return ret
+
+    def ror_components(self, smoothing=0):
+        # Smoothing is mentioned here https://pdfs.semanticscholar.org/9639/66a1e9ee60bfcdb13a1a98527022c7cc59ba.pdf
+        a = self.get_count_value(True, True)
+        b = self.get_count_value(True, False)
+        c = self.get_count_value(False, True)
+        d = self.get_count_value(False, False)
+        assert a + b + c + d == self.tbl.n.sum()
+        if smoothing < 0:
+            smoothing = 1 / self.tbl.n.sum()
+        return (a + smoothing, b + smoothing, c + smoothing, d + smoothing)
+
+    def ror(self, alpha=0.05, smoothing=0):
+        # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2938757/
+        a, b, c, d = self.ror_components(smoothing=smoothing)
+        nominator = a * c
+        denominator = b * c
+        if denominator:
+            ror = (a * d) / (b * c)
+        else:
+            ror = np.nan
+        if alpha is not None:
+            if np.all(np.array([a, b, c, d], dtype=bool)):
+                # eq 2 from https://arxiv.org/pdf/1307.1078.pdf
+                ln_ror = np.log(ror)
+                standard_error_ln_ror = np.sqrt(1 / a + 1 / b + 1 / c + 1 / d)
+                interval = np.multiply(
+                    stats.distributions.norm.interval(1 - alpha), standard_error_ln_ror
+                )
+                ci_ln_ror = ln_ror + interval
+                ci = tuple(np.exp(ci_ln_ror))
+            else:
+                ci = (np.nan, np.nan)
+            return ror, ci
+        else:
+            return ror
+
+    def crosstab(self):
+        ret = self.tbl.pivot_table(
+            values="n", index="exposure", columns="outcome", aggfunc="sum"
+        )
+        return ret
+
+    def __str__(self):
+        ret = "Contingency matrix\n" + str(self.tbl)
+        return ret
+
+    def __repr__(self):
+        return self.__str__()
 
 
 class QuestionConfig:
@@ -197,7 +320,7 @@ def compute_df_uniqueness(df, cols=None, do_print=False, print_prefix=None):
     frac_unique = n_unique / n_total
     if do_print:
         print(
-            f"{print_prefix}Of {n_total:6,d} entries {n_unique:6,d} are unique ({frac_unique*100:.1f}%)"
+            f"{print_prefix}Of {n_total:6,d} entries {n_unique:6,d} are unique ({frac_unique * 100:.1f}%)"
         )
     return frac_unique
 
@@ -269,10 +392,10 @@ def normalize_string(s: str, lower=True) -> str:
 
     start, end = 0, len(s) - 1
 
-    while start < end and not s[start].isalnum() and not s[start] in ["(", "[", "{"]:
+    while start < end and not s[start].isalnum() and s[start] not in ["(", "[", "{"]:
         start += 1
 
-    while end > start and not s[end].isalnum() and not s[end] in [")", "]", "}"]:
+    while end > start and not s[end].isalnum() and s[end] not in [")", "]", "}"]:
         end -= 1
 
     if start <= end:
