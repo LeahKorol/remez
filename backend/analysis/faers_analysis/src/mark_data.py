@@ -4,31 +4,28 @@ Modifiefd to use FAERS data from a database instead of CSV files.
 """
 
 import os
-import shutil
-import warnings
 import pickle
-from multiprocessing import Pool
+import shutil
 from functools import partial
-
-import pandas as pd
+from multiprocessing import Pool
 
 import numpy as np
+import pandas as pd
 import tqdm
 
-from . import utils
-from .utils import Quarter, generate_quarters, QuestionConfig
-
 from ...django_setup import setup_django_environemnt
+from . import utils
+from .utils import Quarter, QuestionConfig, generate_quarters
 
 setup_django_environemnt()
 
-from django.db.models import F
-from analysis.models import Demo, Drug, Outcome, Reaction
-from analysis.faers_analysis import constants as const
-from analysis.faers_analysis.src.utils import normalize_dataframe
-
 import logging
 
+from django.db.models import F
+
+from analysis.faers_analysis import constants as const
+from analysis.faers_analysis.src.utils import normalize_dataframe
+from analysis.models import Demo, Drug, Outcome, Reaction
 
 logging.basicConfig(level=logging.INFO)
 
@@ -44,9 +41,12 @@ def mark_drug_data(df, drug_names):
 
 def mark_reaction_data(df, reaction_types):
     df.pt = df.pt.apply(QuestionConfig.normalize_reaction_name)
-    for reaction in sorted(reaction_types):
-        df[f"reaction {reaction}"] = df.pt == reaction
-    reaction_columns = [f"reaction {reaction}" for reaction in reaction_types]
+    reaction_df = pd.DataFrame({
+        f"reaction {reaction}": df.pt == reaction
+        for reaction in sorted(reaction_types)
+    })
+    df = pd.concat([df, reaction_df], axis=1)
+    reaction_columns = reaction_df.columns.tolist()
     ret = df.groupby("caseid")[reaction_columns].any()
     return ret
 
@@ -73,7 +73,7 @@ def handle_duplicates(df):
     fixed = need_to_fix.groupby("caseid").apply(
         lambda d: handle_duplicates_within_case(d, cols_boolean, cols_rest)
     )
-    logging.info(f"Done fixing, combining the results")
+    logging.info("Done fixing, combining the results")
     ret = pd.concat([already_good, fixed], sort=False)
     uniqueness = utils.compute_df_uniqueness(ret, ["caseid"], do_print=False)
     assert uniqueness == 1.0
@@ -236,7 +236,6 @@ def main(
     threads=1,
     clean_on_failure=True,
 ):
-
     # --skip-if-exists --year-q-from=$(QUARTER_FROM) --year-q-to=$(QUARTER_TO) --dir-in=$(DIR_FAERS_DEDUPLICATED) --config-dir=$(CONFIG_DIR) --dir-out=$(DIR_MARKED_FILES) -t $(N_THREADS) --no-clean-on-failure
     """
 
