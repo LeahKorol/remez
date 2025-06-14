@@ -159,7 +159,7 @@ const UserProfile = () => {
             console.error('Error fetching queries:', error);
             // Don't show error for queries, just log it
         }
-    };
+    };    
 
     // Search for drugs as the user types
     const searchDrugs = async (prefix, index) => {
@@ -316,7 +316,6 @@ const UserProfile = () => {
             return;
         }
     
-        // Fixed data structure to match API schema
         const data = {
             name: queryName,
             drugs: validDrugs.map(drug => drug.id),
@@ -328,20 +327,21 @@ const UserProfile = () => {
         };
     
         try {
-            // Determine if we're creating or updating a query
+            const token = localStorage.getItem('token');
+            
+            if (!token) {
+                alert('You are not logged in. Please log in first.');
+                navigate('/');
+                return;
+            }
+    
             const url = isEditing
                 ? `http://127.0.0.1:8000/api/v1/analysis/queries/${editingQueryId}/`
                 : 'http://127.0.0.1:8000/api/v1/analysis/queries/';
     
             const method = isEditing ? 'PUT' : 'POST';
     
-            // Get token and use regular fetch with proper headers
-            const token = localStorage.getItem('token');
-            
-            if (!token) {
-                alert('You are not logged in. Please log in first.');
-                return;
-            }
+            console.log('Submitting query:', { url, method, data });
     
             const response = await fetch(url, {
                 method: method,
@@ -353,8 +353,19 @@ const UserProfile = () => {
                 body: JSON.stringify(data),
             });
     
+            console.log('Submit query response status:', response.status);
+    
+            if (response.status === 401) {
+                alert('Your session has expired. Please log in again.');
+                localStorage.removeItem('token');
+                navigate('/');
+                return;
+            }
+    
             if (response.ok) {
                 const newQuery = await response.json();
+                console.log('Query saved successfully:', newQuery);
+                
                 if (isEditing) {
                     setSavedQueries(savedQueries.map(q => q.id === newQuery.id ? newQuery : q));
                 } else {
@@ -378,7 +389,7 @@ const UserProfile = () => {
             }
         } catch (error) {
             console.error('Error saving query:', error);
-            alert(`Failed to save query: ${error.message || 'unknown error'}`);
+            alert(`Failed to save query: ${error.message || 'Network error'}`);
         }
     };
 
