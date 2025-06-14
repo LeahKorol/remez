@@ -64,38 +64,58 @@ const UserProfile = () => {
         const fetchUserData = async () => {
             try {
                 setLoading(true);
-
                 const token = localStorage.getItem('token');
                 console.log('token:', token);
-
+        
                 if (!token) {
-                    throw new Error('No authentication token found');
+                    console.log('No token found, redirecting to login');
+                    navigate('/');
+                    return;
                 }
-
+        
                 const userResponse = await fetch('http://127.0.0.1:8000/api/v1/auth/user/', {
+                    method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     }
                 });
-
-                if (!userResponse.ok) {
-                    throw new Error('Failed to fetch user data');
+        
+                console.log('User response status:', userResponse.status);
+        
+                if (userResponse.status === 401) {
+                    console.log('Token expired or invalid, redirecting to login');
+                    localStorage.removeItem('token');
+                    navigate('/');
+                    return;
                 }
-
+        
+                if (!userResponse.ok) {
+                    throw new Error(`Failed to fetch user data: ${userResponse.status}`);
+                }
+        
                 const userData = await userResponse.json();
-                const userName = userData.email.split('@')[0];
+                console.log('User data received:', userData);
+                
+                const userName = userData.email ? userData.email.split('@')[0] : 'User';
                 setUser({ ...userData, name: userName });
-
-                fetchQueries();
-
+        
+                // Fetch queries after user data is successfully loaded
+                await fetchQueries();
+        
             } catch (error) {
                 console.error('Error fetching user data:', error);
                 setError('An error occurred while loading user data');
+                // Don't redirect on network errors, only on auth errors
+                if (error.message.includes('401') || error.message.includes('unauthorized')) {
+                    localStorage.removeItem('token');
+                    navigate('/');
+                }
             } finally {
                 setLoading(false);
             }
         };
+        
 
         fetchUserData();
     }, []);
@@ -104,6 +124,12 @@ const UserProfile = () => {
     const fetchQueries = async () => {
         try {
             const token = localStorage.getItem('token');
+            
+            if (!token) {
+                console.log('No token for queries');
+                return;
+            }
+    
             const response = await fetch('http://127.0.0.1:8000/api/v1/analysis/queries/', {
                 method: 'GET',
                 headers: {
@@ -111,16 +137,27 @@ const UserProfile = () => {
                     'Content-Type': 'application/json'
                 },
             });
-
+    
+            console.log('Queries response status:', response.status);
+    
+            if (response.status === 401) {
+                console.log('Token expired while fetching queries');
+                localStorage.removeItem('token');
+                navigate('/');
+                return;
+            }
+    
             if (response.ok) {
                 const data = await response.json();
+                console.log('Queries loaded:', data.length);
                 setSavedQueries(data);
             } else {
-                throw new Error('Failed to fetch queries');
+                console.error('Failed to fetch queries:', response.status);
+                // Don't show error for queries, just log it
             }
         } catch (error) {
             console.error('Error fetching queries:', error);
-            setError('An error occurred while loading queries');
+            // Don't show error for queries, just log it
         }
     };
 
@@ -245,31 +282,31 @@ const UserProfile = () => {
 
     const handleSubmitQuery = async (e) => {
         e.preventDefault();
-
+    
         const validDrugs = drugs.filter(drug => drug.id !== null);
         const validReactions = reactions.filter(reaction => reaction.id !== null);
-
+    
         // Validate form inputs
         if (validDrugs.length === 0) {
             alert('Please select at least one valid drug from the search results.');
             return;
         }
-
+    
         if (validReactions.length === 0) {
             alert('Please select at least one valid reaction from the search results.');
             return;
         }
-
+    
         if (!yearStart || !yearEnd || !quarterStart || !quarterEnd) {
             alert('Please fill all year and quarter fields.');
             return;
         }
-
+    
         if (!queryName.trim()) {
             alert('Please provide a name for your query.');
             return;
         }
-
+    
         if (parseInt(yearStart) > parseInt(yearEnd)) {
             alert('Start year cannot be greater than end year');
             return;
@@ -278,44 +315,44 @@ const UserProfile = () => {
             alert('Not a valid quarter. Quarters must be between 1 and 4.');
             return;
         }
-
-        const csrfToken = getCSRFToken();  // get this token from cookies
-        const token = localStorage.getItem('token');
-
-        if (!token || !csrfToken) {
-            alert('You are not logged in. Please log in first.');
-            return;
-        }
-
+    
+        // Fixed data structure to match API schema
         const data = {
             name: queryName,
-            drug_ids: validDrugs.map(drug => drug.id),
-            reaction_ids: validReactions.map(reaction => reaction.id),
+            drugs: validDrugs.map(drug => drug.id),
+            reactions: validReactions.map(reaction => reaction.id),
             year_start: parseInt(yearStart),
             year_end: parseInt(yearEnd),
             quarter_start: parseInt(quarterStart),
             quarter_end: parseInt(quarterEnd),
         };
-
+    
         try {
             // Determine if we're creating or updating a query
             const url = isEditing
                 ? `http://127.0.0.1:8000/api/v1/analysis/queries/${editingQueryId}/`
                 : 'http://127.0.0.1:8000/api/v1/analysis/queries/';
-
+    
             const method = isEditing ? 'PUT' : 'POST';
-
+    
+            // Get token and use regular fetch with proper headers
+            const token = localStorage.getItem('token');
+            
+            if (!token) {
+                alert('You are not logged in. Please log in first.');
+                return;
+            }
+    
             const response = await fetch(url, {
                 method: method,
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
-                    'X-CSRFTOKEN': csrfToken,
                 },
                 body: JSON.stringify(data),
             });
-
+    
             if (response.ok) {
                 const newQuery = await response.json();
                 if (isEditing) {
@@ -324,11 +361,20 @@ const UserProfile = () => {
                     setSavedQueries([newQuery, ...savedQueries]);
                 }
                 resetForm();
-            }
-            else {
-                const error = await response.json();
-                console.error('Error saving query : ', error);
-                alert(`Failed to save query: ${error.message || 'unknown error'}`);
+                alert('Query saved successfully!');
+            } else {
+                const errorText = await response.text();
+                let errorMessage = 'Unknown error';
+                
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    errorMessage = errorJson.message || errorJson.detail || 'Unknown error';
+                } catch {
+                    errorMessage = errorText || 'Unknown error';
+                }
+                
+                console.error('Error saving query:', errorMessage);
+                alert(`Failed to save query: ${errorMessage}`);
             }
         } catch (error) {
             console.error('Error saving query:', error);
@@ -336,21 +382,40 @@ const UserProfile = () => {
         }
     };
 
+    const handleDeleteQuery = async (queryId) => {
+        if (!window.confirm('Are you sure you want to delete this query?')) {
+            return;
+        }
+    
+        try {
+            const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+    
+            if (response.ok) {
+                setSavedQueries(savedQueries.filter(q => q.id !== queryId));
+            } else {
+                throw new Error('Failed to delete query');
+            }
+        } catch (error) {
+            console.error('Error deleting query:', error);
+            alert('Failed to delete query');
+        }
+    };
+
     const handleEditQueryName = async (queryId, newName) => {
         try {
-            const token = localStorage.getItem('token');
-            const csrfToken = getCSRFToken();
-
-            const response = await fetch(`http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`, {
+            const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`, {
                 method: 'PATCH',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
-                    'X-CSRFTOKEN': csrfToken,
                 },
                 body: JSON.stringify({ name: newName })
             });
-
+    
             if (response.ok) {
                 const updatedQuery = await response.json();
                 setSavedQueries(savedQueries.map(query =>
@@ -451,35 +516,7 @@ const UserProfile = () => {
 
         // add scroll to top
         window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    const handleDeleteQuery = async (queryId) => {
-        if (!window.confirm('Are you sure you want to delete this query?')) {
-            return;
-        }
-
-        try {
-            const token = localStorage.getItem('token');
-
-            const response = await fetch(`http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (response.ok) {
-                // Remove the query from the local state
-                setSavedQueries(savedQueries.filter(q => q.id !== queryId));
-            } else {
-                throw new Error('Failed to delete query');
-            }
-        } catch (error) {
-            console.error('Error deleting query:', error);
-            alert('Failed to delete query');
-        }
-    };
+    };    
 
     const cancelEditing = () => {
         resetForm();
