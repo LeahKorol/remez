@@ -32,6 +32,8 @@ const UserProfile = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [editingQueryId, setEditingQueryId] = useState(null);
     const [showLogoutPopup, setShowLogoutPopup] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState('');
 
     const navigate = useNavigate();
 
@@ -66,13 +68,13 @@ const UserProfile = () => {
                 setLoading(true);
                 const token = localStorage.getItem('token');
                 console.log('token:', token);
-        
+
                 if (!token) {
                     console.log('No token found, redirecting to login');
                     navigate('/');
                     return;
                 }
-        
+
                 const userResponse = await fetch('http://127.0.0.1:8000/api/v1/auth/user/', {
                     method: 'GET',
                     headers: {
@@ -80,29 +82,29 @@ const UserProfile = () => {
                         'Content-Type': 'application/json'
                     }
                 });
-        
+
                 console.log('User response status:', userResponse.status);
-        
+
                 if (userResponse.status === 401) {
                     console.log('Token expired or invalid, redirecting to login');
                     localStorage.removeItem('token');
                     navigate('/');
                     return;
                 }
-        
+
                 if (!userResponse.ok) {
                     throw new Error(`Failed to fetch user data: ${userResponse.status}`);
                 }
-        
+
                 const userData = await userResponse.json();
                 console.log('User data received:', userData);
-                
+
                 const userName = userData.email ? userData.email.split('@')[0] : 'User';
                 setUser({ ...userData, name: userName });
-        
+
                 // Fetch queries after user data is successfully loaded
                 await fetchQueries();
-        
+
             } catch (error) {
                 console.error('Error fetching user data:', error);
                 setError('An error occurred while loading user data');
@@ -115,7 +117,7 @@ const UserProfile = () => {
                 setLoading(false);
             }
         };
-        
+
 
         fetchUserData();
     }, []);
@@ -124,12 +126,12 @@ const UserProfile = () => {
     const fetchQueries = async () => {
         try {
             const token = localStorage.getItem('token');
-            
+
             if (!token) {
                 console.log('No token for queries');
                 return;
             }
-    
+
             const response = await fetch('http://127.0.0.1:8000/api/v1/analysis/queries/', {
                 method: 'GET',
                 headers: {
@@ -137,16 +139,16 @@ const UserProfile = () => {
                     'Content-Type': 'application/json'
                 },
             });
-    
+
             console.log('Queries response status:', response.status);
-    
+
             if (response.status === 401) {
                 console.log('Token expired while fetching queries');
                 localStorage.removeItem('token');
                 navigate('/');
                 return;
             }
-    
+
             if (response.ok) {
                 const data = await response.json();
                 console.log('Queries loaded:', data.length);
@@ -159,7 +161,7 @@ const UserProfile = () => {
             console.error('Error fetching queries:', error);
             // Don't show error for queries, just log it
         }
-    };    
+    };
 
     // Search for drugs as the user types
     const searchDrugs = async (prefix, index) => {
@@ -282,40 +284,46 @@ const UserProfile = () => {
 
     const handleSubmitQuery = async (e) => {
         e.preventDefault();
-    
+        setIsSubmitting(true);
+        setSubmitError('');
+
+        if (!validateForm()) {
+            return;
+        }
+
         const validDrugs = drugs.filter(drug => drug.id !== null);
         const validReactions = reactions.filter(reaction => reaction.id !== null);
-    
+
         // Validate form inputs
         if (validDrugs.length === 0) {
             alert('Please select at least one valid drug from the search results.');
             return;
         }
-    
+
         if (validReactions.length === 0) {
             alert('Please select at least one valid reaction from the search results.');
             return;
         }
-    
-        if (!yearStart || !yearEnd || !quarterStart || !quarterEnd) {
-            alert('Please fill all year and quarter fields.');
-            return;
-        }
-    
-        if (!queryName.trim()) {
-            alert('Please provide a name for your query.');
-            return;
-        }
-    
-        if (parseInt(yearStart) > parseInt(yearEnd)) {
-            alert('Start year cannot be greater than end year');
-            return;
-        }
-        if (parseInt(quarterStart) > 4 || parseInt(quarterStart) < 1 || parseInt(quarterEnd) < 1 || parseInt(quarterEnd) > 4) {
-            alert('Not a valid quarter. Quarters must be between 1 and 4.');
-            return;
-        }
-    
+
+        // if (!yearStart || !yearEnd || !quarterStart || !quarterEnd) {
+        //     alert('Please fill all year and quarter fields.');
+        //     return;
+        // }
+
+        // if (!queryName.trim()) {
+        //     alert('Please provide a name for your query.');
+        //     return;
+        // }
+
+        // if (parseInt(yearStart) > parseInt(yearEnd)) {
+        //     alert('Start year cannot be greater than end year');
+        //     return;
+        // }
+        // if (parseInt(quarterStart) > 4 || parseInt(quarterStart) < 1 || parseInt(quarterEnd) < 1 || parseInt(quarterEnd) > 4) {
+        //     alert('Not a valid quarter. Quarters must be between 1 and 4.');
+        //     return;
+        // }
+
         const data = {
             name: queryName,
             drugs: validDrugs.map(drug => drug.id),
@@ -325,24 +333,24 @@ const UserProfile = () => {
             quarter_start: parseInt(quarterStart),
             quarter_end: parseInt(quarterEnd),
         };
-    
+
         try {
             const token = localStorage.getItem('token');
-            
+
             if (!token) {
                 alert('You are not logged in. Please log in first.');
                 navigate('/');
                 return;
             }
-    
+
             const url = isEditing
                 ? `http://127.0.0.1:8000/api/v1/analysis/queries/${editingQueryId}/`
                 : 'http://127.0.0.1:8000/api/v1/analysis/queries/';
-    
+
             const method = isEditing ? 'PUT' : 'POST';
-    
+
             console.log('Submitting query:', { url, method, data });
-    
+
             const response = await fetch(url, {
                 method: method,
                 headers: {
@@ -352,44 +360,78 @@ const UserProfile = () => {
                 },
                 body: JSON.stringify(data),
             });
-    
+
             console.log('Submit query response status:', response.status);
-    
+
             if (response.status === 401) {
                 alert('Your session has expired. Please log in again.');
                 localStorage.removeItem('token');
                 navigate('/');
                 return;
             }
-    
+
+            if (response.status === 403) {
+                alert('You do not have permission to perform this action.');
+                return;
+            }
+            
+            if (response.status === 404) {
+                alert('Query not found. It may have been deleted.');
+                await fetchQueries(); // Refresh the queries list
+                resetForm();
+                return;
+            }
+
             if (response.ok) {
                 const newQuery = await response.json();
                 console.log('Query saved successfully:', newQuery);
-                
+
                 if (isEditing) {
                     setSavedQueries(savedQueries.map(q => q.id === newQuery.id ? newQuery : q));
+                    alert('Query updated successfully!');
                 } else {
                     setSavedQueries([newQuery, ...savedQueries]);
+                    alert('Query saved successfully!');
                 }
                 resetForm();
-                alert('Query saved successfully!');
+                setSubmitError('');
             } else {
                 const errorText = await response.text();
-                let errorMessage = 'Unknown error';
-                
+                let errorMessage = 'Unknown error occurred';
+
                 try {
-                    const errorJson = JSON.parse(errorText);
-                    errorMessage = errorJson.message || errorJson.detail || 'Unknown error';
-                } catch {
-                    errorMessage = errorText || 'Unknown error';
+                    const errorData = await response.json
+                    if (errorData.detail) {
+                        errorMessage = errorData.detail;
+                    }
+                    else if (errorData.message) {
+                        errorMessage = errorData.message;
+                    }
+                    else if (errorData.non_field_errors) {
+                        errorMessage = errorData.non_field_errors.join(', ');
+                    }
+                    // const errorJson = JSON.parse(errorText);
+                    // errorMessage = errorJson.message || errorJson.detail || 'Unknown error';
+                } catch (parseError) {
+                    // errorMessage = errorText || 'Unknown error';
+                    console.error('Error parsing error response:', parseError);
+                    errorMessage = `Server error (${response.status})`;
                 }
-                
+
                 console.error('Error saving query:', errorMessage);
                 alert(`Failed to save query: ${errorMessage}`);
+                setSubmitError(errorMessage);
             }
         } catch (error) {
-            console.error('Error saving query:', error);
+            console.error('Network error:', error);
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            alert('Network error: Unable to connect to server. Please check your connection.');
+        } else {
             alert(`Failed to save query: ${error.message || 'Network error'}`);
+        }
+        }
+        finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -397,7 +439,7 @@ const UserProfile = () => {
         if (!window.confirm('Are you sure you want to delete this query?')) {
             return;
         }
-    
+
         try {
             const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`, {
                 method: 'DELETE',
@@ -405,7 +447,7 @@ const UserProfile = () => {
                     'Content-Type': 'application/json'
                 }
             });
-    
+
             if (response.ok) {
                 setSavedQueries(savedQueries.filter(q => q.id !== queryId));
             } else {
@@ -426,7 +468,7 @@ const UserProfile = () => {
                 },
                 body: JSON.stringify({ name: newName })
             });
-    
+
             if (response.ok) {
                 const updatedQuery = await response.json();
                 setSavedQueries(savedQueries.map(query =>
@@ -513,21 +555,46 @@ const UserProfile = () => {
         }
     };
 
-    // update & delete queries
+    // update queries
     const handleEditQuery = (query) => {
         setIsEditing(true);
         setEditingQueryId(query.id);
-        setDrugs(query.drugs.map(d => ({ name: d.name || d, id: d.id || null })).concat({ name: '', id: null }));
-        setReactions(query.reactions.map(r => ({ name: r.name || r, id: r.id || null })).concat({ name: '', id: null }));
-        setYearStart(query.year_start?.toString() || '');
-        setYearEnd(query.year_end?.toString() || '');
-        setQuarterStart(query.quarter_start?.toString() || '');
-        setQuarterEnd(query.quarter_end?.toString() || '');
+        
+        // More robust mapping for drugs - handle both object and string formats
+        const mappedDrugs = query.drugs?.map(drug => {
+            if (typeof drug === 'object' && drug !== null) {
+                return { name: drug.name || '', id: drug.id || null };
+            } else if (typeof drug === 'string') {
+                return { name: drug, id: null };
+            }
+            return { name: '', id: null };
+        }) || [];
+        
+        // Add empty field for adding new drugs
+        setDrugs([...mappedDrugs, { name: '', id: null }]);
+        
+        // Similar handling for reactions
+        const mappedReactions = query.reactions?.map(reaction => {
+            if (typeof reaction === 'object' && reaction !== null) {
+                return { name: reaction.name || '', id: reaction.id || null };
+            } else if (typeof reaction === 'string') {
+                return { name: reaction, id: null };
+            }
+            return { name: '', id: null };
+        }) || [];
+        
+        setReactions([...mappedReactions, { name: '', id: null }]);
+        
+        // Handle date fields with validation
+        setYearStart(query.year_start ? query.year_start.toString() : '');
+        setYearEnd(query.year_end ? query.year_end.toString() : '');
+        setQuarterStart(query.quarter_start ? query.quarter_start.toString() : '');
+        setQuarterEnd(query.quarter_end ? query.quarter_end.toString() : '');
         setQueryName(query.name || 'New Query');
-
-        // add scroll to top
+    
+        // Scroll to top
         window.scrollTo({ top: 0, behavior: 'smooth' });
-    };    
+    };
 
     const cancelEditing = () => {
         resetForm();
@@ -535,6 +602,64 @@ const UserProfile = () => {
 
     const handleNewQuery = () => {
         resetForm();
+    };
+
+    const validateForm = () => {
+        const validDrugs = drugs.filter(drug => drug.id !== null);
+        const validReactions = reactions.filter(reaction => reaction.id !== null);
+        
+        // Check for required fields
+        if (validDrugs.length === 0) {
+            alert('Please select at least one valid drug from the search results.');
+            return false;
+        }
+        
+        if (validReactions.length === 0) {
+            alert('Please select at least one valid reaction from the search results.');
+            return false;
+        }
+        
+        if (!yearStart || !yearEnd || !quarterStart || !quarterEnd) {
+            alert('Please fill all year and quarter fields.');
+            return false;
+        }
+        
+        if (!queryName.trim()) {
+            alert('Please provide a name for your query.');
+            return false;
+        }
+        
+        // Enhanced year validation
+        const startYear = parseInt(yearStart);
+        const endYear = parseInt(yearEnd);
+        const currentYear = new Date().getFullYear();
+        
+        if (startYear > endYear) {
+            alert('Start year cannot be greater than end year');
+            return false;
+        }
+        
+        if (startYear < 1900 || endYear > currentYear + 10) {
+            alert('Please enter realistic year values');
+            return false;
+        }
+        
+        // Quarter validation
+        const startQuarter = parseInt(quarterStart);
+        const endQuarter = parseInt(quarterEnd);
+        
+        if (startQuarter < 1 || startQuarter > 4 || endQuarter < 1 || endQuarter > 4) {
+            alert('Quarters must be between 1 and 4.');
+            return false;
+        }
+        
+        // Additional validation: if same year, start quarter should not be after end quarter
+        if (startYear === endYear && startQuarter > endQuarter) {
+            alert('Start quarter cannot be after end quarter in the same year');
+            return false;
+        }
+        
+        return true;
     };
 
     const handleLogout = async () => {
@@ -761,15 +886,29 @@ const UserProfile = () => {
                         </div>
 
                         <div className="submit-container">
+                            {submitError && (
+                                <div className="error-message" style={{ color: 'red', marginBottom: '10px' }}>
+                                    {submitError}
+                                </div>
+                            )}
                             <button
                                 type="submit"
                                 className="submit-button"
                                 disabled={
+                                    isSubmitting ||
                                     drugs.every(d => !d.name.trim()) ||
                                     reactions.every(r => !r.name.trim())
                                 }
                             >
-                                {isEditing ? 'Update + Calc' : 'Save + Calc'}
+                                {isSubmitting ? (
+                                    <>
+                                        {isEditing ? 'Updating...' : 'Saving...'}
+                                    </>
+                                ) : (
+                                    <>
+                                        {isEditing ? 'Update + Calc' : 'Save + Calc'}
+                                    </>
+                                )}
                             </button>
                         </div>
                     </form>
