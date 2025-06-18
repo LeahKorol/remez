@@ -99,7 +99,7 @@ const UserProfile = () => {
                 const userData = await userResponse.json();
                 console.log('User data received:', userData);
 
-                const userName = userData.username || userData.email?.split('@')[0] || 'User';
+                const userName = userData.name || userData.email?.split('@')[0] || 'User';
                 setUser({ ...userData, name: userName });
 
                 // Fetch queries after user data is successfully loaded

@@ -37,10 +37,10 @@ const handleBackendErrors = (data) => {
       : errorMessages.push(`Email: ${data.email}`);
   }
 
-  if (data.username) {
-    Array.isArray(data.username)
-      ? data.username.forEach((e) => errorMessages.push(`Username: ${e}`))
-      : errorMessages.push(`Username: ${data.username}`);
+  if (data.name) {
+    Array.isArray(data.name)
+      ? data.name.forEach((e) => errorMessages.push(`name: ${e}`))
+      : errorMessages.push(`name: ${data.name}`);
   }
 
   if (data.password1) {
@@ -60,7 +60,7 @@ const handleBackendErrors = (data) => {
 
 function Register() {
   const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
+  const [name, setname] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -82,54 +82,119 @@ function Register() {
     setNotCommon(!commonPasswords.includes(password.toLowerCase()));
   }, [password]);
 
-  const handleUsernameChange = (e) => {
+  const handlenameChange = (e) => {
     const value = e.target.value;
     if (value.length <= 200) {
-      setUsername(value);
+      setname(value);
     } else {
-      toast.error('Username cannot exceed 200 characters.');
+      toast.error('name cannot exceed 200 characters.');
     }
   };
+
+  // const handleRegister = async (e) => {
+  //   e.preventDefault();
+  //   setIsLoading(true);
+
+  //   // בדיקת אורך name
+  //   if (name.length > 200) {
+  //     toast.error('name cannot exceed 200 characters.');
+  //     setIsLoading(false);
+  //     return;
+  //   }
+
+  //   if (password !== confirmPassword) {
+  //     toast.error('Passwords do not match.');
+  //     setIsLoading(false);
+  //     return;
+  //   }
+
+  //   if (!isLongEnough || !hasLetter || !notCommon) {
+  //     toast.error('Password does not meet the requirements.');
+  //     setIsLoading(false);
+  //     return;
+  //   }
+
+  //   try {
+  //     const response = await fetch('http://127.0.0.1:8000/api/v1/auth/registration/', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify({
+  //         email,
+  //         password1: password,
+  //         password2: confirmPassword,
+  //         name,
+  //       }),
+  //     });
+
+  //     const data = await response.json();
+
+  //     if (response.ok) {
+  //       if (data.token || data.access) {
+  //         localStorage.setItem('token', data.token || data.access);
+  //         toast.success('Registration successful!');
+  //         navigate('/dashboard');
+  //       } else {
+  //         toast.info('Registration successful. Please verify your email before logging in.');
+  //       }
+  //       return;
+  //     }
+
+  //     const backendErrors = handleBackendErrors(data);
+  //     backendErrors.forEach((err) => toast.error(err));
+  //   } catch (err) {
+  //     console.error('Network error:', err);
+  //     toast.error('Network error. Please check your connection and try again.');
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+
+
 
   const handleRegister = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-
-    // בדיקת אורך Username
-    if (username.length > 200) {
-      toast.error('Username cannot exceed 200 characters.');
+  
+    // בדיקת אורך name
+    if (name.length > 200) {
+      toast.error('name cannot exceed 200 characters.');
       setIsLoading(false);
       return;
     }
-
+  
     if (password !== confirmPassword) {
       toast.error('Passwords do not match.');
       setIsLoading(false);
       return;
     }
-
+  
     if (!isLongEnough || !hasLetter || !notCommon) {
       toast.error('Password does not meet the requirements.');
       setIsLoading(false);
       return;
     }
-
+  
+    const requestBody = {
+      email,
+      password1: password,
+      password2: confirmPassword,
+      name,
+    };
+  
     try {
       const response = await fetch('http://127.0.0.1:8000/api/v1/auth/registration/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          email,
-          username,
-          password1: password,
-          password2: confirmPassword,
-        }),
+        body: JSON.stringify(requestBody),
       });
-
+  
       const data = await response.json();
-
+      console.log('Response data:', data);
+  
       if (response.ok) {
         if (data.token || data.access) {
           localStorage.setItem('token', data.token || data.access);
@@ -140,11 +205,16 @@ function Register() {
         }
         return;
       }
-
+  
       const backendErrors = handleBackendErrors(data);
       backendErrors.forEach((err) => toast.error(err));
     } catch (err) {
       console.error('Network error:', err);
+      console.error('Error details:', {
+        message: err.message,
+        stack: err.stack,
+        name: err.name
+      });
       toast.error('Network error. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
@@ -179,17 +249,17 @@ function Register() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="username">Username</label>
+              <label htmlFor="name">username</label>
               <input
                 type="text"
-                id="username"
-                value={username}
-                onChange={handleUsernameChange}
+                id="name"
+                value={name}
+                onChange={handlenameChange}
                 maxLength={200}
                 required
               />
-              <small style={{ color: username.length > 180 ? 'orange' : 'gray' }}>
-                {username.length}/200 characters
+              <small style={{ color: name.length > 180 ? 'orange' : 'gray' }}>
+                {name.length}/200 characters
               </small>
             </div>
 
