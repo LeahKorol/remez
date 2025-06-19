@@ -35,6 +35,9 @@ const UserProfile = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState('');
 
+    const [showToast, setShowToast] = useState(false);
+    const [toastMessage, setToastMessage] = useState('');
+
     const navigate = useNavigate();
 
     // Handle input changes for year and quarter fields
@@ -282,6 +285,12 @@ const UserProfile = () => {
         setEditingQueryId(null);
     };
 
+    const showToastMessage = (message) => {
+        setToastMessage(message);
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+    };
+
     const handleSubmitQuery = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -374,7 +383,7 @@ const UserProfile = () => {
                 alert('You do not have permission to perform this action.');
                 return;
             }
-            
+
             if (response.status === 404) {
                 alert('Query not found. It may have been deleted.');
                 await fetchQueries(); // Refresh the queries list
@@ -388,7 +397,7 @@ const UserProfile = () => {
 
                 if (isEditing) {
                     setSavedQueries(savedQueries.map(q => q.id === newQuery.id ? newQuery : q));
-                    alert('Query updated successfully!');
+                    showToastMessage('Query updated successfully!');
                 } else {
                     setSavedQueries([newQuery, ...savedQueries]);
                     alert('Query saved successfully!');
@@ -400,7 +409,7 @@ const UserProfile = () => {
                 let errorMessage = 'Unknown error occurred';
 
                 try {
-                    const errorData = await response.json
+                    const errorData = await response.json();
                     if (errorData.detail) {
                         errorMessage = errorData.detail;
                     }
@@ -424,11 +433,11 @@ const UserProfile = () => {
             }
         } catch (error) {
             console.error('Network error:', error);
-        if (error.name === 'TypeError' && error.message.includes('fetch')) {
-            alert('Network error: Unable to connect to server. Please check your connection.');
-        } else {
-            alert(`Failed to save query: ${error.message || 'Network error'}`);
-        }
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                alert('Network error: Unable to connect to server. Please check your connection.');
+            } else {
+                alert(`Failed to save query: ${error.message || 'Network error'}`);
+            }
         }
         finally {
             setIsSubmitting(false);
@@ -556,42 +565,44 @@ const UserProfile = () => {
     };
 
     // update queries
-    const handleEditQuery = (query) => {
+    const handleEditQuery = async (query) => {
         setIsEditing(true);
         setEditingQueryId(query.id);
-        
+
         // More robust mapping for drugs - handle both object and string formats
-        const mappedDrugs = query.drugs?.map(drug => {
-            if (typeof drug === 'object' && drug !== null) {
-                return { name: drug.name || '', id: drug.id || null };
-            } else if (typeof drug === 'string') {
-                return { name: drug, id: null };
+        const mappedDrugs = query.drugs?.map(drugId => {
+            if (typeof drugId === 'number') {
+                return { name: '', id: drugId }; 
+            }
+            else if (typeof drugId === 'object' && drugId !== null) {
+                return { name: drugId.name || '', id: drugId.id || drugId };
             }
             return { name: '', id: null };
         }) || [];
-        
+
         // Add empty field for adding new drugs
         setDrugs([...mappedDrugs, { name: '', id: null }]);
-        
+
         // Similar handling for reactions
-        const mappedReactions = query.reactions?.map(reaction => {
-            if (typeof reaction === 'object' && reaction !== null) {
-                return { name: reaction.name || '', id: reaction.id || null };
-            } else if (typeof reaction === 'string') {
-                return { name: reaction, id: null };
+        const mappedReactions = query.reactions?.map(reactionId => {
+            if (typeof reactionId === 'number') {
+                return { name: '', id: reactionId }; 
+            }
+            else if (typeof reactionId === 'object' && reactionId !== null) {
+                return { name: reactionId.name || '', id: reactionId };
             }
             return { name: '', id: null };
         }) || [];
-        
+
         setReactions([...mappedReactions, { name: '', id: null }]);
-        
+
         // Handle date fields with validation
         setYearStart(query.year_start ? query.year_start.toString() : '');
         setYearEnd(query.year_end ? query.year_end.toString() : '');
         setQuarterStart(query.quarter_start ? query.quarter_start.toString() : '');
         setQuarterEnd(query.quarter_end ? query.quarter_end.toString() : '');
         setQueryName(query.name || 'New Query');
-    
+
         // Scroll to top
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -607,58 +618,58 @@ const UserProfile = () => {
     const validateForm = () => {
         const validDrugs = drugs.filter(drug => drug.id !== null);
         const validReactions = reactions.filter(reaction => reaction.id !== null);
-        
+
         // Check for required fields
         if (validDrugs.length === 0) {
             alert('Please select at least one valid drug from the search results.');
             return false;
         }
-        
+
         if (validReactions.length === 0) {
             alert('Please select at least one valid reaction from the search results.');
             return false;
         }
-        
+
         if (!yearStart || !yearEnd || !quarterStart || !quarterEnd) {
             alert('Please fill all year and quarter fields.');
             return false;
         }
-        
+
         if (!queryName.trim()) {
             alert('Please provide a name for your query.');
             return false;
         }
-        
+
         // Enhanced year validation
         const startYear = parseInt(yearStart);
         const endYear = parseInt(yearEnd);
         const currentYear = new Date().getFullYear();
-        
+
         if (startYear > endYear) {
             alert('Start year cannot be greater than end year');
             return false;
         }
-        
+
         if (startYear < 1900 || endYear > currentYear + 10) {
             alert('Please enter realistic year values');
             return false;
         }
-        
+
         // Quarter validation
         const startQuarter = parseInt(quarterStart);
         const endQuarter = parseInt(quarterEnd);
-        
+
         if (startQuarter < 1 || startQuarter > 4 || endQuarter < 1 || endQuarter > 4) {
             alert('Quarters must be between 1 and 4.');
             return false;
         }
-        
+
         // Additional validation: if same year, start quarter should not be after end quarter
         if (startYear === endYear && startQuarter > endQuarter) {
             alert('Start quarter cannot be after end quarter in the same year');
             return false;
         }
-        
+
         return true;
     };
 
@@ -720,6 +731,12 @@ const UserProfile = () => {
                             >
                                 Cancel
                             </button>
+                        )}
+
+                        {showToast && (
+                            <div className="toast-notification">
+                                {toastMessage}
+                            </div>
                         )}
                     </div>
 
