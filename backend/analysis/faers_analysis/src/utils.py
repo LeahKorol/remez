@@ -17,6 +17,8 @@ import numpy as np
 import pandas as pd
 import scipy.stats as stats
 
+logger = logging.getLogger("FAERS")
+
 
 def html_from_fig(fig, caption=None, width=None):
     figfile = io.BytesIO()
@@ -247,7 +249,7 @@ class QuestionConfig:
             tbl = xl.parse(sheetname)
             tbl.columns = [c.lower().strip() for c in tbl.columns]
             if len(tbl.columns) > 3:
-                logging.warning(
+                logger.warning(
                     f"Skipping {fn} sheet {sheetname} that has {len(tbl.columns)} columns"
                 )
                 continue

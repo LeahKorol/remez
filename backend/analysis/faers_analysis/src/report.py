@@ -26,6 +26,8 @@ from analysis.faers_analysis.src.utils import (
 )
 from analysis.models import Outcome
 
+logger = logging.getLogger("FAERS")
+
 
 class Reporter:
     FORMATS = ["png"]
@@ -57,12 +59,13 @@ class Reporter:
                 self.dir_out, format_, f"figure_{self.figure_count:03d}.{format_}"
             )
             fig.savefig(fn, dpi=360)
+        plt.close(fig)
         return html
 
     def report(self, data, title, config, explanation=None, skip_lr=False):
         # Check for duplicate indices and reset index if needed
         if len(set(data.index)) != len(data):
-            logging.warning("Found duplicate indices in data. Resetting index.")
+            logger.warning("Found duplicate indices in data. Resetting index.")
             data = data.reset_index(drop=False)
 
         lines = []
@@ -163,7 +166,7 @@ class Reporter:
                 data_regression[outcome_col], data_regression[regression_cols]
             )
         except Exception as e:
-            logging.error(f"Error in Logit model creation: {str(e)}")
+            logger.error(f"Error in Logit model creation: {str(e)}")
             return f"ERROR in regression: {str(e)}<br>"
         try:
             result = logit.fit()

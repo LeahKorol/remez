@@ -9,11 +9,15 @@ import os
 import shutil
 import urllib.request
 from multiprocessing.dummy import Pool as ThreadPool
-import tqdm
 
+import tqdm
 from django.core.management.base import BaseCommand, CommandError
+
 from analysis.faers_analysis.src.utils import Quarter, generate_quarters
+
 from ..cli_utils import QuarterRangeArgMixin
+
+logger = logging.getLogger("FAERS")
 
 
 class Command(QuarterRangeArgMixin, BaseCommand):
@@ -54,7 +58,7 @@ class Command(QuarterRangeArgMixin, BaseCommand):
             for q in generate_quarters(q_first, q_last):
                 urls.extend(Command.quarter_urls(q))
 
-            print(f"will download {len(urls)} urls")
+            logger.info(f"will download {len(urls)} urls")
             with ThreadPool(threads) as pool:
                 _ = list(
                     tqdm.tqdm(
@@ -80,6 +84,7 @@ class Command(QuarterRangeArgMixin, BaseCommand):
             # "indi",
             # "ther",
         ]
+
         for w in what:
             if year <= 2018:
                 tmplt = (
@@ -94,10 +99,13 @@ class Command(QuarterRangeArgMixin, BaseCommand):
     def download_url(url, dir_out):
         fn_out = os.path.split(url)[-1]
         fn_out = os.path.join(dir_out, fn_out)
+        if os.path.exists(fn_out):
+            logger.debug(f"Skipping {url} because {fn_out} already exists")
+            return
         try:
             urllib.request.urlretrieve(url, fn_out)
         except Exception as err:
-            logging.error(f"Failed to download {url} to {fn_out} {err}")
+            logger.error(f"Failed to download {url} to {fn_out} {err}")
         else:
-            logging.info(f"Saved {fn_out}")
+            logger.info(f"Saved {fn_out}")
             assert os.path.exists(fn_out)

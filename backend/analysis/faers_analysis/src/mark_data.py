@@ -20,14 +20,13 @@ from .utils import Quarter, QuestionConfig, generate_quarters
 setup_django_environemnt()
 
 import logging
-
 from django.db.models import F
 
 from analysis.faers_analysis import constants as const
 from analysis.faers_analysis.src.utils import normalize_dataframe
 from analysis.models import Demo, Drug, Outcome, Reaction
 
-logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("FAERS")
 
 
 def mark_drug_data(df, drug_names):
@@ -41,13 +40,18 @@ def mark_drug_data(df, drug_names):
 
 def mark_reaction_data(df, reaction_types):
     df.pt = df.pt.apply(QuestionConfig.normalize_reaction_name)
-    reaction_df = pd.DataFrame({
-        f"reaction {reaction}": df.pt == reaction
-        for reaction in sorted(reaction_types)
-    })
-    df = pd.concat([df, reaction_df], axis=1)
-    reaction_columns = reaction_df.columns.tolist()
+
+    # Create a dict of new columns
+    new_cols = {
+        f"reaction {reaction}": df.pt == reaction for reaction in sorted(reaction_types)
+    }
+
+    # Concatenate in a single operation to avoid fragmentation
+    df = pd.concat([df, pd.DataFrame(new_cols, index=df.index)], axis=1)
+
+    reaction_columns = list(new_cols.keys())
     ret = df.groupby("caseid")[reaction_columns].any()
+
     return ret
 
 
@@ -67,13 +71,13 @@ def handle_duplicates(df):
     df["rows_per_caseid"] = rows_per_caseid.reindex(df.caseid).values
     sel = df.rows_per_caseid == 1
     already_good = df.loc[sel]
-    logging.info(f"{sel.sum():,d} rows are already good")
+    logger.info(f"{sel.sum():,d} rows are already good")
     need_to_fix = df.loc[~sel]
-    logging.info(f"{len(need_to_fix):,d} rows need some fixing")
+    logger.info(f"{len(need_to_fix):,d} rows need some fixing")
     fixed = need_to_fix.groupby("caseid").apply(
         lambda d: handle_duplicates_within_case(d, cols_boolean, cols_rest)
     )
-    logging.info("Done fixing, combining the results")
+    logger.info("Done fixing, combining the results")
     ret = pd.concat([already_good, fixed], sort=False)
     uniqueness = utils.compute_df_uniqueness(ret, ["caseid"], do_print=False)
     assert uniqueness == 1.0
@@ -81,11 +85,11 @@ def handle_duplicates(df):
 
 
 def mark_data(df_drug, df_reac, df_demo, config_items):
-    logging.info("Marking the data")
+    logger.info("Marking the data")
     cols_to_collect = list(df_demo.columns)
     df_merged = df_demo.join(df_reac).join(df_drug)
     for config in config_items:
-        logging.info(f"Config {config.name[0:40]}....")
+        logger.info(f"Config {config.name[0:40]}....")
         drugs_curr = set(config.drugs)
         drug_columns = [f"drug {drug}" for drug in drugs_curr]
         exposed = f"exposed {config.name}"
@@ -101,7 +105,7 @@ def mark_data(df_drug, df_reac, df_demo, config_items):
         df_merged[reacted] = df_merged[reaction_columns].any(axis=1)
         cols_to_collect.append(reacted)
     df_merged = df_merged[cols_to_collect].reset_index().sort_values(["caseid", "q"])
-    logging.info(f"Handling duplicates of {len(df_merged):,d} rows")
+    logger.info(f"Handling duplicates of {len(df_merged):,d} rows")
     ret = handle_duplicates(df_merged)
     return ret
 
@@ -181,7 +185,7 @@ def process_quarters(quarters, dir_out, config_items, drug_names, reaction_types
     df_marked = mark_data(
         df_drug=df_drug, df_reac=df_reac, df_demo=df_demo, config_items=config_items
     )
-    logging.info("Marked the data, dumping the file")
+    logger.info("Marked the data, dumping the file")
 
     # Save the combined file
     pickle.dump(df_marked, open(os.path.join(dir_out, "marked_data.pkl"), "wb"))
@@ -191,13 +195,17 @@ def process_quarters(quarters, dir_out, config_items, drug_names, reaction_types
         df_q = df_marked[df_marked.q == str(q)]
         if not df_q.empty:
             pickle.dump(df_q, open(os.path.join(dir_out, f"{q}.pkl"), "wb"))
-            logging.info(f"Saved quarterly file for {q}")
+            logger.info(f"Saved quarterly file for {q}")
 
     return df_marked
 
 
 def process_quarter_wrapper(q, dir_out, config_items, drug_names, reaction_types):
     """Wrapper function for process_quarter to use with multiprocessing"""
+    output_file = os.path.join(dir_out, f"{q}.pkl")
+    if os.path.exists(output_file):
+        logger.debug(f"Skipping {q} because {output_file} already exists")
+        return
 
     # Ensure the environment is set up for Django, as this function runs in a separate process
     from django.conf import settings
@@ -220,8 +228,7 @@ def process_quarter_wrapper(q, dir_out, config_items, drug_names, reaction_types
     )
 
     # Only save the quarterly file for this quarter
-    output_file = os.path.join(dir_out, f"{q}.pkl")
-    logging.info(f"Saving quarterly file {output_file}")
+    logger.info(f"Saving quarterly file {output_file}")
     pickle.dump(df_marked, open(output_file, "wb"))
 
     return df_marked
