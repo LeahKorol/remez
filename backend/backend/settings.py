@@ -10,11 +10,13 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
-from pathlib import Path
-from dotenv import load_dotenv
-from datetime import timedelta
+import logging.config
 import os
 import sys
+from datetime import timedelta
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
@@ -261,3 +263,43 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
 PASSWORD_RESET_CONFIRM_REDIRECT_BASE_URL = os.getenv(
     "PASSWORD_RESET_CONFIRM_REDIRECT_BASE_URL"
 )
+
+ROOT_LOG_LEVEL = os.getenv("ROOT_LOG_LEVEL", "WARNING").upper()
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "color": {
+            "()": "colorlog.ColoredFormatter",
+            "format": "[%(asctime)s] %(log_color)s%(levelname)s (%(module)s:%(lineno)d): %(message)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
+            "log_colors": {
+                "INFO": "green",
+                "ERROR": "red",
+                "CRITICAL": "bold_red",
+                "WARNING": "yellow",
+                "DEBUG": "cyan",
+            },
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "color",
+        },
+    },
+    "loggers": {
+        "FAERS": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": ROOT_LOG_LEVEL,
+    },
+}
+
+logging.config.dictConfig(LOGGING)

@@ -7,6 +7,7 @@ django-cors-headers==4.7.0   # Enable Cross-Origin Resource Sharing (CORS)
 psycopg[binary]==3.2.6 # A PostgreSQL  Adapter
 pytest-django==4.10.0 # a testing library
 python-dotenv==1.1.0 # for loading environment variables from .env files
+colorlog==6.9.0 # for colored terminal output
 
 # FAERS analysis requirements: https://github.com/bgbg/faers_analysis/blob/main/requirements.txt
 tqdm==4.67.1
