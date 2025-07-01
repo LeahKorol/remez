@@ -20,6 +20,7 @@ from .utils import Quarter, QuestionConfig, generate_quarters
 setup_django_environemnt()
 
 import logging
+
 from django.db.models import F
 
 from analysis.faers_analysis import constants as const
@@ -238,7 +239,8 @@ def main(
     *,
     year_q_from,
     year_q_to,
-    config_dir,
+    config_dir=None,  # save config_dir for backwards compatibility
+    json_config=None,
     dir_out,
     threads=1,
     clean_on_failure=True,
@@ -252,6 +254,8 @@ def main(
         XXXXqQ, where XXXX is the year, q is the literal "q" and Q is 1, 2, 3 or 4
     :param str config_dir:
         Directory with config files
+    :param str json_config:
+        JSON object with configuration for queries
     :param str dir_out:
         Output directory
     :param int threads:
@@ -265,10 +269,20 @@ def main(
 
     dir_out = os.path.abspath(dir_out)
     os.makedirs(dir_out, exist_ok=True)
+
+    if not config_dir and not json_config:
+        raise ValueError(
+            "Either config_dir or json_config must be provided. "
+            "Use --config-dir or --json-config options."
+        )
     try:
         q_from = Quarter(year_q_from)
         q_to = Quarter(year_q_to)
-        config_items = QuestionConfig.load_config_items(config_dir)
+        config_items = []
+        if config_dir:
+            config_items = QuestionConfig.load_config_items(config_dir)
+        if json_config:
+            config_items.append(QuestionConfig.config_from_json_object(json_config))
         drug_names = set()
         reaction_types = set()
         for config in config_items:

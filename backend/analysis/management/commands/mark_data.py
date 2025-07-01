@@ -1,4 +1,6 @@
+# NOTE: This command does not support passing a JSON object for configuration; it only works with a configuration directory via --config-dir.
 from django.core.management.base import BaseCommand, CommandError
+
 from analysis.faers_analysis.src.mark_data import main as mark_data_main
 
 

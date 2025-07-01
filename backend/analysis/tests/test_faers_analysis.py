@@ -68,6 +68,17 @@ def reaction(case):
     )
 
 
+@pytest.fixture
+def minimal_json_config():
+    # Provide a minimal valid config for mark_data
+    return {
+        "name": "test_config",
+        "drug": ["aspirin"],
+        "reaction": ["headache"],
+        "control": None,
+    }
+
+
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     "model_fixture, model, columns, column_types",
@@ -148,6 +159,51 @@ def test_mark_data_main(demo, drug, outcome, reaction, quarter, django_db_setup)
 
     # If no exceptions are raised, the test passes
     assert True
+
+
+@pytest.mark.django_db(transaction=True)
+def test_mark_data_config_from_json(
+    minimal_json_config,
+    tmp_path,
+    demo,
+    drug,
+    outcome,
+    reaction,
+    quarter,
+    django_db_setup,
+):
+    output_dir = tmp_path
+    year_q_from = f"{quarter.year}q{quarter.quarter}"
+    year_q_to = f"{quarter.year}q{Quarter.increment(quarter).quarter}"
+    mark_data_main(
+        year_q_from=year_q_from,
+        year_q_to=year_q_to,
+        config_dir=None,
+        json_config=minimal_json_config,
+        dir_out=str(output_dir),
+        threads=1,
+        clean_on_failure=True,
+    )
+    assert (output_dir / f"{year_q_from}.pkl").exists(), (
+        f"{year_q_from}.pkl was not created"
+    )
+    assert (output_dir / "marked_data.pkl").exists(), "marked_data.pkl was not created"
+
+
+def test_mark_data_error_on_no_config(tmp_path):
+    output_dir = tmp_path
+    with pytest.raises(
+        ValueError, match="Either config_dir or json_config must be provided"
+    ):
+        mark_data_main(
+            year_q_from="2020q1",
+            year_q_to="2020q1",
+            config_dir=None,
+            json_config=None,
+            dir_out=str(output_dir),
+            threads=1,
+            clean_on_failure=True,
+        )
 
 
 @pytest.mark.django_db
