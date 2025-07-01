@@ -273,6 +273,26 @@ class QuestionConfig:
             )
         return ret
 
+    @classmethod
+    def config_from_json_object(cls, json_object):
+        """
+        Create a QuestionConfig instance from a JSON object.
+        The JSON object should have 'name', 'drug', 'reaction', and optionally 'control' keys.
+        """
+        logging.debug(f"Creating QuestionConfig from JSON object: {json_object}")
+        name = json_object["name"]
+        drugs = [cls.normalize_drug_name(d) for d in json_object["drug"]]
+        reactions = [cls.normalize_reaction_name(r) for r in json_object["reaction"]]
+        control = (
+            [cls.normalize_drug_name(d) for d in json_object.get("control", [])]
+            if "control" in json_object and json_object["control"]
+            else None
+        )
+        logging.debug(
+            f"Created QuestionConfig: {name}, Drugs: {drugs}, Reactions: {reactions}, Control: {control}"
+        )
+        return cls(name, drugs=drugs, reactions=reactions, control=control)
+
     def filename_from_config(self, directory, extension=".csv"):
         if extension:
             assert extension.startswith(".")
