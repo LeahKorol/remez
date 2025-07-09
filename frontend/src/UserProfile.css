@@ -489,7 +489,7 @@
   flex: 1; 
 }
 
-/* Buttons */
+/* Buttons Style */
 .cancel-button {
   background-color: #777;
   color: white;
@@ -617,7 +617,7 @@
   cursor: not-allowed;
 }
 
-/* Query Components */
+/* Query Components Style */
 .query-item {
   display: flex;
   justify-content: space-between;
@@ -688,6 +688,7 @@
   animation: slideIn 0.3s ease-in-out;
 }
 
+/* Anomation for slide in */
 @keyframes slideIn {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
