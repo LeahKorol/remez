@@ -1,6 +1,7 @@
 """
 This file was originally copied from: https://github.com/bgbg/faers_analysis/blob/main/src/report.py
 Modifiefd to use FAERS data from a database instead of CSV files.
+Added an option to return the graph data points instead of generating them.
 """
 
 # We will use a class instead of a set of functions, mainly for figure management
@@ -8,6 +9,7 @@ import logging
 import os
 import pickle
 from glob import glob
+from typing import Dict, List, Optional, Tuple, TypeAlias, Union
 
 import numpy as np
 import pandas as pd
@@ -30,9 +32,28 @@ logger = logging.getLogger("FAERS")
 
 
 class Reporter:
-    FORMATS = ["png"]
+    FORMATS: List[str] = ["png"]
+    PlotDataDict: TypeAlias = Dict[str, List[Union[str, float]]]
+    """Structure of PlotDataDict:
+    {
+        "quarters": List[str],       # Quarter identifiers (e.g., ["2021q1", "2021q2", ...])
+        "ror_values": List[float],   # Reporting Odds Ratio values
+        "ror_lower": List[float],    # Lower confidence bounds for ROR
+        "ror_upper": List[float],    # Upper confidence bounds for ROR
+        "log10_ror": List[float],    # Log10 of ROR values for plotting
+        "log10_ror_lower": List[float], # Log10 of lower bounds
+        "log10_ror_upper": List[float]  # Log10 of upper bounds
+    }
+    """
 
-    def __init__(self, config, dir_out, q_from, q_to, output_raw_exposure_data):
+    def __init__(
+        self,
+        config: QuestionConfig,
+        dir_out: str,
+        q_from: Quarter,
+        q_to: Quarter,
+        output_raw_exposure_data: bool,
+    ) -> None:
         self.config = config
         self.title = config.name
         self.dir_out = os.path.join(dir_out, self.title)
@@ -43,8 +64,8 @@ class Reporter:
         self.figure_count = 0
         self.output_raw_exposure_data = output_raw_exposure_data
 
-    def subplots(self, nrows=1, ncols=1, figsize=(8, 6), dpi=360):
-        return plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize, dpi=dpi)
+    def subplots(self, figsize=(8, 4), dpi=360):
+        return plt.subplots(figsize=figsize, dpi=dpi)
 
     def handle_fig(self, fig, caption=None):
         self.figure_count += 1
@@ -62,7 +83,15 @@ class Reporter:
         plt.close(fig)
         return html
 
-    def report(self, data, title, config, explanation=None, skip_lr=False):
+    def report(
+        self,
+        data: pd.DataFrame,
+        title: str,
+        config: QuestionConfig,
+        explanation: Optional[str] = None,
+        skip_lr: bool = False,
+        return_plot_data: bool = False,
+    ) -> Optional[PlotDataDict]:
         # Check for duplicate indices and reset index if needed
         if len(set(data.index)) != len(data):
             logger.warning("Found duplicate indices in data. Resetting index.")
@@ -75,11 +104,22 @@ class Reporter:
         data = self.handle_controls(data, config)
         config_summary = self.summarize_config(config)
         lines.append(config_summary)
-        summary = self.summarize_data(data, title, config, skip_lr=skip_lr)
-        lines.append(summary)
+
+        summary_result = self.summarize_data(
+            data, title, config, skip_lr=skip_lr, return_plot_data=return_plot_data
+        )
+        if return_plot_data:
+            summary_html, plot_data = summary_result
+            lines.append(summary_html)
+        else:
+            lines.append(summary_result)
+
         fn = os.path.join(self.dir_out, f"report {self.config.name} {title}.html")
         open(fn, "w").write("\n".join(lines))
         print(f"Saved {fn}")
+
+        if return_plot_data:
+            return plot_data
 
     def handle_controls(self, data, config):
         if config.control is None:
@@ -103,15 +143,31 @@ class Reporter:
         lines.append(f"<strong>Reactions:</strong> {str_reactions}<br>")
         return "\n".join(lines)
 
-    def summarize_data(self, data, title, config, skip_lr=False):
+    def summarize_data(
+        self,
+        data: pd.DataFrame,
+        title: str,
+        config: QuestionConfig,
+        skip_lr: bool = False,
+        return_plot_data: bool = False,
+    ) -> Union[str, Tuple[str, PlotDataDict]]:
         lines = ["<H2>%s</H2>" % title]
         lines.append(self.demographic_summary(data))
-        lines.append(self.ror_dynamics(data))
+
+        ror_result = self.ror_dynamics(data, return_data=return_plot_data)
+        if return_plot_data:
+            ror_html, plot_data = ror_result
+            lines.append(ror_html)
+        else:
+            lines.append(ror_result)
+
         if not skip_lr:
             lines.append(self.regression_analysis(data))
         if self.output_raw_exposure_data:
             lines.append(self.true_true(data, config))
 
+        if return_plot_data:
+            return "\n".join(lines), plot_data
         return "\n".join(lines)
 
     def true_true(self, data, config):
@@ -170,7 +226,8 @@ class Reporter:
             return f"ERROR in regression: {str(e)}<br>"
         try:
             result = logit.fit()
-        except:
+        except Exception as e:
+            logger.warning(f"Error fitting logistic regression: {str(e)}")
             result_summary = "ERROR. Most probably, singular matrix<br>"
             or_estimates = "<br>"
         else:
@@ -352,9 +409,15 @@ class Reporter:
 
         return ret
 
-    def ror_dynamics(self, data):
-        lines = []
-        lines.append("<H3>ROR data</H3>")
+    def ror_dynamics(
+        self, data: pd.DataFrame, return_data: bool = False
+    ) -> Union[str, Tuple[str, PlotDataDict]]:
+        """Generate ROR dynamics report section and optionally return plot data
+
+        Returns:
+            If return_data=True: Tuple of (html_string, plot_data_dict)
+            If return_data=False: html_string
+        """
         config = self.config
         rors = []
         columns_to_keep = ["age", "sex", "event_date", "q"] + [
@@ -370,21 +433,60 @@ class Reporter:
             ror, (lower, upper) = contingency_matrix.ror()
             rors.append([q, lower, ror, upper])
         df_rors = pd.DataFrame(rors, columns=["q", "ROR_lower", "ROR", "ROR_upper"])
-        fig, ax = self.subplots()
-        self.plot_ror(df_rors, ax_ror=ax)
-        lines.append(self.handle_fig(fig, "ROR dynamics"))
-        return "\n".join(lines)
+
+        # Generate HTML without plotting if return_data is True
+        lines = []
+        lines.append("<H3>ROR data</H3>")
+        if return_data:
+            plot_data = self.plot_ror(df_rors, return_data=True)
+            return "\n".join(lines), plot_data
+        else:
+            fig, ax = self.subplots()
+            self.plot_ror(df_rors, ax_ror=ax)
+            lines.append(self.handle_fig(fig, "ROR dynamics"))
+            return "\n".join(lines)
 
     @staticmethod
-    def plot_ror(tbl_report, ax_ror=None, xticklabels=True, figwidth=8, dpi=360):
-        if ax_ror is None:
-            figsize = (figwidth, figwidth * 0.5)
-            fig_ror, ax_ror = plt.subplots(figsize=figsize, dpi=dpi)
+    def plot_ror(
+        tbl_report: pd.DataFrame,
+        ax_ror: Optional[plt.Axes] = None,
+        xticklabels: bool = True,
+        figwidth: int = 8,
+        dpi: int = 360,
+        return_data: bool = False,
+    ) -> Union[plt.Axes, PlotDataDict]:
+        """
+        Plot ROR dynamics or return the plot data points.
+        IMPORTANT: It plots log(10) values, but labels are back-converted to a linear form.
+
+        Returns:
+            If return_data=True: Dict with plot data points - both linear and log10 values.
+            If return_data=False: Matplotlib axis object.
+        """
         quarters = list(sorted(tbl_report.q.unique()))  # we assume no Q is missing
         x = list(range(len(quarters)))
+
+        # Calculate log10 values as in original plotting code
         tbl_report["l10_ROR"] = np.log10(tbl_report.ROR)
         tbl_report["l10_ROR_lower"] = np.log10(tbl_report.ROR_lower)
         tbl_report["l10_ROR_upper"] = np.log10(tbl_report.ROR_upper)
+
+        plot_data = {
+            "quarters": quarters,
+            "ror_values": tbl_report.ROR.values.tolist(),
+            "ror_lower": tbl_report.ROR_lower.values.tolist(),
+            "ror_upper": tbl_report.ROR_upper.values.tolist(),
+            "log10_ror": tbl_report.l10_ROR.values.tolist(),
+            "log10_ror_lower": tbl_report.l10_ROR_lower.values.tolist(),
+            "log10_ror_upper": tbl_report.l10_ROR_upper.values.tolist(),
+        }
+
+        if return_data:
+            return plot_data
+
+        if ax_ror is None:
+            figsize = (figwidth, figwidth * 0.5)
+            fig_ror, ax_ror = plt.subplots(figsize=figsize, dpi=dpi)
 
         ax_ror.plot(x, tbl_report.l10_ROR, "-o", color="C0", zorder=99)
         try:
@@ -395,8 +497,10 @@ class Reporter:
                 color="C0",
                 alpha=0.3,
             )
-        except:
+        except Exception as e:
+            logger.warning(f"Error filling between curves: {str(e)}")
             return ax_ror
+        
         ax_ror.set_ylim(-2.1, 2.1)
         tkx = [-1, 0, 1]
         ax_ror.set_yticks(tkx)
@@ -448,7 +552,8 @@ class Reporter:
         return ax_ror
 
 
-def filter_illegal_values(data):
+def filter_illegal_values(data: pd.DataFrame) -> pd.DataFrame:
+    """Filter out rows with illegal values for weight, age, and sex."""
     sel = (
         ((data.wt > 0) & (data.wt < 360))
         & ((data.age > 0) & (data.age < 120))
@@ -457,7 +562,10 @@ def filter_illegal_values(data):
     return data.loc[sel]
 
 
-def filter_data_for_regression(data, config, including_the_weight=True):
+def filter_data_for_regression(
+    data: pd.DataFrame, config: QuestionConfig, including_the_weight: bool = True
+) -> pd.DataFrame:
+    """Filter data for regression analysis based on percentiles."""
     percentile_ = 99.0
     percentile_lower = (100 - percentile_) / 2
     percentile_upper = 100 - percentile_lower
@@ -483,16 +591,16 @@ def filter_data_for_regression(data, config, including_the_weight=True):
 
 def main(
     *,
-    dir_marked_data,
-    year_q_from,
-    year_q_to,
-    config_dir,
-    dir_reports,
-    output_raw_exposure_data=False,
-):
+    dir_marked_data: str,
+    year_q_from: str,
+    year_q_to: str,
+    config_dir: str,
+    dir_reports: str,
+    output_raw_exposure_data: bool = False,
+    return_plot_data: bool = False,
+) -> Optional[Dict[str, Dict[str, Reporter.PlotDataDict]]]:
     """
-
-    Generate reports
+    Generate reports and optionally return plot data
 
     :param str dir_marked_data:
         marked data directory
@@ -506,14 +614,21 @@ def main(
         output directory
     :param bool output_raw_exposure_data:
         whether to include raw table of exposure cases
+    :param bool return_plot_data:
+        If True, returns a dict containing plot data points instead of generating plots
 
     :return:
-
+        If return_plot_data=True: Dict containing plot data for each config
+        If return_plot_data=False: None
     """
 
     config_items = QuestionConfig.load_config_items(config_dir)
     files = sorted(glob(os.path.join(dir_marked_data, "*.pkl")))
     data_all_configs = pd.concat([pickle.load(open(f, "rb")) for f in files])
+
+    if return_plot_data:
+        plot_data_by_config = {}
+
     for config in tqdm.tqdm(config_items):
         print(f"DEBUG {config.name}")
         columns_to_keep = ["age", "sex", "wt", "event_date", "q"] + [
@@ -527,26 +642,62 @@ def main(
             q_to=Quarter(year_q_to),
             output_raw_exposure_data=output_raw_exposure_data,
         )
-        reporter.report(
-            data, "01 Initial data", explanation="Raw data", skip_lr=True, config=config
+
+        # Initialize plot data structure for this config
+        if return_plot_data:
+            plot_data_by_config[config.name] = {
+                "initial_data": None,
+                "stratified_lr": None,
+                "stratified_lr_no_weight": None,
+            }
+
+        # Report 1: Initial data
+        plot_data = reporter.report(
+            data,
+            "01 Initial data",
+            explanation="Raw data",
+            skip_lr=True,
+            config=config,
+            return_plot_data=return_plot_data,
         )
+        if return_plot_data:
+            plot_data_by_config[config.name]["initial_data"] = plot_data
 
         data = filter_illegal_values(data)
-
         data_lr = filter_data_for_regression(data, config)
 
-        reporter.report(
+        # Report 2: Stratified for LR
+        plot_data = reporter.report(
             data_lr,
-            "03 Stratified for LR",
+            "02 Stratified for LR",
             config=config,
             explanation="After filtering out age and weight values that do not fit 99 percentile of the exposed population",
+            return_plot_data=return_plot_data,
         )
+        if return_plot_data:
+            plot_data_by_config[config.name]["stratified_lr"] = plot_data
 
+        # Report 3: Stratified for LR without weight
         data_lr = filter_data_for_regression(data, config, including_the_weight=False)
-        reporter.report(
+        plot_data = reporter.report(
             data_lr,
-            "04 Stratified for LR ignoring weight",
+            "03 Stratified for LR ignoring weight",
             config=config,
-            explanation="After filtering out age values that do not fit 99 percentile "
-            "of the exposed population",
+            explanation="After filtering out age values that do not fit 99 percentile of the exposed population",
+            return_plot_data=return_plot_data,
         )
+        if return_plot_data:
+            plot_data_by_config[config.name]["stratified_lr_no_weight"] = plot_data
+
+    if return_plot_data:
+        # Log data for each config item and report type
+        for config_name, config_data in plot_data_by_config.items():
+            logger.debug(f"\nPlot data for {config_name}:")
+            for report_type, plot_data in config_data.items():
+                logger.debug(f"{report_type}:")
+                logger.debug(f"Quarters: {plot_data['quarters']}")
+                logger.debug(f"ROR values: {plot_data['ror_values']}")
+                logger.debug(f"ROR lower bounds: {plot_data['ror_lower']}")
+                logger.debug(f"ROR upper bounds: {plot_data['ror_upper']}")
+
+        return plot_data_by_config

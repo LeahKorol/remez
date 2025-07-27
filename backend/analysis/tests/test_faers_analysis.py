@@ -226,3 +226,71 @@ def test_report_main(outcome):
 
     # If no exceptions are raised, the test passes
     assert True
+
+
+@pytest.mark.django_db
+def test_report_main_returns_plot_data(outcome):
+    """
+    Test that report_main returns plot data for each config and report type when return_plot_data=True.
+    Verifies the structure and content types of the returned data.
+    """
+    year_q_from = f"{outcome.case.year}q{outcome.case.quarter}"
+    year_q_to = f"{outcome.case.year}q{Quarter.increment(outcome.case).quarter}"
+
+    results = report_main(
+        dir_marked_data=f"{Path(__file__).resolve().parent}/output/mark_data",
+        year_q_from=year_q_from,
+        year_q_to=year_q_to,
+        config_dir=f"{Path(__file__).resolve().parent}/output/config",
+        dir_reports=f"{Path(__file__).resolve().parent}/output/reports",
+        output_raw_exposure_data=False,
+        return_plot_data=True,
+    )
+
+    # Test overall structure
+    assert isinstance(results, dict), "Results should be a dictionary"
+    assert len(results) > 0, "Should have at least one config"
+
+    # Test structure for each config
+    for config_name, config_data in results.items():
+        assert isinstance(config_name, str), "Config key should be a string"
+        assert isinstance(config_data, dict), "Config data should be a dictionary"
+
+        # Verify all report types are present
+        expected_reports = {"initial_data", "stratified_lr", "stratified_lr_no_weight"}
+        assert set(config_data.keys()) == expected_reports, (
+            f"Missing report types for config {config_name}"
+        )
+
+        # Test data structure for each report
+        for report_type, plot_data in config_data.items():
+            assert isinstance(plot_data, dict), (
+                f"Plot data for {config_name}.{report_type} should be a dictionary"
+            )
+
+            # Verify required plot data fields
+            required_fields = {
+                "quarters",
+                "ror_values",
+                "ror_lower",
+                "ror_upper",
+                "log10_ror",
+                "log10_ror_lower",
+                "log10_ror_upper",
+            }
+            assert set(plot_data.keys()) == required_fields, (
+                f"Missing data fields in {config_name}.{report_type}"
+            )
+
+            # Verify data types and consistency
+            assert isinstance(plot_data["quarters"], list), "quarters should be a list"
+            assert isinstance(plot_data["ror_values"], list), (
+                "ror_values should be a list"
+            )
+
+            # All arrays should have the same length
+            array_length = len(plot_data["quarters"])
+            for key in required_fields - {"quarters"}:
+                assert len(plot_data[key]) == array_length, (
+                    f"Inconsistent array length in {key} for {config_name}.{report_type}"
+                )
