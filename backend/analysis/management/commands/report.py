@@ -1,8 +1,12 @@
 from django.core.management.base import BaseCommand, CommandError
+
 from analysis.faers_analysis.src.report import main as report_main
 
+
 class Command(BaseCommand):
-    help = "Generate FAERS reports using the specified configuration and data directories."
+    help = (
+        "Generate FAERS reports using the specified configuration and data directories."
+    )
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -40,6 +44,11 @@ class Command(BaseCommand):
             action="store_true",
             help="Include raw table of exposure cases in the report.",
         )
+        parser.add_argument(
+            "--return-plot-data",
+            action="store_true",
+            help="Return graph data points instead of generating graphs.",
+        )
 
     def handle(self, *args, **options):
         try:
@@ -50,7 +59,10 @@ class Command(BaseCommand):
                 config_dir=options["config_dir"],
                 dir_reports=options["dir_reports"],
                 output_raw_exposure_data=options["output_raw_exposure_data"],
+                return_plot_data=options["return_plot_data"],
             )
-            self.stdout.write(self.style.SUCCESS("Report generation completed successfully."))
+            self.stdout.write(
+                self.style.SUCCESS("Report generation completed successfully.")
+            )
         except Exception as e:
             raise CommandError(f"Error in report: {e}")
