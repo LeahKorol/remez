@@ -8,28 +8,25 @@ from analysis.serializers import (
     DrugNameSerializer,
     ReactionNameSerializer,
 )
-from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema_view, extend_schema
 from django.shortcuts import get_object_or_404
 
-query_schemas = {
-    method: extend_schema(
-        tags=["Query"],
-        parameters=[
-            OpenApiParameter(name="id", type=int, location=OpenApiParameter.PATH)
-        ],
-    )
-    for method in [
-        "retrieve",
-        "update",
-        "partial_update",
-        "destroy",
-    ]
-}
-for method in ["list", "create", "get_queries_names"]:
-    query_schemas[method] = extend_schema(tags=["Query"])
 
-
-@extend_schema_view(**query_schemas)
+@extend_schema_view(
+    **{
+        method: extend_schema(
+            tags=["Query"], parameters=[{"name": "id", "in": "path", "type": "integer"}]
+        )
+        for method in [
+            "list",
+            "retrieve",
+            "create",
+            "update",
+            "partial_update",
+            "destroy",
+        ]
+    }
+)
 class QueryViewSet(viewsets.ModelViewSet):
     serializer_class = QuerySerializer
     permission_classes = [IsAuthenticated]
@@ -85,15 +82,6 @@ class QueryViewSet(viewsets.ModelViewSet):
         serializer.save(**validated_data)
         return Response(data=serializer.data)
 
-    @action(detail=False, methods=["get"], url_path="queries-names")
-    def get_queries_names(self, request):
-        """
-        Retrieves all queries names for the authenticated user.
-        """
-        queries = self.get_queryset()
-        query_names = queries.values_list("name", flat=True)
-        return Response(query_names, status=status.HTTP_200_OK)
-
 
 class TermNameSearchViewSet(viewsets.GenericViewSet):
     """Base viewset for searching term names by prefix."""
@@ -138,11 +126,7 @@ class TermNameSearchViewSet(viewsets.GenericViewSet):
 @extend_schema_view(
     search_by_prefix=extend_schema(
         tags=["Drug Names"],
-        parameters=[
-            OpenApiParameter(
-                name="prefix", type="string", location=OpenApiParameter.PATH
-            )
-        ],
+        parameters=[{"name": "prefix", "in": "path", "type": "string"}],
     )
 )
 class DrugNameViewSet(TermNameSearchViewSet):

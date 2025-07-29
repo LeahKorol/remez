@@ -5,8 +5,8 @@ Serializers for user-related functionality.
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from dj_rest_auth.registration.serializers import RegisterSerializer
-from dj_rest_auth.serializers import LoginSerializer, PasswordResetSerializer
-from users.forms import CustomAllAuthPasswordResetForm
+from dj_rest_auth.serializers import LoginSerializer
+from django.db import transaction
 
 # For overriding validate_email
 from allauth.account.models import EmailAddress
@@ -67,11 +67,3 @@ class CustomRegisterSerializer(RegisterSerializer):
 
 class CustomLoginSerializer(LoginSerializer):
     username = None  # Remove username field
-
-
-class CustomPasswordResetSerializer(PasswordResetSerializer):
-    """Customise password resets emails in dj-rest-auth & allauth"""
-
-    @property
-    def password_reset_form_class(self):
-        return CustomAllAuthPasswordResetForm
