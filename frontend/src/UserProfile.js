@@ -444,27 +444,105 @@ const UserProfile = () => {
         }
     };
 
+    // const handleDeleteQuery = async (queryId) => {
+    //     if (!window.confirm('Are you sure you want to delete this query?')) {
+    //         return;
+    //     }
+
+    //     try {
+    //         const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`, {
+    //             method: 'DELETE',
+    //             headers: {
+    //                 'Content-Type': 'application/json'
+    //             }
+    //         });
+
+    //         if (response.ok) {
+    //             setSavedQueries(savedQueries.filter(q => q.id !== queryId));
+    //         } else {
+    //             throw new Error('Failed to delete query');
+    //         }
+    //     } catch (error) {
+    //         console.error('Error deleting query:', error);
+    //         alert('Failed to delete query');
+    //     }
+    // };
+
+
     const handleDeleteQuery = async (queryId) => {
         if (!window.confirm('Are you sure you want to delete this query?')) {
             return;
         }
-
+    
         try {
-            const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`, {
+            const token = localStorage.getItem('token');
+            
+            if (!token) {
+                alert('You are not logged in. Please log in first.');
+                navigate('/');
+                return;
+            }
+    
+            console.log('Deleting query with ID:', queryId);
+    
+            const response = await fetch(`http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`, {
                 method: 'DELETE',
                 headers: {
+                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
-
-            if (response.ok) {
+    
+            console.log('Delete response status:', response.status);
+    
+            if (response.status === 401) {
+                console.log('Token expired during delete, redirecting to login');
+                localStorage.removeItem('token');
+                navigate('/');
+                return;
+            }
+    
+            if (response.status === 403) {
+                alert('You do not have permission to delete this query.');
+                return;
+            }
+    
+            if (response.status === 404) {
+                alert('Query not found. It may have already been deleted.');
+                // Refresh queries to sync with server state
+                await fetchQueries();
+                return;
+            }
+    
+            if (response.ok || response.status === 204) {
+                // Successfully deleted
                 setSavedQueries(savedQueries.filter(q => q.id !== queryId));
+                showToastMessage('Query deleted successfully!');
+                
+                // If we were editing this query, reset the form
+                if (editingQueryId === queryId) {
+                    resetForm();
+                }
             } else {
-                throw new Error('Failed to delete query');
+                // Handle other error responses
+                let errorMessage = 'Failed to delete query';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.detail || errorData.message || errorMessage;
+                } catch (parseError) {
+                    errorMessage = `Server error (${response.status})`;
+                }
+                
+                console.error('Error deleting query:', errorMessage);
+                alert(`Failed to delete query: ${errorMessage}`);
             }
         } catch (error) {
-            console.error('Error deleting query:', error);
-            alert('Failed to delete query');
+            console.error('Network error during delete:', error);
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                alert('Network error: Unable to connect to server. Please check your connection.');
+            } else {
+                alert(`Failed to delete query: ${error.message || 'Network error'}`);
+            }
         }
     };
 
