@@ -1,15 +1,31 @@
-from rest_framework import serializers
-from analysis.models import DrugName, ReactionName, Query
 from django.db import transaction
+from rest_framework import serializers
+
+from analysis.models import DrugName, Query, ReactionName
 
 
 class QuerySerializer(serializers.ModelSerializer):
+    # Accepts only arrays of IDs for drugs and reactions on input (create/update)
     drugs = serializers.PrimaryKeyRelatedField(
         many=True, queryset=DrugName.objects.all()
     )
     reactions = serializers.PrimaryKeyRelatedField(
         many=True, queryset=ReactionName.objects.all()
     )
+
+    def to_representation(self, instance):
+        # On output (GET, PUT, POST), returns arrays of objects with both id and name for drugs and reactions
+        # This overrides the default representation provided by PrimaryKeyRelatedField
+        # It allows showing the drugs and reations names to the user without needing extra requests
+        rep = super().to_representation(instance)
+        rep["drugs"] = [
+            {"id": drug.id, "name": drug.name} for drug in instance.drugs.all()
+        ]
+        rep["reactions"] = [
+            {"id": reaction.id, "name": reaction.name}
+            for reaction in instance.reactions.all()
+        ]
+        return rep
 
     class Meta:
         model = Query

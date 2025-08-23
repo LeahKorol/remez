@@ -1,12 +1,13 @@
-from django.test import TestCase
+import pytest
 from django.contrib.auth import get_user_model
-from analysis.models import Query, DrugName, ReactionName
+from django.test import TestCase
+
+from analysis.models import DrugName, Query, ReactionName
 from analysis.serializers import (
-    QuerySerializer,
     DrugNameSerializer,
+    QuerySerializer,
     ReactionNameSerializer,
 )
-import pytest
 
 
 class QuerySerializerTest(TestCase):
@@ -33,7 +34,7 @@ class QuerySerializerTest(TestCase):
         cls.query.reactions.set([cls.reaction1.id])
 
     def test_serialization(self):
-        """Test that serialization produces expected data"""
+        """Test that serialization produces expected data (drugs/reactions as id+name objects)"""
         serializer = QuerySerializer(instance=self.query)
         # Remove fields that change dynamically
         response_data = serializer.data.copy()
@@ -42,8 +43,8 @@ class QuerySerializerTest(TestCase):
 
         expected_data = {
             "id": self.query.id,
-            "drugs": [self.drug1.id],  # ManyToManyField should return a list of IDs
-            "reactions": [self.reaction1.id],
+            "drugs": [{"id": self.drug1.id, "name": self.drug1.name}],
+            "reactions": [{"id": self.reaction1.id, "name": self.reaction1.name}],
             "name": self.query.name,
             "user": self.query.user.id,  # ForeignKey should be serialized as ID
             "quarter_start": self.query.quarter_start,
