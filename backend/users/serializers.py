@@ -19,10 +19,11 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = get_user_model()
-        fields = ["id", "email", "password", "name"]
+        fields = ["id", "email", "password", "name", "google_id"]
         extra_kwargs = {
             "password": {"write_only": True, "min_length": 8},
             "id": {"read_only": True},
+            "google_id": {"read_only": True}, # Google ID should only be set internally
         }
 
     def create(self, validated_data):
@@ -32,6 +33,8 @@ class UserSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         """Update a user and return it."""
         password = validated_data.pop("password", None)
+        # Ensure google_id is not updated externally
+        validated_data.pop("google_id", None)  
         user = super().update(instance, validated_data)
 
         if password:

@@ -3,8 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
 // Google OAuth Configuration
-const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID';
-const GOOGLE_REDIRECT_URI = process.env.REACT_APP_GOOGLE_REDIRECT_URI || 'http://localhost:3000/auth/google/callback';
+const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+const GOOGLE_REDIRECT_URI = process.env.REACT_APP_GOOGLE_REDIRECT_URI;
 
 class GoogleAuthService {
   constructor() {
@@ -101,9 +101,10 @@ class GoogleAuthService {
   // Send Google user data to your backend
   async authenticateWithBackend(googleUser, isRegistration = false) {
     try {
+      // Updated endpoints to match your backend URLs
       const endpoint = isRegistration 
-        ? 'http://127.0.0.1:8000/api/v1/auth/google/register'
-        : 'http://127.0.0.1:8000/api/v1/auth/google/login';
+        ? 'http://127.0.0.1:8000/api/v1/auth/google/register/'
+        : 'http://127.0.0.1:8000/api/v1/auth/google/login/';
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -124,10 +125,21 @@ class GoogleAuthService {
       if (response.ok) {
         return data;
       } else {
-        throw new Error(data.message || data.detail || 'Authentication failed');
+        // Better error handling for different HTTP status codes
+        if (response.status === 404) {
+          throw new Error('User not found. Please register first.');
+        } else if (response.status === 409) {
+          throw new Error('Account already exists. Please try logging in instead.');
+        } else {
+          throw new Error(data.error || data.detail || data.message || 'Authentication failed');
+        }
       }
     } catch (error) {
-      throw new Error(`Backend authentication failed: ${error.message}`);
+      // Handle network errors
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        throw new Error('Network error. Please check your connection.');
+      }
+      throw error;
     }
   }
 }
@@ -162,6 +174,7 @@ export const useGoogleAuth = () => {
       // Store token
       if (authResult.access) {
         localStorage.setItem('token', authResult.access);
+        console.log('Google auth successful, token saved');
       }
 
       // Success toast
@@ -181,7 +194,18 @@ export const useGoogleAuth = () => {
       console.error('Google auth error:', error);
       setError(error.message);
       
-      toast.error(error.message || 'שגיאה בהתחברות עם Google', {
+      // Show appropriate error message
+      let errorMessage = 'שגיאה בהתחברות עם Google';
+      
+      if (error.message.includes('User not found')) {
+        errorMessage = 'המשתמש לא נמצא. אנא הרשם תחילה.';
+      } else if (error.message.includes('already exists')) {
+        errorMessage = 'החשבון כבר קיים. נסה להתחבר במקום להרשם.';
+      } else if (error.message.includes('Network error')) {
+        errorMessage = 'בעיית רשת. בדוק את החיבור לאינטרנט.';
+      }
+      
+      toast.error(errorMessage, {
         autoClose: 5000
       });
     } finally {
@@ -204,7 +228,7 @@ export const useGoogleAuth = () => {
         verified_email: userObject.email_verified
       };
 
-      // Try login first, then registration if user doesn't exist
+      // Try login first
       try {
         const authResult = await googleAuthService.authenticateWithBackend(googleUser, false);
         
@@ -214,8 +238,8 @@ export const useGoogleAuth = () => {
           navigate('/profile');
         }
       } catch (loginError) {
-        // If login fails, try registration
-        if (loginError.message.includes('not found') || loginError.message.includes('404')) {
+        // If login fails with "User not found", try registration
+        if (loginError.message.includes('User not found') || loginError.message.includes('404')) {
           try {
             const registerResult = await googleAuthService.authenticateWithBackend(googleUser, true);
             
@@ -312,91 +336,6 @@ export const GoogleOneTap = () => {
   }, []);
 
   return null; // This component doesn't render anything visible
-};
-
-// Google Auth Callback Handler (for redirect method)
-export const GoogleAuthCallback = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [status, setStatus] = useState('processing');
-
-  useEffect(() => {
-    const handleCallback = async () => {
-      try {
-        const urlParams = new URLSearchParams(location.search);
-        const code = urlParams.get('code');
-        const error = urlParams.get('error');
-
-        if (error) {
-          throw new Error(error);
-        }
-
-        if (!code) {
-          throw new Error('No authorization code received');
-        }
-
-        // Send code to your backend
-        const response = await fetch('http://127.0.0.1:8000/api/v1/auth/google/callback', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ code }),
-        });
-
-        const data = await response.json();
-
-        if (response.ok && data.access) {
-          localStorage.setItem('token', data.access);
-          setStatus('success');
-          toast.success('התחברת בהצלחה!');
-          setTimeout(() => navigate('/profile'), 2000);
-        } else {
-          throw new Error(data.message || 'Authentication failed');
-        }
-
-      } catch (error) {
-        console.error('Callback error:', error);
-        setStatus('error');
-        toast.error('שגיאה בהתחברות');
-        setTimeout(() => navigate('/login'), 3000);
-      }
-    };
-
-    handleCallback();
-  }, [location, navigate]);
-
-  return (
-    <div className="auth-callback-container">
-      <div className="auth-callback-content">
-        {status === 'processing' && (
-          <>
-            <div className="loading-spinner large">
-              <div className="spinner"></div>
-            </div>
-            <h2>מעבד התחברות...</h2>
-            <p>אנא המתן בזמן שאנו מאמתים את הנתונים שלך</p>
-          </>
-        )}
-        
-        {status === 'success' && (
-          <>
-            <div className="success-icon">✓</div>
-            <h2>התחברות הושלמה!</h2>
-            <p>מעביר אותך לפרופיל...</p>
-          </>
-        )}
-        
-        {status === 'error' && (
-          <>
-            <div className="error-icon">✗</div>
-            <h2>שגיאה בהתחברות</h2>
-            <p>מעביר אותך חזרה לעמוד ההתחברות...</p>
-          </>
-        )}
-      </div>
-    </div>
-  );
 };
 
 export default GoogleAuthService;
