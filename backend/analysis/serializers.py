@@ -36,8 +36,9 @@ class QuerySerializer(serializers.ModelSerializer):
             "user",
             "created_at",
             "updated_at",
-            "x_values",
-            "y_values",
+            "ror_values",
+            "ror_lower",
+            "ror_upper",
         )
 
     def validate(self, data):

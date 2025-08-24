@@ -71,9 +71,10 @@ class Query(models.Model):
         validators=[MinValueValidator(YEAR_START), MaxValueValidator(YEAR_END)]
     )
 
-    # Result parameters:
-    x_values = models.JSONField(default=list)
-    y_values = models.JSONField(default=list)
+    # Result parameters - ROR values, lower and upper confidence intervals
+    ror_values = models.JSONField(default=list)
+    ror_lower = models.JSONField(default=list)
+    ror_upper = models.JSONField(default=list)
 
     class Meta:
         ordering = ["-updated_at"]

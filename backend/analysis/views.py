@@ -45,12 +45,12 @@ class QueryViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """Override perform_create method to automatically assign the authenticated user and calculate results."""
-        # TO-DO: Calculate x_values and y_values
+        # TO-DO: Calculate ror_values, ror_lower, ror_upper
         serializer.save(user=self.request.user)
 
     def perform_update(self, serializer):
         """Override perform_update method to calculate results."""
-        # TO-DO: Recalculate x_values and y_values
+        # TO-DO: Recalculate ror_values, ror_lower, ror_upper
         serializer.save()
 
     def partial_update(self, request, *args, **kwargs):
@@ -78,7 +78,7 @@ class QueryViewSet(viewsets.ModelViewSet):
             )
             in validated_data
         ):
-            # TO-DO: Recalaculte x_values and y_values
+            # TO-DO: Recalaculte ror_values, ror_lower, ror_upper
             pass
 
         # Save the data

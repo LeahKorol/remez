@@ -51,8 +51,9 @@ class QuerySerializerTest(TestCase):
             "quarter_end": self.query.quarter_end,
             "year_start": self.query.year_start,
             "year_end": self.query.year_end,
-            "x_values": self.query.x_values,
-            "y_values": self.query.y_values,
+            "ror_values": self.query.ror_values,
+            "ror_lower": self.query.ror_lower,
+            "ror_upper": self.query.ror_upper,
         }
         self.assertEqual(response_data, expected_data)
 
