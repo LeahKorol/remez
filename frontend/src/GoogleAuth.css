@@ -1,0 +1,301 @@
+.google-auth-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 12px 24px;
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+    background-color: #ffffff;
+    color: #3c4043;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .google-auth-button:hover {
+    background-color: #f8f9fa;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    border-color: #c6c8ca;
+    transform: translateY(-1px);
+  }
+  
+  .google-auth-button:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .google-auth-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+  
+  .google-auth-button:disabled:hover {
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border-color: #dadce0;
+    transform: none;
+  }
+  
+  .google-button-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    position: relative;
+  }
+  
+  .google-icon {
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+  }
+  
+  .google-auth-button:hover .google-icon {
+    transform: scale(1.1);
+  }
+  
+  .button-text {
+    font-weight: 500;
+    user-select: none;
+  }
+  
+  .google-auth-button.small {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+  
+  .google-auth-button.small .google-icon {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .google-auth-button.large {
+    padding: 14px 28px;
+    font-size: 16px;
+  }
+  
+  .google-auth-button.large .google-icon {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .google-auth-button.loading {
+    pointer-events: none;
+  }
+  
+  .loading-spinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #4285f4;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  .loading-spinner.large .spinner {
+    width: 32px;
+    height: 32px;
+    border-width: 3px;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .auth-callback-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px;
+  }
+  
+  .auth-callback-content {
+    background: white;
+    padding: 40px;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    max-width: 400px;
+    width: 100%;
+  }
+  
+  .auth-callback-content h2 {
+    margin: 20px 0 10px;
+    color: #2c3e50;
+    font-size: 24px;
+    font-weight: 600;
+  }
+  
+  .auth-callback-content p {
+    color: #7f8c8d;
+    font-size: 16px;
+    line-height: 1.5;
+    margin: 0;
+  }
+  
+  .success-icon {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    color: white;
+    font-size: 32px;
+    font-weight: bold;
+    animation: successPulse 1.5s ease-in-out;
+  }
+  
+  @keyframes successPulse {
+    0% {
+      transform: scale(0);
+      opacity: 0;
+    }
+    50% {
+      transform: scale(1.1);
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+  
+  .error-icon {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, #f44336, #d32f2f);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    color: white;
+    font-size: 32px;
+    font-weight: bold;
+    animation: errorShake 0.8s ease-in-out;
+  }
+  
+  @keyframes errorShake {
+    0%, 100% {
+      transform: translateX(0);
+    }
+    10%, 30%, 50%, 70%, 90% {
+      transform: translateX(-5px);
+    }
+    20%, 40%, 60%, 80% {
+      transform: translateX(5px);
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .google-auth-button {
+      padding: 12px 20px;
+      font-size: 14px;
+    }
+    
+    .google-auth-button.large {
+      padding: 14px 24px;
+      font-size: 15px;
+    }
+    
+    .auth-callback-content {
+      padding: 30px 20px;
+      margin: 20px;
+    }
+    
+    .auth-callback-content h2 {
+      font-size: 20px;
+    }
+    
+    .auth-callback-content p {
+      font-size: 14px;
+    }
+  }
+  
+  [dir="rtl"] .google-button-content {
+    flex-direction: row-reverse;
+  }
+  
+  [dir="rtl"] .button-text {
+    text-align: right;
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    .google-auth-button {
+      background-color: #2d3748;
+      border-color: #4a5568;
+      color: #e2e8f0;
+    }
+    
+    .google-auth-button:hover {
+      background-color: #4a5568;
+      border-color: #718096;
+    }
+    
+    .auth-callback-content {
+      background-color: #2d3748;
+      color: #e2e8f0;
+    }
+    
+    .auth-callback-content h2 {
+      color: #e2e8f0;
+    }
+    
+    .auth-callback-content p {
+      color: #a0aec0;
+    }
+  }
+  
+  .google-auth-button:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.3);
+  }
+  
+  .google-auth-button:focus:not(:focus-visible) {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  @media (prefers-contrast: high) {
+    .google-auth-button {
+      border-width: 2px;
+      border-color: #000;
+    }
+    
+    .google-auth-button:hover {
+      background-color: #000;
+      color: #fff;
+    }
+  }
+  
+  @media (prefers-reduced-motion: reduce) {
+    .google-auth-button,
+    .google-icon,
+    .spinner,
+    .success-icon,
+    .error-icon {
+      animation: none;
+      transition: none;
+    }
+    
+    .google-auth-button:hover {
+      transform: none;
+    }
+  }

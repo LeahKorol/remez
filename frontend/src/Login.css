@@ -157,3 +157,93 @@
   .register-link a:hover {
     text-decoration: underline;
   }
+
+
+
+
+
+  
+.error-message {
+  background-color: #fee;
+  border: 1px solid #fcc;
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 16px;
+  color: #c33;
+  font-size: 14px;
+}
+
+.error-item {
+  margin-bottom: 4px;
+}
+
+.error-item:last-child {
+  margin-bottom: 0;
+}
+
+.error-item + .error-item {
+  border-top: 1px solid #fdd;
+  padding-top: 4px;
+  margin-top: 4px;
+}
+
+.error-message.critical {
+  background-color: #ffebee;
+  border-color: #f44336;
+  color: #c62828;
+}
+
+.warning-message {
+  background-color: #fff8e1;
+  border: 1px solid #ffcc02;
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 16px;
+  color: #f57c00;
+  font-size: 14px;
+}
+
+.success-message {
+  background-color: #e8f5e8;
+  border: 1px solid #4caf50;
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 16px;
+  color: #2e7d32;
+  font-size: 14px;
+}
+
+.form-group.error input {
+  border-color: #f44336;
+  box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.2);
+}
+
+.form-group.error label {
+  color: #f44336;
+}
+
+.error-message {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.password-guidelines {
+  font-size: 0.9em;
+  margin-top: 6px;
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+.password-guidelines ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

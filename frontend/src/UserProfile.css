@@ -1,3 +1,4 @@
+/* Main Container */
 .user-profile-container {
   display: flex;
   min-height: 100vh;
@@ -6,6 +7,7 @@
   direction: ltr;
 }
 
+/* Logout Components */
 .logout-popup {
   position: fixed;
   top: 50%;
@@ -51,15 +53,34 @@
 .logout-button {
   background-color: white;
   color: #6a50e0;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 12px;
+  border: 1px solid #eaeaea;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
   cursor: pointer;
-  font-size: 20px;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 10;
 }
 
-/* Sidebar Styles - Now on the left */
+.logout-button:hover {
+  background-color: #f8f8f8;
+  border-color: #6a50e0;
+  color: #e74c3c;
+}
+
+.logout-button svg {
+  font-size: 10rem; 
+  vertical-align: middle; 
+}
+
+/* Sidebar Styles */
 .sidebar {
   width: 300px;
   background-color: white;
@@ -79,9 +100,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 20px;
   border-bottom: 1px solid #eaeaea;
+  position: relative;
 }
 
 .avatar-circle {
@@ -92,7 +112,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 15px;
+  margin-bottom: 0px;
 }
 
 .user-icon {
@@ -116,11 +136,12 @@
   text-align: center;
 }
 
-/* Saved Queries Section - Now inside sidebar */
+/* Saved Queries Section */
 .saved-queries-section {
   margin-bottom: 20px;
   flex: 1;
   overflow-y: auto;
+  min-height: 10rem; 
 }
 
 .section-title {
@@ -135,15 +156,6 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-
-.query-card {
-  padding: 12px;
-  border: 1px solid #eaeaea;
-  border-radius: 8px;
-  background-color: #fafafa;
-  transition: all 0.2s ease;
-  font-size: 0.9em;
 }
 
 .query-card:hover {
@@ -164,6 +176,7 @@
   font-weight: 500;
   color: #444;
   margin: 0 0 5px 0;
+  flex: 1;
 }
 
 .query-date {
@@ -221,7 +234,6 @@
   flex: 1;
   padding: 30px;
   margin-left: 300px;
-  /* Match sidebar width */
 }
 
 .prompt-container {
@@ -248,6 +260,7 @@
   outline: none;
 }
 
+/* Submit Button */
 .submit-button {
   background-color: #7b61ff;
   color: white;
@@ -267,7 +280,7 @@
   cursor: not-allowed;
 }
 
-/* Loading and Error States */
+/* State Classes */
 .loading,
 .error,
 .not-logged-in {
@@ -283,40 +296,104 @@
   color: #e74c3c;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .user-profile-container {
-    flex-direction: column-reverse;
-  }
-
-  .sidebar {
-    width: 100%;
-    position: relative;
-    max-height: none;
-  }
-
-  .main-content {
-    margin-left: 0;
-    padding: 15px;
-  }
-
-  .user-info {
-    flex-direction: row;
-    align-items: center;
-    padding-bottom: 15px;
-    margin-bottom: 15px;
-  }
-
-  .avatar-circle {
-    margin-bottom: 0;
-    margin-left: 15px;
-  }
-
-  .saved-queries-section {
-    max-height: 300px;
-  }
+/* Custom Select Components */
+.custom-select-container {
+  position: relative;
+  width: 100%;
 }
 
+.custom-select-header {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background-color: white;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 16px;
+}
+
+.custom-select-header:hover {
+  border-color: #7b61ff;
+}
+
+.custom-select-options {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  border: 1px solid #7b61ff;
+  border-top: none;
+  background-color: white;
+  border-radius: 0 0 6px 6px;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.custom-select-option {
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.custom-select-option:hover {
+  background-color: #7b61ff;
+  color: white;
+}
+
+.chevron {
+  transition: transform 0.2s;
+}
+
+.chevron.open {
+  transform: rotate(180deg);
+}
+
+/* Search Results Dropdown */
+.search-results {
+  position: absolute;
+  top: 100%;
+  left: 4.6rem;
+  right: 0;
+  border: 2px solid #7b61ff;
+  border-top: none;
+  background-color: white;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  border-radius: 0 0 6px 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: 62%;
+}
+
+.search-result-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 14px;
+  color: #333;
+  transition: background-color 0.2s ease;
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+.search-result-item:hover {
+  background-color: #f8f9ff;
+  color: #7b61ff;
+  font-weight: 500;
+}
+
+.input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+/* Form Components */
 .form-section {
   margin-bottom: 20px;
   background-color: #f5f5f5;
@@ -338,6 +415,81 @@
   margin: 0;
 }
 
+.form-field {
+  margin-bottom: 20px;
+}
+
+.form-field label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.form-field input,
+.form-field .custom-select-container {
+  width: 100%;
+}
+
+.form-field .mb-2:last-child {
+  margin-bottom: 0;
+}
+
+/* MB-2 Component */
+.mb-2 {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 15px;
+}
+
+.mb-2 label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 8px;
+  min-width: 120px;
+  text-align: left;
+}
+
+.mb-2 input,
+.mb-2 .custom-select-container {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 16px;
+  text-align: left; 
+  box-sizing: border-box;
+}
+
+.mb-2 input:focus,
+.mb-2 .custom-select-container:focus-within {
+  border-color: #3498db;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.mb-2.inline {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+.mb-2.inline label {
+  margin-bottom: 0;
+  flex-shrink: 0; 
+  width: 120px; 
+}
+
+.mb-2.inline input,
+.mb-2.inline .custom-select-container {
+  flex: 1; 
+}
+
+/* Buttons Style */
 .cancel-button {
   background-color: #777;
   color: white;
@@ -351,29 +503,6 @@
 
 .cancel-button:hover {
   background-color: #555;
-}
-
-.section-label {
-  font-size: 18px;
-  margin-bottom: 12px;
-  color: #333;
-  text-align: left;
-  font-weight: 600;
-}
-
-.input-group {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.input-field {
-  flex: 1;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 16px;
-  text-align: left;
 }
 
 .remove-button {
@@ -411,68 +540,6 @@
   font-weight: bold;
 }
 
-.submit-container {
-  margin-top: 20px;
-  text-align: center;
-}
-
-.submit-button {
-  background-color: #27ae60;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 12px 20px;
-  font-size: 16px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  width: 100%;
-}
-
-.submit-button:hover {
-  background-color: #219653;
-}
-
-.submit-button:disabled {
-  background-color: #aaa;
-  cursor: not-allowed;
-}
-
-/* עיצוב קלטים בפוקוס */
-.input-field:focus {
-  border-color: #3498db;
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-}
-
-/* עיצוב כרטיסיות בצד */
-.query-card {
-  margin-bottom: 15px;
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-}
-
-.query-header {
-  padding: 10px 15px;
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #eee;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.query-date {
-  font-size: 14px;
-  color: #666;
-}
-
-.query-actions {
-  display: flex;
-  gap: 8px;
-}
-
 .action-button {
   background: none;
   border: none;
@@ -502,6 +569,78 @@
   background-color: rgba(231, 76, 60, 0.1);
 }
 
+/* Labels and Fields */
+.section-label {
+  font-size: 18px;
+  margin-bottom: 12px;
+  color: #333;
+  text-align: left;
+  font-weight: 600;
+}
+
+.input-field {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 16px;
+  text-align: left;
+}
+
+.input-field:focus {
+  border-color: #3498db;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+/* Submit Container - Updated */
+.submit-container {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.submit-container .submit-button {
+  background-color: #27ae60;
+  border-radius: 6px;
+  padding: 12px 20px;
+  font-size: 16px;
+  font-weight: bold;
+  width: 100%;
+}
+
+.submit-container .submit-button:hover {
+  background-color: #219653;
+}
+
+.submit-container .submit-button:disabled {
+  background-color: #aaa;
+  cursor: not-allowed;
+}
+
+/* Query Components Style */
+.query-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  width: 90%;
+}
+
+.query-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #444;
+  margin: 0;
+  flex: 1;
+  text-align: left;
+}
+
+.query-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: 10px;
+}
+
 .query-content {
   padding: 15px;
 }
@@ -510,7 +649,7 @@
 .query-reactions {
   margin-bottom: 8px;
   font-size: 14px;
-  text-align: right;
+  text-align: left;
 }
 
 .result-divider {
@@ -519,13 +658,13 @@
   margin: 12px 0;
 }
 
-.query-result {
+.query-content .query-result {
   font-size: 14px;
   color: #333;
   background-color: #f0f9ff;
   padding: 10px;
   border-radius: 4px;
-  text-align: right;
+  text-align: left;
 }
 
 .updated-note {
@@ -534,4 +673,59 @@
   text-align: left;
   margin-top: 8px;
   font-style: italic;
+}
+
+.toast-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #4CAF50;
+  color: white;
+  padding: 16px 24px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  z-index: 1000;
+  animation: slideIn 0.3s ease-in-out;
+}
+
+/* Anomation for slide in */
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .user-profile-container {
+    flex-direction: column-reverse;
+  }
+
+  .sidebar {
+    width: 100%;
+    position: relative;
+    max-height: none;
+  }
+
+  .main-content {
+    margin-left: 0;
+    padding: 15px;
+  }
+
+  .avatar-circle {
+    margin-bottom: 0;
+    margin-left: 15px;
+  }
+
+  .saved-queries-section {
+    max-height: 300px;
+  }
+
+  .logout-button {
+    position: static;
+    margin-bottom: 15px;
+  }
+
+  .search-results {
+    width: 85%;
+  }
 }

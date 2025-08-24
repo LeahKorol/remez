@@ -1,11 +1,13 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 import './App.css';
 import Home from './HomePage';
 import Login from './Login';
 import Register from './Registration';
 import UserProfile from './UserProfile';
-
 
 function App() {
   return (
@@ -14,18 +16,25 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        {/* <Route path="/dashboard" element={
-          <ProtectedRoute>
-            <div>Dashboard Page (To be implemented)</div>
-          </ProtectedRoute>
-        } /> */}
         <Route path="/profile" element={<UserProfile />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
+
+      <ToastContainer
+        position="top-center"
+        autoClose={7000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false} 
+        pauseOnFocusLoss={false}
+        draggable
+        pauseOnHover
+        theme="light" 
+      />
     </BrowserRouter>
   );
 }
-
 
 // Protected route component
 function ProtectedRoute({ children }) {
@@ -37,6 +46,5 @@ function ProtectedRoute({ children }) {
 
   return children;
 }
-
 
 export default App;

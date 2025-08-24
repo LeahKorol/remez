@@ -1,0 +1,41 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${DB_USER_DIRECT}
+      POSTGRES_PASSWORD: ${DB_PASSWORD_DIRECT}
+      POSTGRES_DB: ${DB_NAME_DIRECT}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      DB_HOST_DIRECT: db
+      DB_PORT_DIRECT: 5432
+      DB_NAME_DIRECT: ${DB_NAME_DIRECT}
+      DB_USER_DIRECT: ${DB_USER_DIRECT}
+      DB_PASSWORD_DIRECT: ${DB_PASSWORD_DIRECT}
+
+  frontend:
+    build: ./frontend
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
