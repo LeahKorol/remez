@@ -202,7 +202,7 @@ const UserProfile = () => {
     // Handle drug input changes with debouncing
     const handleDrugChange = (index, value) => {
         const newDrugs = [...drugs];
-        newDrugs[index] = { name: value, id: null }; // Reset ID when changing name
+        newDrugs[index] = { name: value || '', id: null }; // וודא שזה לא undefined
         setDrugs(newDrugs);
 
         // Debounce the search API call
@@ -473,18 +473,18 @@ const UserProfile = () => {
         if (!window.confirm('Are you sure you want to delete this query?')) {
             return;
         }
-    
+
         try {
             const token = localStorage.getItem('token');
-            
+
             if (!token) {
                 alert('You are not logged in. Please log in first.');
                 navigate('/');
                 return;
             }
-    
+
             console.log('Deleting query with ID:', queryId);
-    
+
             const response = await fetch(`http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`, {
                 method: 'DELETE',
                 headers: {
@@ -492,33 +492,33 @@ const UserProfile = () => {
                     'Content-Type': 'application/json'
                 }
             });
-    
+
             console.log('Delete response status:', response.status);
-    
+
             if (response.status === 401) {
                 console.log('Token expired during delete, redirecting to login');
                 localStorage.removeItem('token');
                 navigate('/');
                 return;
             }
-    
+
             if (response.status === 403) {
                 alert('You do not have permission to delete this query.');
                 return;
             }
-    
+
             if (response.status === 404) {
                 alert('Query not found. It may have already been deleted.');
                 // Refresh queries to sync with server state
                 await fetchQueries();
                 return;
             }
-    
+
             if (response.ok || response.status === 204) {
                 // Successfully deleted
                 setSavedQueries(savedQueries.filter(q => q.id !== queryId));
                 showToastMessage('Query deleted successfully!');
-                
+
                 // If we were editing this query, reset the form
                 if (editingQueryId === queryId) {
                     resetForm();
@@ -532,7 +532,7 @@ const UserProfile = () => {
                 } catch (parseError) {
                     errorMessage = `Server error (${response.status})`;
                 }
-                
+
                 console.error('Error deleting query:', errorMessage);
                 alert(`Failed to delete query: ${errorMessage}`);
             }
@@ -618,7 +618,7 @@ const UserProfile = () => {
     // reactions management functions
     const handleReactionChange = (index, value) => {
         const newReactions = [...reactions];
-        newReactions[index] = { name: value, id: null };
+        newReactions[index] = { name: value || '', id: null }; // Ensure it's not undefined
         setReactions(newReactions);
 
         if (reactionSearchTimeout.current) {
@@ -642,47 +642,170 @@ const UserProfile = () => {
         }
     };
 
-    // update queries
+    // Helper function to fetch drug names by IDs
+    const fetchDrugNames = async (drugIds) => {
+        const token = localStorage.getItem('token');
+        const drugPromises = drugIds.map(async (drugId) => {
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/api/v1/analysis/drug-names/${drugId}/`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const drugData = await response.json();
+                    return { name: drugData.name, id: drugData.id };
+                } else {
+                    console.error(`Failed to fetch drug ${drugId}`);
+                    return { name: `Drug ID: ${drugId}`, id: drugId }; // Fallback
+                }
+            } catch (error) {
+                console.error(`Error fetching drug ${drugId}:`, error);
+                return { name: `Drug ID: ${drugId}`, id: drugId }; // Fallback
+            }
+        });
+
+        return Promise.all(drugPromises);
+    };
+
+    // Helper function to fetch reaction names by IDs
+    const fetchReactionNames = async (reactionIds) => {
+        const token = localStorage.getItem('token');
+        const reactionPromises = reactionIds.map(async (reactionId) => {
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/api/v1/analysis/reaction-names/${reactionId}/`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const reactionData = await response.json();
+                    return { name: reactionData.name, id: reactionData.id };
+                } else {
+                    console.error(`Failed to fetch reaction ${reactionId}`);
+                    return { name: `Reaction ID: ${reactionId}`, id: reactionId }; // Fallback
+                }
+            } catch (error) {
+                console.error(`Error fetching reaction ${reactionId}:`, error);
+                return { name: `Reaction ID: ${reactionId}`, id: reactionId }; // Fallback
+            }
+        });
+
+        return Promise.all(reactionPromises);
+    };
+
+
+    // Helper function to fetch drug name by ID (adjust endpoint as needed)
+    const fetchDrugById = async (drugId) => {
+        try {
+            const token = localStorage.getItem('token');
+
+            // נסה את ה-endpoint הנכון לפי ה-API שלך
+            const response = await fetch(`http://127.0.0.1:8000/api/v1/analysis/drug-names/${drugId}/`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                return { name: data.name, id: data.id };
+            } else if (response.status === 404) {
+                console.warn(`Drug ${drugId} not found`);
+                return { name: `Drug ID: ${drugId} (not found)`, id: drugId };
+            } else {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+        } catch (error) {
+            console.error(`Error fetching drug ${drugId}:`, error);
+            return { name: `Drug ID: ${drugId}`, id: drugId };
+        }
+    };
+
+    // Helper function to fetch reaction name by ID (adjust endpoint as needed)
+    const fetchReactionById = async (reactionId) => {
+        try {
+            const token = localStorage.getItem('token');
+
+            // נסה את ה-endpoint הנכון לפי ה-API שלך
+            const response = await fetch(`http://127.0.0.1:8000/api/v1/analysis/reaction-names/${reactionId}/`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                return { name: data.name, id: data.id };
+            } else if (response.status === 404) {
+                console.warn(`Reaction ${reactionId} not found`);
+                return { name: `Reaction ID: ${reactionId} (not found)`, id: reactionId };
+            } else {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+        } catch (error) {
+            console.error(`Error fetching reaction ${reactionId}:`, error);
+            return { name: `Reaction ID: ${reactionId}`, id: reactionId };
+        }
+    };
+
+    // Function to handle editing a query
     const handleEditQuery = async (query) => {
         setIsEditing(true);
         setEditingQueryId(query.id);
+        setLoading(true);
 
-        // More robust mapping for drugs - handle both object and string formats
-        const mappedDrugs = query.drugs?.map(drugId => {
-            if (typeof drugId === 'number') {
-                return { name: '', id: drugId }; 
+        try {
+            console.log('Original query data:', query);
+
+            let drugsToEdit = [];
+            let reactionsToEdit = [];
+
+            // Fetch drug names by IDs
+            if (query.drugs && query.drugs.length > 0) {
+                drugsToEdit = query.drugs.map(drug => ({
+                    name: drug.name || '',
+                    id: drug.id || null
+                }));
             }
-            else if (typeof drugId === 'object' && drugId !== null) {
-                return { name: drugId.name || '', id: drugId.id || drugId };
+
+            // Fetch reaction names by IDs
+            if (query.reactions && query.reactions.length > 0) {
+                reactionsToEdit = query.reactions.map(reaction => ({
+                    name: reaction.name || '',
+                    id: reaction.id || null
+                }));
             }
-            return { name: '', id: null };
-        }) || [];
 
-        // Add empty field for adding new drugs
-        setDrugs([...mappedDrugs, { name: '', id: null }]);
+            console.log('Drugs for editing:', drugsToEdit);
+            console.log('Reactions for editing:', reactionsToEdit);
 
-        // Similar handling for reactions
-        const mappedReactions = query.reactions?.map(reactionId => {
-            if (typeof reactionId === 'number') {
-                return { name: '', id: reactionId }; 
-            }
-            else if (typeof reactionId === 'object' && reactionId !== null) {
-                return { name: reactionId.name || '', id: reactionId };
-            }
-            return { name: '', id: null };
-        }) || [];
+            // If no drugs or reactions, initialize with empty fields
+            setDrugs(drugsToEdit.length > 0 ? [...drugsToEdit, { name: '', id: null }] : [{ name: '', id: null }]);
+            setReactions(reactionsToEdit.length > 0 ? [...reactionsToEdit, { name: '', id: null }] : [{ name: '', id: null }]);
 
-        setReactions([...mappedReactions, { name: '', id: null }]);
+            setYearStart(query.year_start ? query.year_start.toString() : '');
+            setYearEnd(query.year_end ? query.year_end.toString() : '');
+            setQuarterStart(query.quarter_start ? query.quarter_start.toString() : '');
+            setQuarterEnd(query.quarter_end ? query.quarter_end.toString() : '');
+            setQueryName(query.name || 'New Query');
 
-        // Handle date fields with validation
-        setYearStart(query.year_start ? query.year_start.toString() : '');
-        setYearEnd(query.year_end ? query.year_end.toString() : '');
-        setQuarterStart(query.quarter_start ? query.quarter_start.toString() : '');
-        setQuarterEnd(query.quarter_end ? query.quarter_end.toString() : '');
-        setQueryName(query.name || 'New Query');
+            // scroll to the top of the page
+            window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        // Scroll to top
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch (error) {
+            console.error('Error loading query for editing:', error);
+            alert('Failed to load query data for editing');
+            resetForm();
+        } finally {
+            setLoading(false);
+        }
     };
 
     const cancelEditing = () => {
@@ -708,20 +831,32 @@ const UserProfile = () => {
             return false;
         }
 
-        if (!yearStart || !yearEnd || !quarterStart || !quarterEnd) {
+        // בדיקה בטוחה לשדות - וידוא שהם לא undefined
+        const safeYearStart = yearStart || '';
+        const safeYearEnd = yearEnd || '';
+        const safeQuarterStart = quarterStart || '';
+        const safeQuarterEnd = quarterEnd || '';
+        const safeQueryName = queryName || '';
+
+        if (!safeYearStart.trim() || !safeYearEnd.trim() || !safeQuarterStart.trim() || !safeQuarterEnd.trim()) {
             alert('Please fill all year and quarter fields.');
             return false;
         }
 
-        if (!queryName.trim()) {
+        if (!safeQueryName.trim()) {
             alert('Please provide a name for your query.');
             return false;
         }
 
         // Enhanced year validation
-        const startYear = parseInt(yearStart);
-        const endYear = parseInt(yearEnd);
+        const startYear = parseInt(safeYearStart);
+        const endYear = parseInt(safeYearEnd);
         const currentYear = new Date().getFullYear();
+
+        if (isNaN(startYear) || isNaN(endYear)) {
+            alert('Please enter valid year values.');
+            return false;
+        }
 
         if (startYear > endYear) {
             alert('Start year cannot be greater than end year');
@@ -734,8 +869,13 @@ const UserProfile = () => {
         }
 
         // Quarter validation
-        const startQuarter = parseInt(quarterStart);
-        const endQuarter = parseInt(quarterEnd);
+        const startQuarter = parseInt(safeQuarterStart);
+        const endQuarter = parseInt(safeQuarterEnd);
+
+        if (isNaN(startQuarter) || isNaN(endQuarter)) {
+            alert('Please enter valid quarter values.');
+            return false;
+        }
 
         if (startQuarter < 1 || startQuarter > 4 || endQuarter < 1 || endQuarter > 4) {
             alert('Quarters must be between 1 and 4.');
@@ -991,8 +1131,8 @@ const UserProfile = () => {
                                 className="submit-button"
                                 disabled={
                                     isSubmitting ||
-                                    drugs.every(d => !d.name.trim()) ||
-                                    reactions.every(r => !r.name.trim())
+                                    drugs.every(d => !d.name || !d.name.trim()) ||
+                                    reactions.every(r => !r.name || !r.name.trim())
                                 }
                             >
                                 {isSubmitting ? (
