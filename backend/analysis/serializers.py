@@ -3,18 +3,34 @@ from analysis.models import DrugName, ReactionName, Query
 from django.db import transaction
 
 
+class DrugNameSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DrugName
+        fields = "__all__"
+        read_only_fields = ("id", "name")
+
+
+class ReactionNameSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReactionName
+        fields = "__all__"
+        read_only_fields = ("id", "name")
+
+
 class QuerySerializer(serializers.ModelSerializer):
-    drugs = serializers.PrimaryKeyRelatedField(
-        many=True, queryset=DrugName.objects.all()
+    drugs = DrugNameSerializer(many=True, read_only=True)
+    reactions = ReactionNameSerializer(many=True, read_only=True)
+
+    drug_ids = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=DrugName.objects.all(), write_only=True, source="drugs"
     )
-    reactions = serializers.PrimaryKeyRelatedField(
-        many=True, queryset=ReactionName.objects.all()
+    reaction_ids = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=ReactionName.objects.all(), write_only=True, source="reactions"
     )
 
     class Meta:
         model = Query
         fields = "__all__"
-
         read_only_fields = (
             "id",
             "user",
@@ -23,6 +39,8 @@ class QuerySerializer(serializers.ModelSerializer):
             "x_values",
             "y_values",
         )
+
+
 
     def validate(self, data):
         """Ensure drugs & reactions are not empty lists when included in the request."""
@@ -85,17 +103,3 @@ class QuerySerializer(serializers.ModelSerializer):
 
             return instance
         return None
-
-
-class DrugNameSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = DrugName
-        fields = "__all__"
-        read_only_fields = ("id", "name")
-
-
-class ReactionNameSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ReactionName
-        fields = "__all__"
-        read_only_fields = ("id", "name")

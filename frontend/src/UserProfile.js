@@ -841,45 +841,35 @@ const UserProfile = () => {
         setIsEditing(true);
         setEditingQueryId(query.id);
         setLoading(true);
-
+    
         try {
             console.log('Original query data:', query);
-
-            let drugsToEdit = [];
-            let reactionsToEdit = [];
-
-            // Fetch drug names by IDs
-            if (query.drugs && query.drugs.length > 0) {
-                drugsToEdit = query.drugs.map(drug => ({
-                    name: drug.name || '',
-                    id: drug.id || null
-                }));
-            }
-
-            // Fetch reaction names by IDs
-            if (query.reactions && query.reactions.length > 0) {
-                reactionsToEdit = query.reactions.map(reaction => ({
-                    name: reaction.name || '',
-                    id: reaction.id || null
-                }));
-            }
-
-            console.log('Drugs for editing:', drugsToEdit);
-            console.log('Reactions for editing:', reactionsToEdit);
-
-            // If no drugs or reactions, initialize with empty fields
-            setDrugs(drugsToEdit.length > 0 ? [...drugsToEdit, { name: '', id: null }] : [{ name: '', id: null }]);
-            setReactions(reactionsToEdit.length > 0 ? [...reactionsToEdit, { name: '', id: null }] : [{ name: '', id: null }]);
-
+    
+            // עכשיו query.drugs ו-query.reactions כבר מחזירים [{id, name}]
+            const drugsToEdit = (query.drugs || []).map(d => ({
+                id: d.id,
+                name: d.name
+            }));
+    
+            const reactionsToEdit = (query.reactions || []).map(r => ({
+                id: r.id,
+                name: r.name
+            }));
+    
+            console.log('Drugs for editing (final):', drugsToEdit);
+            console.log('Reactions for editing (final):', reactionsToEdit);
+    
+            // נטען ל-state את מה שיש, ואם אין – נוסיף שורה ריקה
+            setDrugs(drugsToEdit.length > 0 ? drugsToEdit : [{ name: '', id: null }]);
+            setReactions(reactionsToEdit.length > 0 ? reactionsToEdit : [{ name: '', id: null }]);
+    
             setYearStart(query.year_start ? query.year_start.toString() : '');
             setYearEnd(query.year_end ? query.year_end.toString() : '');
             setQuarterStart(query.quarter_start ? query.quarter_start.toString() : '');
             setQuarterEnd(query.quarter_end ? query.quarter_end.toString() : '');
             setQueryName(query.name || 'New Query');
-
-            // scroll to the top of the page
+    
             window.scrollTo({ top: 0, behavior: 'smooth' });
-
         } catch (error) {
             console.error('Error loading query for editing:', error);
             alert('Failed to load query data for editing');
@@ -888,6 +878,7 @@ const UserProfile = () => {
             setLoading(false);
         }
     };
+    
 
     const cancelEditing = () => {
         resetForm();
