@@ -291,48 +291,156 @@ const UserProfile = () => {
         setTimeout(() => setShowToast(false), 3000);
     };
 
+    // const handleSubmitQuery = async (e) => {
+    //     e.preventDefault();
+    //     setIsSubmitting(true);
+    //     setSubmitError('');
+
+    //     if (!validateForm()) {
+    //         return;
+    //     }
+
+    //     const validDrugs = drugs.filter(drug => drug.id !== null);
+    //     const validReactions = reactions.filter(reaction => reaction.id !== null);
+
+    //     // Validate form inputs
+    //     if (validDrugs.length === 0) {
+    //         alert('Please select at least one valid drug from the search results.');
+    //         return;
+    //     }
+
+    //     if (validReactions.length === 0) {
+    //         alert('Please select at least one valid reaction from the search results.');
+    //         return;
+    //     }
+
+    //     const data = {
+    //         name: queryName,
+    //         drugs: validDrugs.map(drug => drug.id),
+    //         reactions: validReactions.map(reaction => reaction.id),
+    //         year_start: parseInt(yearStart),
+    //         year_end: parseInt(yearEnd),
+    //         quarter_start: parseInt(quarterStart),
+    //         quarter_end: parseInt(quarterEnd),
+    //     };
+
+    //     try {
+    //         const token = localStorage.getItem('token');
+
+    //         if (!token) {
+    //             alert('You are not logged in. Please log in first.');
+    //             navigate('/');
+    //             return;
+    //         }
+
+    //         const url = isEditing
+    //             ? `http://127.0.0.1:8000/api/v1/analysis/queries/${editingQueryId}/`
+    //             : 'http://127.0.0.1:8000/api/v1/analysis/queries/';
+
+    //         const method = isEditing ? 'PUT' : 'POST';
+
+    //         console.log('Submitting query:', { url, method, data });
+
+    //         const response = await fetch(url, {
+    //             method: method,
+    //             headers: {
+    //                 'Accept': 'application/json',
+    //                 'Content-Type': 'application/json',
+    //                 'Authorization': `Bearer ${token}`,
+    //             },
+    //             body: JSON.stringify(data),
+    //         });
+
+    //         console.log('Submit query response status:', response.status);
+
+    //         if (response.status === 401) {
+    //             alert('Your session has expired. Please log in again.');
+    //             localStorage.removeItem('token');
+    //             navigate('/');
+    //             return;
+    //         }
+
+    //         if (response.status === 403) {
+    //             alert('You do not have permission to perform this action.');
+    //             return;
+    //         }
+
+    //         if (response.status === 404) {
+    //             alert('Query not found. It may have been deleted.');
+    //             await fetchQueries(); // Refresh the queries list
+    //             resetForm();
+    //             return;
+    //         }
+
+    //         if (response.ok) {
+    //             const newQuery = await response.json();
+    //             console.log('Query saved successfully:', newQuery);
+
+    //             if (isEditing) {
+    //                 setSavedQueries(savedQueries.map(q => q.id === newQuery.id ? newQuery : q));
+    //                 showToastMessage('Query updated successfully!');
+    //             } else {
+    //                 setSavedQueries([newQuery, ...savedQueries]);
+    //                 alert('Query saved successfully!');
+    //             }
+    //             resetForm();
+    //             setSubmitError('');
+    //         } else {
+    //             const errorText = await response.text();
+    //             let errorMessage = 'Unknown error occurred';
+
+    //             try {
+    //                 const errorData = await response.json();
+    //                 if (errorData.detail) {
+    //                     errorMessage = errorData.detail;
+    //                 }
+    //                 else if (errorData.message) {
+    //                     errorMessage = errorData.message;
+    //                 }
+    //                 else if (errorData.non_field_errors) {
+    //                     errorMessage = errorData.non_field_errors.join(', ');
+    //                 }
+    //                 // const errorJson = JSON.parse(errorText);
+    //                 // errorMessage = errorJson.message || errorJson.detail || 'Unknown error';
+    //             } catch (parseError) {
+    //                 // errorMessage = errorText || 'Unknown error';
+    //                 console.error('Error parsing error response:', parseError);
+    //                 errorMessage = `Server error (${response.status})`;
+    //             }
+
+    //             console.error('Error saving query:', errorMessage);
+    //             alert(`Failed to save query: ${errorMessage}`);
+    //             setSubmitError(errorMessage);
+    //         }
+    //     } catch (error) {
+    //         console.error('Network error:', error);
+    //         if (error.name === 'TypeError' && error.message.includes('fetch')) {
+    //             alert('Network error: Unable to connect to server. Please check your connection.');
+    //         } else {
+    //             alert(`Failed to save query: ${error.message || 'Network error'}`);
+    //         }
+    //     }
+    //     finally {
+    //         setIsSubmitting(false);
+    //     }
+    // };
+
+
     const handleSubmitQuery = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
         setSubmitError('');
 
         if (!validateForm()) {
+            setIsSubmitting(false);
             return;
         }
 
+        // קח רק את התרופות ותופעות הלוואי שנבחרו (עם ID)
         const validDrugs = drugs.filter(drug => drug.id !== null);
         const validReactions = reactions.filter(reaction => reaction.id !== null);
 
-        // Validate form inputs
-        if (validDrugs.length === 0) {
-            alert('Please select at least one valid drug from the search results.');
-            return;
-        }
-
-        if (validReactions.length === 0) {
-            alert('Please select at least one valid reaction from the search results.');
-            return;
-        }
-
-        // if (!yearStart || !yearEnd || !quarterStart || !quarterEnd) {
-        //     alert('Please fill all year and quarter fields.');
-        //     return;
-        // }
-
-        // if (!queryName.trim()) {
-        //     alert('Please provide a name for your query.');
-        //     return;
-        // }
-
-        // if (parseInt(yearStart) > parseInt(yearEnd)) {
-        //     alert('Start year cannot be greater than end year');
-        //     return;
-        // }
-        // if (parseInt(quarterStart) > 4 || parseInt(quarterStart) < 1 || parseInt(quarterEnd) < 1 || parseInt(quarterEnd) > 4) {
-        //     alert('Not a valid quarter. Quarters must be between 1 and 4.');
-        //     return;
-        // }
-
+        // הכנת הנתונים לשליחה - רק IDs (הסיריאליזר מצפה ל-IDs בכניסה)
         const data = {
             name: queryName,
             drugs: validDrugs.map(drug => drug.id),
@@ -386,7 +494,7 @@ const UserProfile = () => {
 
             if (response.status === 404) {
                 alert('Query not found. It may have been deleted.');
-                await fetchQueries(); // Refresh the queries list
+                await fetchQueries();
                 resetForm();
                 return;
             }
@@ -400,7 +508,7 @@ const UserProfile = () => {
                     showToastMessage('Query updated successfully!');
                 } else {
                     setSavedQueries([newQuery, ...savedQueries]);
-                    alert('Query saved successfully!');
+                    showToastMessage('Query saved successfully!');
                 }
                 resetForm();
                 setSubmitError('');
@@ -409,7 +517,7 @@ const UserProfile = () => {
                 let errorMessage = 'Unknown error occurred';
 
                 try {
-                    const errorData = await response.json();
+                    const errorData = JSON.parse(errorText);
                     if (errorData.detail) {
                         errorMessage = errorData.detail;
                     }
@@ -419,10 +527,7 @@ const UserProfile = () => {
                     else if (errorData.non_field_errors) {
                         errorMessage = errorData.non_field_errors.join(', ');
                     }
-                    // const errorJson = JSON.parse(errorText);
-                    // errorMessage = errorJson.message || errorJson.detail || 'Unknown error';
                 } catch (parseError) {
-                    // errorMessage = errorText || 'Unknown error';
                     console.error('Error parsing error response:', parseError);
                     errorMessage = `Server error (${response.status})`;
                 }
@@ -438,35 +543,11 @@ const UserProfile = () => {
             } else {
                 alert(`Failed to save query: ${error.message || 'Network error'}`);
             }
-        }
-        finally {
+        } finally {
             setIsSubmitting(false);
         }
     };
 
-    // const handleDeleteQuery = async (queryId) => {
-    //     if (!window.confirm('Are you sure you want to delete this query?')) {
-    //         return;
-    //     }
-
-    //     try {
-    //         const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`, {
-    //             method: 'DELETE',
-    //             headers: {
-    //                 'Content-Type': 'application/json'
-    //             }
-    //         });
-
-    //         if (response.ok) {
-    //             setSavedQueries(savedQueries.filter(q => q.id !== queryId));
-    //         } else {
-    //             throw new Error('Failed to delete query');
-    //         }
-    //     } catch (error) {
-    //         console.error('Error deleting query:', error);
-    //         alert('Failed to delete query');
-    //     }
-    // };
 
 
     const handleDeleteQuery = async (queryId) => {
