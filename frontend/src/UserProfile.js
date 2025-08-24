@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaUser, FaArrowRight, FaPlus, FaTimes, FaEdit, FaTrash, FaSignOutAlt, FaChevronDown, FaChevronRight, FaEye } from 'react-icons/fa';
+import { FaUser, FaArrowRight, FaPlus, FaTimes, FaEdit, FaTrash, FaSignOutAlt, FaChevronDown, FaEye } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { fetchWithRefresh } from './Login';
+// import { fetchWithRefresh } from './Login';
 import './UserProfile.css';
 
 const UserProfile = () => {
@@ -372,12 +372,12 @@ const UserProfile = () => {
         setActiveReactionSearchIndex(null);
     };
 
-    // Get CSRF token from cookies
-    const getCSRFToken = () => {
-        const cookies = document.cookie.split('; ');
-        const csrfCookie = cookies.find(cookie => cookie.startsWith('csrftoken='));
-        return csrfCookie ? csrfCookie.split('=')[1] : null;
-    };
+    // // Get CSRF token from cookies
+    // const getCSRFToken = () => {
+    //     const cookies = document.cookie.split('; ');
+    //     const csrfCookie = cookies.find(cookie => cookie.startsWith('csrftoken='));
+    //     return csrfCookie ? csrfCookie.split('=')[1] : null;
+    // };
 
     const resetForm = () => {
         setDrugs([{ name: '', id: null }]);
@@ -396,6 +396,7 @@ const UserProfile = () => {
         setShowToast(true);
         setTimeout(() => setShowToast(false), 3000);
     };
+
 
     // Handle form submission for saving or updating queries
     const handleSubmitQuery = async (e) => {
@@ -423,8 +424,8 @@ const UserProfile = () => {
                 year_end: parseInt(yearEnd),
                 quarter_start: parseInt(quarterStart),
                 quarter_end: parseInt(quarterEnd),
-                drug_ids: drugs.filter(d => d.id).map(d => d.id),
-                reaction_ids: reactions.filter(r => r.id).map(r => r.id)
+                drugs: drugs.filter(d => d.id).map(d => d.id),
+                reactions: reactions.filter(r => r.id).map(r => r.id)
             };
 
             console.log('Submitting payload:', payload);
@@ -435,6 +436,8 @@ const UserProfile = () => {
                     'Content-Type': 'application/json'
                 }
             };
+
+            console.log("config: ", config);
 
             let response;
             if (editingQueryId) {
@@ -561,29 +564,6 @@ const UserProfile = () => {
         }
     };
 
-    const handleEditQueryName = async (queryId, newName) => {
-        try {
-            const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ name: newName })
-            });
-
-            if (response.ok) {
-                const updatedQuery = await response.json();
-                setSavedQueries(savedQueries.map(query =>
-                    query.id === queryId ? { ...query, name: newName } : query
-                ));
-            } else {
-                alert('Failed to update query name');
-            }
-        } catch (error) {
-            console.error('Error updating query name:', error);
-            alert('Failed to update query name');
-        }
-    };
 
     const CustomSelect = ({ value, onChange, options, placeholder, name }) => {
         const [isOpen, setIsOpen] = useState(false);
@@ -657,61 +637,61 @@ const UserProfile = () => {
         }
     };
 
-    // Helper function to fetch drug names by IDs
-    const fetchDrugNames = async (drugIds) => {
-        const token = localStorage.getItem('token');
-        const drugPromises = drugIds.map(async (drugId) => {
-            try {
-                const response = await fetch(`http://127.0.0.1:8000/api/v1/analysis/drug-names/${drugId}/`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
+    // // Helper function to fetch drug names by IDs
+    // const fetchDrugNames = async (drugIds) => {
+    //     const token = localStorage.getItem('token');
+    //     const drugPromises = drugIds.map(async (drugId) => {
+    //         try {
+    //             const response = await fetch(`http://127.0.0.1:8000/api/v1/analysis/drug-names/${drugId}/`, {
+    //                 headers: {
+    //                     'Authorization': `Bearer ${token}`,
+    //                     'Content-Type': 'application/json'
+    //                 }
+    //             });
 
-                if (response.ok) {
-                    const drugData = await response.json();
-                    return { name: drugData.name, id: drugData.id };
-                } else {
-                    console.error(`Failed to fetch drug ${drugId}`);
-                    return { name: `Drug ID: ${drugId}`, id: drugId }; // Fallback
-                }
-            } catch (error) {
-                console.error(`Error fetching drug ${drugId}:`, error);
-                return { name: `Drug ID: ${drugId}`, id: drugId }; // Fallback
-            }
-        });
+    //             if (response.ok) {
+    //                 const drugData = await response.json();
+    //                 return { name: drugData.name, id: drugData.id };
+    //             } else {
+    //                 console.error(`Failed to fetch drug ${drugId}`);
+    //                 return { name: `Drug ID: ${drugId}`, id: drugId }; // Fallback
+    //             }
+    //         } catch (error) {
+    //             console.error(`Error fetching drug ${drugId}:`, error);
+    //             return { name: `Drug ID: ${drugId}`, id: drugId }; // Fallback
+    //         }
+    //     });
 
-        return Promise.all(drugPromises);
-    };
+    //     return Promise.all(drugPromises);
+    // };
 
-    // Helper function to fetch reaction names by IDs
-    const fetchReactionNames = async (reactionIds) => {
-        const token = localStorage.getItem('token');
-        const reactionPromises = reactionIds.map(async (reactionId) => {
-            try {
-                const response = await fetch(`http://127.0.0.1:8000/api/v1/analysis/reaction-names/${reactionId}/`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
+    // // Helper function to fetch reaction names by IDs
+    // const fetchReactionNames = async (reactionIds) => {
+    //     const token = localStorage.getItem('token');
+    //     const reactionPromises = reactionIds.map(async (reactionId) => {
+    //         try {
+    //             const response = await fetch(`http://127.0.0.1:8000/api/v1/analysis/reaction-names/${reactionId}/`, {
+    //                 headers: {
+    //                     'Authorization': `Bearer ${token}`,
+    //                     'Content-Type': 'application/json'
+    //                 }
+    //             });
 
-                if (response.ok) {
-                    const reactionData = await response.json();
-                    return { name: reactionData.name, id: reactionData.id };
-                } else {
-                    console.error(`Failed to fetch reaction ${reactionId}`);
-                    return { name: `Reaction ID: ${reactionId}`, id: reactionId }; // Fallback
-                }
-            } catch (error) {
-                console.error(`Error fetching reaction ${reactionId}:`, error);
-                return { name: `Reaction ID: ${reactionId}`, id: reactionId }; // Fallback
-            }
-        });
+    //             if (response.ok) {
+    //                 const reactionData = await response.json();
+    //                 return { name: reactionData.name, id: reactionData.id };
+    //             } else {
+    //                 console.error(`Failed to fetch reaction ${reactionId}`);
+    //                 return { name: `Reaction ID: ${reactionId}`, id: reactionId }; // Fallback
+    //             }
+    //         } catch (error) {
+    //             console.error(`Error fetching reaction ${reactionId}:`, error);
+    //             return { name: `Reaction ID: ${reactionId}`, id: reactionId }; // Fallback
+    //         }
+    //     });
 
-        return Promise.all(reactionPromises);
-    };
+    //     return Promise.all(reactionPromises);
+    // };
 
 
     // // Helper function to fetch drug name by ID (adjust endpoint as needed)
@@ -771,6 +751,66 @@ const UserProfile = () => {
     // };
 
     // Function to handle editing a query
+    // const handleEditQuery = async (query) => {
+    //     setViewMode('edit');
+    //     setViewingQuery(null);
+    //     setIsEditing(true);
+    //     setEditingQueryId(query.id);
+    //     setLoading(true);
+
+    //     try {
+    //         console.log('Original query data:', query);
+
+    //         // Fetch drug names and reactions names by IDs
+    //         const drugsToEdit = (query.drugs || []).map(d => ({
+    //             id: d.id,
+    //             name: d.name
+    //         }));
+
+    //         const reactionsToEdit = (query.reactions || []).map(r => ({
+    //             id: r.id,
+    //             name: r.name
+    //         }));
+
+    //         console.log('Drugs for editing (final):', drugsToEdit);
+    //         console.log('Reactions for editing (final):', reactionsToEdit);
+
+    //         const token = localStorage.getItem('token');
+    //         if (!token) {
+    //             alert('You are not logged in. Please log in first.');
+    //             navigate('/');
+    //             return;
+    //         }
+
+    //         const response = await axios.get(
+    //             `http://127.0.0.1:8000/api/v1/analysis/queries/${query.id}/`,
+    //             {
+    //                 headers: {
+    //                     'Authorization': `Bearer ${token}`
+    //                 }
+    //             }
+    //         );
+
+    //         setDrugs(drugsToEdit.length > 0 ? drugsToEdit : [{ name: '', id: null }]);
+    //         setReactions(reactionsToEdit.length > 0 ? reactionsToEdit : [{ name: '', id: null }]);
+
+    //         setYearStart(query.year_start ? query.year_start.toString() : '');
+    //         setYearEnd(query.year_end ? query.year_end.toString() : '');
+    //         setQuarterStart(query.quarter_start ? query.quarter_start.toString() : '');
+    //         setQuarterEnd(query.quarter_end ? query.quarter_end.toString() : '');
+    //         setQueryName(query.name || 'New Query');
+
+    //         window.scrollTo({ top: 0, behavior: 'smooth' });
+    //     } catch (error) {
+    //         console.error('Error loading query for editing:', error);
+    //         alert('Failed to load query data for editing');
+    //         resetForm();
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // };
+
+
     const handleEditQuery = async (query) => {
         setViewMode('edit');
         setViewingQuery(null);
@@ -779,15 +819,32 @@ const UserProfile = () => {
         setLoading(true);
 
         try {
-            console.log('Original query data:', query);
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('You are not logged in. Please log in first.');
+                navigate('/');
+                return;
+            }
 
-            // Fetch drug names and reactions names by IDs
-            const drugsToEdit = (query.drugs || []).map(d => ({
+            const response = await axios.get(
+                `http://127.0.0.1:8000/api/v1/analysis/queries/${query.id}/`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                }
+            );
+
+            const queryData = response.data;
+
+            console.log('Query data from backend:', queryData);
+
+            const drugsToEdit = (queryData.drugs || []).map(d => ({
                 id: d.id,
                 name: d.name
             }));
 
-            const reactionsToEdit = (query.reactions || []).map(r => ({
+            const reactionsToEdit = (queryData.reactions || []).map(r => ({
                 id: r.id,
                 name: r.name
             }));
@@ -795,15 +852,14 @@ const UserProfile = () => {
             console.log('Drugs for editing (final):', drugsToEdit);
             console.log('Reactions for editing (final):', reactionsToEdit);
 
-            // נטען ל-state את מה שיש, ואם אין – נוסיף שורה ריקה
             setDrugs(drugsToEdit.length > 0 ? drugsToEdit : [{ name: '', id: null }]);
             setReactions(reactionsToEdit.length > 0 ? reactionsToEdit : [{ name: '', id: null }]);
 
-            setYearStart(query.year_start ? query.year_start.toString() : '');
-            setYearEnd(query.year_end ? query.year_end.toString() : '');
-            setQuarterStart(query.quarter_start ? query.quarter_start.toString() : '');
-            setQuarterEnd(query.quarter_end ? query.quarter_end.toString() : '');
-            setQueryName(query.name || 'New Query');
+            setYearStart(queryData.year_start ? queryData.year_start.toString() : '');
+            setYearEnd(queryData.year_end ? queryData.year_end.toString() : '');
+            setQuarterStart(queryData.quarter_start ? queryData.quarter_start.toString() : '');
+            setQuarterEnd(queryData.quarter_end ? queryData.quarter_end.toString() : '');
+            setQueryName(queryData.name || 'New Query');
 
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (error) {
