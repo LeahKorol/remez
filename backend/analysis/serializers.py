@@ -4,13 +4,26 @@ from rest_framework import serializers
 from analysis.models import DrugName, Query, ReactionName
 
 
+class DrugNameSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DrugName
+        fields = "__all__"
+        read_only_fields = ("id", "name")
+
+
+class ReactionNameSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReactionName
+        fields = "__all__"
+        read_only_fields = ("id", "name")
+
+
 class QuerySerializer(serializers.ModelSerializer):
-    # Accepts only arrays of IDs for drugs and reactions on input (create/update)
     drugs = serializers.PrimaryKeyRelatedField(
         many=True, queryset=DrugName.objects.all()
     )
-    reactions = serializers.PrimaryKeyRelatedField(
-        many=True, queryset=ReactionName.objects.all()
+    reaction_ids = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=ReactionName.objects.all(), write_only=True, source="reactions"
     )
 
     def to_representation(self, instance):
@@ -30,7 +43,6 @@ class QuerySerializer(serializers.ModelSerializer):
     class Meta:
         model = Query
         fields = "__all__"
-
         read_only_fields = (
             "id",
             "user",
@@ -39,6 +51,8 @@ class QuerySerializer(serializers.ModelSerializer):
             "x_values",
             "y_values",
         )
+
+
 
     def validate(self, data):
         """Ensure drugs & reactions are not empty lists when included in the request."""
@@ -101,17 +115,3 @@ class QuerySerializer(serializers.ModelSerializer):
 
             return instance
         return None
-
-
-class DrugNameSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = DrugName
-        fields = "__all__"
-        read_only_fields = ("id", "name")
-
-
-class ReactionNameSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ReactionName
-        fields = "__all__"
-        read_only_fields = ("id", "name")

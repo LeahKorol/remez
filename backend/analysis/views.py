@@ -11,25 +11,20 @@ from analysis.serializers import (
 from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiParameter
 from django.shortcuts import get_object_or_404
 
-query_schemas = {
-    method: extend_schema(
-        tags=["Query"],
-        parameters=[
-            OpenApiParameter(name="id", type=int, location=OpenApiParameter.PATH)
-        ],
-    )
-    for method in [
-        "retrieve",
-        "update",
-        "partial_update",
-        "destroy",
-    ]
-}
-for method in ["list", "create", "get_queries_names"]:
-    query_schemas[method] = extend_schema(tags=["Query"])
 
-
-@extend_schema_view(**query_schemas)
+@extend_schema_view(
+    **{
+        method: extend_schema(tags=["Query"])
+        for method in [
+            "list",
+            "retrieve",
+            "create",
+            "update",
+            "partial_update",
+            "destroy",
+        ]
+    }
+)
 class QueryViewSet(viewsets.ModelViewSet):
     serializer_class = QuerySerializer
     permission_classes = [IsAuthenticated]
@@ -137,12 +132,7 @@ class TermNameSearchViewSet(viewsets.GenericViewSet):
 
 @extend_schema_view(
     search_by_prefix=extend_schema(
-        tags=["Drug Names"],
-        parameters=[
-            OpenApiParameter(
-                name="prefix", type="string", location=OpenApiParameter.PATH
-            )
-        ],
+        tags=["Drug Names"]
     )
 )
 class DrugNameViewSet(TermNameSearchViewSet):
