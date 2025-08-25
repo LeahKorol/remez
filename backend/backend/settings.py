@@ -101,6 +101,8 @@ WSGI_APPLICATION = "backend.wsgi.application"
 PASSWORD_RESET_CONFIRM_REDIRECT_BASE_URL = "http://localhost:3000/reset-password/"
 FRONTEND_PASSWORD_RESET_URL = "http://localhost:3000/reset-password"
 
+PASSWORD_RESET_TIMEOUT = 86400  # 1 day, in seconds
+
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
