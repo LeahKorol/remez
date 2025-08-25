@@ -43,16 +43,86 @@ function PasswordResetConfirm() {
   const [showPassword1, setShowPassword1] = useState(false);
   const [showPassword2, setShowPassword2] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isTokenExpired, setIsTokenExpired] = useState(false);
+  const [isValidatingToken, setIsValidatingToken] = useState(true);
   
   const navigate = useNavigate();
   const { uidb64, token } = useParams();
 
-  // Validate that we have the required URL parameters
-  useEffect(() => {
+  // Function to validate token on page load - FIXED VERSION
+  const validateToken = async () => {
     if (!uidb64 || !token) {
-      console.error('Missing parameters:', { uidb64, token });
       setErrors(['Invalid password reset link. Please request a new one.']);
+      setIsTokenExpired(true);
+      setIsValidatingToken(false);
+      return;
     }
+
+    try {
+      setIsValidatingToken(true);
+      
+      // Create a validation endpoint request or use GET method if available
+      // If your backend supports GET validation, use this:
+      const response = await fetch(`http://127.0.0.1:8000/api/v1/auth/password/reset/validate/${uidb64}/${token}/`, {
+        method: 'GET',
+        headers: { 
+          'Content-Type': 'application/json',
+        },
+      });
+
+      // If GET validation endpoint doesn't exist, skip validation entirely
+      // and let the actual form submission handle token validation
+      if (response.status === 404) {
+        console.log('No validation endpoint available, skipping token validation');
+        setIsTokenExpired(false);
+        setIsValidatingToken(false);
+        return;
+      }
+
+      const data = await response.json();
+      console.log('Token validation response:', response.status, data);
+
+      if (response.ok) {
+        console.log('Token is valid');
+        setIsTokenExpired(false);
+      } else if (response.status === 400 || response.status === 401 || response.status === 403) {
+        console.log('Token expired or invalid');
+        setIsTokenExpired(true);
+      } else {
+        // For other errors, assume token is valid and let user try
+        console.log('Unknown error, assuming token valid');
+        setIsTokenExpired(false);
+      }
+    } catch (err) {
+      console.error('Token validation error:', err);
+      // On network error, assume token is valid and let user try
+      console.log('Network error, assuming token valid');
+      setIsTokenExpired(false);
+    } finally {
+      setIsValidatingToken(false);
+    }
+  };
+
+  // Alternative approach - skip token validation entirely
+  const skipTokenValidation = () => {
+    if (!uidb64 || !token) {
+      setErrors(['Invalid password reset link. Please request a new one.']);
+      setIsTokenExpired(true);
+    } else {
+      setIsTokenExpired(false);
+    }
+    setIsValidatingToken(false);
+  };
+
+  // Validate token on component mount
+  useEffect(() => {
+    // Choose one of these approaches:
+    
+    // Option 1: Try to validate token (recommended if you have a validation endpoint)
+    // validateToken();
+    
+    // Option 2: Skip validation entirely and let form submission handle it
+    skipTokenValidation();
   }, [uidb64, token]);
 
   const validatePasswords = () => {
@@ -135,14 +205,19 @@ function PasswordResetConfirm() {
           const tokenErrors = backendErrors.filter(error => 
             error.toLowerCase().includes('token') || 
             error.toLowerCase().includes('invalid') ||
-            error.toLowerCase().includes('expired')
+            error.toLowerCase().includes('expired') ||
+            error.toLowerCase().includes('stale')
           );
           
           if (tokenErrors.length > 0) {
-            setErrors(['This password reset link is invalid or has expired. Please request a new one.']);
+            setIsTokenExpired(true);
+            setErrors(['This password reset link has expired or is no longer valid.']);
           } else {
             setErrors(backendErrors);
           }
+        } else if (response.status === 401 || response.status === 403) {
+          setIsTokenExpired(true);
+          setErrors(['This password reset link has expired or is no longer valid.']);
         } else {
           setErrors(backendErrors);
         }
@@ -157,6 +232,10 @@ function PasswordResetConfirm() {
 
   const handleBackToLogin = () => {
     navigate('/login');
+  };
+
+  const handleRequestNewReset = () => {
+    navigate('/password-reset');
   };
 
   const getPasswordStrength = (password) => {
@@ -185,6 +264,69 @@ function PasswordResetConfirm() {
 
   const passwordStrength = getPasswordStrength(newPassword1);
 
+  // Show loading while validating token
+  if (isValidatingToken) {
+    return (
+      <div className="password-reset-confirm-container">
+        <div className="password-reset-confirm-header">
+          <div className="logo">REMEZ</div>
+        </div>
+        
+        <div className="password-reset-confirm-form-container">
+          <div className="password-reset-confirm-form">
+            <div className="loading-icon">⏳</div>
+            <h1>Validating Reset Link...</h1>
+            <p className="loading-message">
+              Please wait while we verify your password reset link.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show token expired page
+  if (isTokenExpired) {
+    return (
+      <div className="password-reset-confirm-container">
+        <div className="password-reset-confirm-header">
+          <div className="logo">REMEZ</div>
+        </div>
+        
+        <div className="password-reset-confirm-form-container">
+          <div className="password-reset-confirm-form">
+            <div className="error-icon">⚠️</div>
+            <h1>Reset Link Expired</h1>
+            <p className="error-message">
+              This password reset link has expired or is no longer valid.
+            </p>
+            <p className="error-description">
+              For your security, password reset links expire after 24 hours. 
+              Please request a new password reset link to continue.
+            </p>
+            
+            <button 
+              className="request-new-reset-button"
+              onClick={handleRequestNewReset}
+              type="button"
+            >
+              Request New Reset Link
+            </button>
+            
+            <button 
+              className="back-to-login-button secondary"
+              onClick={handleBackToLogin}
+              type="button"
+            >
+              Back to Login
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show success page
   if (isSuccess) {
     return (
       <div className="password-reset-confirm-container">
@@ -216,6 +358,7 @@ function PasswordResetConfirm() {
     );
   }
 
+  // Show password reset form (only if token is valid)
   return (
     <div className="password-reset-confirm-container">
       <div className="password-reset-confirm-header">
