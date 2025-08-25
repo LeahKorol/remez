@@ -34,13 +34,22 @@ class CustomAllAuthPasswordResetForm(AllAuthPasswordResetForm):
 
         for user in self.users:
             temp_key = token_generator.make_token(user)
-
+            uid = user_pk_to_url_str(user)
+            
+            # create the URL that points to Django backend
             url = f"{settings.PASSWORD_RESET_CONFIRM_REDIRECT_BASE_URL}{user_pk_to_url_str(user)}/{temp_key}/"
+            # Create the URL that points to React frontend
+            frontend_base_url = getattr(settings, 'FRONTEND_PASSWORD_RESET_URL', 'http://localhost:3000/reset-password')
+            reset_url = f"{frontend_base_url}/{uid}/{temp_key}/"
+            
+
             # Values which are passed to password_reset_key_message.txt
             context = {
                 "current_site": current_site,
                 "user": user,
-                "password_reset_url": url,
+                "password_reset_url": reset_url, # This will be used in the email template
+                "uid": uid, # available for direct use in template
+                "token": temp_key, # available for direct use in template
             }
 
             if (
