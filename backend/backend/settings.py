@@ -97,6 +97,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "backend.wsgi.application"
 
+# Password Reset URL Configuration
+PASSWORD_RESET_CONFIRM_REDIRECT_BASE_URL = "http://localhost:3000/reset-password/"
+FRONTEND_PASSWORD_RESET_URL = "http://localhost:3000/reset-password"
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
