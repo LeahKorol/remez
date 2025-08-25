@@ -269,6 +269,11 @@
   background-color: #218838;
 }
 
+.forgot-password:hover {
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 .forgot-password-suggestion {
   background-color: #fff3cd;
   border: 1px solid #ffeaa7;
