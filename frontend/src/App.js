@@ -6,6 +6,8 @@ import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
 import Home from './HomePage';
 import Login from './Login';
+import PasswordReset from './PasswordReset';
+import PasswordResetConfirm from './PasswordResetConfirm';
 import Register from './Registration';
 import UserProfile from './UserProfile';
 
@@ -15,6 +17,8 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/password-reset" element={<PasswordReset />} />
+        <Route path="/reset-password/:uidb64/:token" element={<PasswordResetConfirm />} />
         <Route path="/register" element={<Register />} />
         <Route path="/profile" element={<UserProfile />} />
         <Route path="*" element={<Navigate to="/" />} />
