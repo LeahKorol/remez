@@ -9,6 +9,10 @@ from allauth.account.utils import (
     user_username,
     user_pk_to_url_str,
 )
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class CustomAllAuthPasswordResetForm(AllAuthPasswordResetForm):
@@ -57,8 +61,13 @@ class CustomAllAuthPasswordResetForm(AllAuthPasswordResetForm):
                 != app_settings.AuthenticationMethod.EMAIL
             ):
                 context["username"] = user_username(user)
-            get_adapter(request).send_mail(
-                "account/email/password_reset_key", email, context
-            )
+                
+            try:                
+                get_adapter(request).send_mail(
+                    "account/email/password_reset_key", email, context
+                )
+                logger.info(f"Password reset email sent to {email}")
+            except Exception as e:
+                logger.error(f"Error sending password reset email to {email}: {e}")
 
         return self.cleaned_data["email"]
