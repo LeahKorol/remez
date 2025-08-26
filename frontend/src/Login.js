@@ -76,6 +76,20 @@ function Login() {
   const [isResetLoading, setIsResetLoading] = useState(false);
   const navigate = useNavigate();
 
+  const urlParams = new URLSearchParams(window.location.search);
+  const verified = urlParams.get('verified');
+  const error = urlParams.get('error');
+
+  if (verified === 'false') {
+    if (error === 'expired') {
+      // הצג הודעה: "קישור האימות פג תוקפו. אנא בקש קישור חדש"
+    } else if (error === 'notfound') {
+      // הצג הודעה: "קישור אימות לא תקין"
+    } else {
+      // הצג הודעה כללית של שגיאה
+    }
+  }
+
   // Initialize Google One Tap on component mount
   useEffect(() => {
     // Check if user is already logged in
