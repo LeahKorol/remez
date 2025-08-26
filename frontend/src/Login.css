@@ -350,3 +350,49 @@
     transform: translateY(0);
   }
 }
+
+
+.button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.resend-button {
+  background-color: #007bff !important;
+}
+
+.resend-button:hover:not(:disabled) {
+  background-color: #0056b3 !important;
+}
+
+.resend-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed !important;
+}
+
+.error-icon {
+  font-size: 48px;
+  margin-bottom: 20px;
+}
+
+.success-icon {
+  font-size: 48px;
+  margin-bottom: 20px;
+}
+
+.loading-icon {
+  font-size: 48px;
+  margin-bottom: 20px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
