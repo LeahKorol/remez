@@ -15,7 +15,6 @@ import os
 import sys
 from datetime import timedelta
 from pathlib import Path
-
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -208,8 +207,8 @@ ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_UNIQUE_EMAIL = True
-ACCOUNT_EMAIL_VERIFICATION = "none"  # Do not require email confirmation
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
@@ -309,3 +308,21 @@ LOGGING = {
 }
 
 logging.config.dictConfig(LOGGING)
+
+
+# Email verification settings
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_CONFIRM_EMAIL_ON_GET = True
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
+
+# Custom adapter
+ACCOUNT_ADAPTER = 'users.adapters.CustomAccountAdapter'
+
+# Email confirmation redirect URLs
+ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/verify-email/"
+ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/login/"
+
+REST_AUTH_REGISTER_SERIALIZERS = {
+    "REGISTER_SERIALIZER": "users.serializers.CustomRegisterSerializer",
+}
