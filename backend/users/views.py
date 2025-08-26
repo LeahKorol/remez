@@ -108,7 +108,7 @@ def verify_email_api(request, key):
             email_confirmation = EmailConfirmation.objects.get(key=key)
 
         email_confirmation.confirm(request)
-        # אחרי אימות → שולחים ל־frontend
+        # Redirect to frontend with success message
         frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
         return redirect(f"{frontend_url}/login?verified=true")
     except Exception:

@@ -90,7 +90,7 @@
         </div>
         
         <div class="content">
-            <h1 class="welcome-text">Welcome, {{ user.get_full_name|default:user.username }}!</h1>
+            <h1 class="welcome-text">Welcome, {{ user.username|default:user.email }}!</h1>
             
             <div class="message">
                 <p>Thank you for signing up for REMEZ! We're excited to have you on board.</p>
