@@ -1,5 +1,9 @@
 .env
 
-.vscode/
+.github
 
-node_modules/
+**/*.txt
+
+**/.vscode
+
+**/*.log
