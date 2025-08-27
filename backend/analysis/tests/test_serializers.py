@@ -1,6 +1,6 @@
 import pytest
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from rest_framework import serializers
 
 from analysis.models import DrugName, Query, ReactionName
 from analysis.serializers import (
@@ -10,164 +10,267 @@ from analysis.serializers import (
 )
 
 
-class QuerySerializerTest(TestCase):
-    @classmethod
-    def setUpTestData(cls):
-        """Set up test data"""
-        cls.user = get_user_model().objects.create_user(
-            email="testuser@example.com", password="password123"
-        )
-        cls.drug1 = DrugName.objects.create(name="Drug A")
-        cls.drug2 = DrugName.objects.create(name="Drug B")
-        cls.reaction1 = ReactionName.objects.create(name="Reaction X")
-        cls.reaction2 = ReactionName.objects.create(name="Reaction Y")
+@pytest.fixture
+def query_test_data():
+    """Set up test data"""
+    user = get_user_model().objects.create_user(
+        email="testuser@example.com", password="password123"
+    )
+    drug1 = DrugName.objects.create(name="Drug A")
+    drug2 = DrugName.objects.create(name="Drug B")
+    reaction1 = ReactionName.objects.create(name="Reaction X")
+    reaction2 = ReactionName.objects.create(name="Reaction Y")
 
-        cls.query = Query.objects.create(
-            user=cls.user,
-            name="Test Query",
-            quarter_start=1,
-            quarter_end=2,
-            year_start=2020,
-            year_end=2020,
-        )
-        cls.query.drugs.set([cls.drug1.id])
-        cls.query.reactions.set([cls.reaction1.id])
+    query = Query.objects.create(
+        user=user,
+        name="Test Query",
+        quarter_start=1,
+        quarter_end=2,
+        year_start=2020,
+        year_end=2020,
+    )
+    query.drugs.set([drug1.id])
+    query.reactions.set([reaction1.id])
 
-    def test_serialization(self):
+    return {
+        "user": user,
+        "drug1": drug1,
+        "drug2": drug2,
+        "reaction1": reaction1,
+        "reaction2": reaction2,
+        "query": query,
+    }
+
+
+@pytest.mark.django_db
+class TestQuerySerializer:
+    def test_serialization(self, query_test_data):
         """Test that serialization produces expected data (drugs/reactions as id+name objects)"""
-        serializer = QuerySerializer(instance=self.query)
+        query = query_test_data["query"]
+        drug1 = query_test_data["drug1"]
+        reaction1 = query_test_data["reaction1"]
+
+        serializer = QuerySerializer(instance=query)
         # Remove fields that change dynamically
         response_data = serializer.data.copy()
         response_data.pop("created_at", None)
         response_data.pop("updated_at", None)
 
         expected_data = {
-            "id": self.query.id,
-            "drugs": [{"id": self.drug1.id, "name": self.drug1.name}],
-            "reactions": [{"id": self.reaction1.id, "name": self.reaction1.name}],
-            "name": self.query.name,
-            "user": self.query.user.id,  # ForeignKey should be serialized as ID
-            "quarter_start": self.query.quarter_start,
-            "quarter_end": self.query.quarter_end,
-            "year_start": self.query.year_start,
-            "year_end": self.query.year_end,
-            "ror_values": self.query.ror_values,
-            "ror_lower": self.query.ror_lower,
-            "ror_upper": self.query.ror_upper,
+            "id": query.id,
+            "drugs": [{"id": drug1.id, "name": drug1.name}],
+            "reactions": [{"id": reaction1.id, "name": reaction1.name}],
+            "name": query.name,
+            "user": query.user.id,  # ForeignKey should be serialized as ID
+            "quarter_start": query.quarter_start,
+            "quarter_end": query.quarter_end,
+            "year_start": query.year_start,
+            "year_end": query.year_end,
+            "ror_values": query.ror_values,
+            "ror_lower": query.ror_lower,
+            "ror_upper": query.ror_upper,
         }
-        self.assertEqual(response_data, expected_data)
+        assert response_data == expected_data
 
-    def test_missing_drugs_fails(self):
+    def test_missing_drugs_fails(self, query_test_data):
         """Test validation fails if drugs are missing"""
+        reaction1 = query_test_data["reaction1"]
         data = {
             "name": "New Query",
             "quarter_start": 1,
             "quarter_end": 2,
             "year_start": 2020,
             "year_end": 2020,
-            "reactions": [self.reaction1.id],  # No drugs
+            "reactions": [reaction1.id],  # No drugs
         }
         serializer = QuerySerializer(data=data)
-        self.assertFalse(serializer.is_valid())
-        self.assertIn("drugs", serializer.errors)
+        assert not serializer.is_valid()
+        assert "drugs" in serializer.errors
 
-    def test_missing_reactions_fails(self):
+    def test_missing_reactions_fails(self, query_test_data):
         """Test validation fails if reactions are missing"""
+        drug1 = query_test_data["drug1"]
         data = {
             "name": "New Query",
             "quarter_start": 1,
             "quarter_end": 2,
             "year_start": 2020,
             "year_end": 2020,
-            "drugs": [self.drug1.id],  # No reactions
+            "drugs": [drug1.id],  # No reactions
         }
         serializer = QuerySerializer(data=data)
-        self.assertFalse(serializer.is_valid())
-        self.assertIn("reactions", serializer.errors)
+        assert not serializer.is_valid()
+        assert "reactions" in serializer.errors
 
-    def test_create_query(self):
+    def test_create_query(self, query_test_data):
         """Test successful creation of a Query"""
+        user = query_test_data["user"]
+        drug1 = query_test_data["drug1"]
+        drug2 = query_test_data["drug2"]
+        reaction1 = query_test_data["reaction1"]
+        reaction2 = query_test_data["reaction2"]
+
         data = {
             "name": "Created Query",
             "quarter_start": 1,
             "quarter_end": 2,
             "year_start": 2020,
             "year_end": 2020,
-            "drugs": [self.drug1.id, self.drug2.id],
-            "reactions": [self.reaction1.id, self.reaction2.id],
+            "drugs": [drug1.id, drug2.id],
+            "reactions": [reaction1.id, reaction2.id],
         }
         serializer = QuerySerializer(data=data)
-        self.assertTrue(serializer.is_valid())
+        assert serializer.is_valid()
 
-        query = serializer.save(
-            user=self.user
-        )  # Manually assign user since it's read-only
-        self.assertEqual(query.name, "Created Query")
-        self.assertEqual(query.quarter_start, 1)
-        self.assertEqual(query.quarter_end, 2)
-        self.assertEqual(list(query.drugs.all()), [self.drug1, self.drug2])
-        # Model instances with primary key value are hashable by default
-        self.assertEqual(set(query.reactions.all()), {self.reaction1, self.reaction2})
+        query = serializer.save(user=user)  # Manually assign user
+        assert query.name == "Created Query"
+        assert query.quarter_start == 1
+        assert query.quarter_end == 2
+        assert list(query.drugs.all()) == [drug1, drug2]
+        assert set(query.reactions.all()) == {reaction1, reaction2}
 
-    def test_update_query(self):
+    def test_update_query(self, query_test_data):
         """Test successful update of a Query"""
+        query = query_test_data["query"]
+        drug2 = query_test_data["drug2"]
+        reaction2 = query_test_data["reaction2"]
+
         data = {
             "name": "Updated Query",
             "quarter_start": 3,
             "quarter_end": 4,
             "year_start": 2020,
             "year_end": 2020,
-            "drugs": [self.drug2.id],  # Change drugs
-            "reactions": [self.reaction2.id],  # Change reactions
+            "drugs": [drug2.id],
+            "reactions": [reaction2.id],
         }
-        serializer = QuerySerializer(instance=self.query, data=data, partial=True)
-        self.assertTrue(serializer.is_valid())
+        serializer = QuerySerializer(instance=query, data=data, partial=True)
+        assert serializer.is_valid()
 
         updated_query = serializer.save()
-        self.assertEqual(updated_query.name, "Updated Query")
-        self.assertEqual(updated_query.quarter_start, 3)
-        self.assertEqual(updated_query.quarter_end, 4)
-        self.assertEqual(list(updated_query.drugs.all()), [self.drug2])
-        self.assertEqual(list(updated_query.reactions.all()), [self.reaction2])
+        assert updated_query.name == "Updated Query"
+        assert updated_query.quarter_start == 3
+        assert updated_query.quarter_end == 4
+        assert list(updated_query.drugs.all()) == [drug2]
+        assert list(updated_query.reactions.all()) == [reaction2]
 
-    def test_read_only_fields_cannot_be_updated(self):
+    def test_read_only_fields_cannot_be_updated(self, query_test_data):
         """Test that read-only fields cannot be updated"""
+        query = query_test_data["query"]
+        user = query_test_data["user"]
         data = {
-            "id": 9999,  # Trying to modify ID
-            "user": self.user.id,  # Trying to modify user
-            "created_at": "2022-01-01T00:00:00Z",  # Trying to modify created_at
+            "id": 9999,
+            "user": user.id,
+            "created_at": "2022-01-01T00:00:00Z",
             "updated_at": "2022-01-01T00:00:00Z",
         }
-        serializer = QuerySerializer(instance=self.query, data=data, partial=True)
-        self.assertTrue(serializer.is_valid())
+        serializer = QuerySerializer(instance=query, data=data, partial=True)
+        assert serializer.is_valid()
 
         updated_query = serializer.save()
-        self.assertNotEqual(updated_query.id, 9999)  # ID should not change
-        self.assertEqual(updated_query.user, self.user)  # User should remain unchanged
-        self.assertNotEqual(
-            updated_query.created_at.isoformat(), "2022-01-01T00:00:00Z"
-        )  # Created_at should remain unchanged
+        assert updated_query.id != 9999
+        assert updated_query.user == user
+        assert updated_query.created_at.isoformat() != "2022-01-01T00:00:00Z"
 
-    def test_partial_update_keeps_existing_relations(self):
+    def test_partial_update_keeps_existing_relations(self, query_test_data):
         """Test that partial update does not remove ManyToMany fields if not provided"""
-        data = {"name": "Partially Updated Query"}  # No drugs or reactions provided
-        serializer = QuerySerializer(instance=self.query, data=data, partial=True)
-        self.assertTrue(serializer.is_valid())
+        query = query_test_data["query"]
+        drug1 = query_test_data["drug1"]
+        reaction1 = query_test_data["reaction1"]
+
+        data = {"name": "Partially Updated Query"}
+        serializer = QuerySerializer(instance=query, data=data, partial=True)
+        assert serializer.is_valid()
 
         updated_query = serializer.save()
-        self.assertEqual(updated_query.name, "Partially Updated Query")
-        self.assertEqual(
-            list(updated_query.drugs.all()), [self.drug1]
-        )  # Should remain unchanged
-        self.assertEqual(
-            list(updated_query.reactions.all()), [self.reaction1]
-        )  # Should remain unchanged
+        assert updated_query.name == "Partially Updated Query"
+        assert list(updated_query.drugs.all()) == [drug1]
+        assert list(updated_query.reactions.all()) == [reaction1]
 
-    def test_partial_update_with_null_relations(self):
+    def test_partial_update_with_null_relations(self, query_test_data):
         """Test that explicitly setting drugs or reactions to an empty list fails"""
-        data = {"drugs": [], "reactions": []}  # Explicitly removing relations
-        serializer = QuerySerializer(instance=self.query, data=data, partial=True)
-        self.assertFalse(serializer.is_valid())
+        query = query_test_data["query"]
+        data = {"drugs": [], "reactions": []}
+        serializer = QuerySerializer(instance=query, data=data, partial=True)
+        assert not serializer.is_valid()
+
+    @pytest.mark.parametrize(
+        "quarter_start, quarter_end, year_start, year_end, is_valid",
+        [
+            (2, 1, 2020, 2020, False),  # same year, start > end
+            (1, 1, 2020, 2020, False),  # same year, start == end
+            (1, 2, 2020, 2020, True),  # same year, start < end
+            (1, 2, 2021, 2020, False),  # year_start > year_end, always invalid
+            (2, 1, 2020, 2021, True),  # year_start < year_end, always valid
+            (1, 1, 2020, 2021, True),
+            (1, 2, 2020, 2021, True),
+        ],
+    )
+    def test_quarter_start_lte_quarter_end_in_create_query(
+        self,
+        query_test_data,
+        quarter_start,
+        quarter_end,
+        year_start,
+        year_end,
+        is_valid,
+    ):
+        """Test that quarter_start must be lte quarter_end within the same year"""
+        drug1 = query_test_data["drug1"]
+        reaction1 = query_test_data["reaction1"]
+        data = {
+            "name": "Quarter Validation Query",
+            "quarter_start": quarter_start,
+            "quarter_end": quarter_end,
+            "year_start": year_start,
+            "year_end": year_end,
+            "drugs": [drug1.id],
+            "reactions": [reaction1.id],
+        }
+        serializer = QuerySerializer(data=data)
+        if is_valid:
+            assert serializer.is_valid()
+        else:
+            assert not serializer.is_valid()
+            assert "quarter_start" or "year_start" in serializer.errors
+
+    @pytest.mark.parametrize(
+        "quarter_end, year_end, is_valid",
+        [
+            (1, 2020, False),
+            (2, 2020, False),
+            (3, 2020, True),
+            (3, 2019, False),
+            (1, 2021, True),
+            (2, 2021, True),
+            (3, 2021, True),
+        ],
+    )
+    def test_quarter_start_lte_quarter_end_in_update_query(
+        self, query_test_data, quarter_end, year_end, is_valid
+    ):
+        """Test that quarter_start must be lte quarter_end within the same year"""
+        user = query_test_data["user"]
+        data = {
+            "quarter_end": quarter_end,
+            "year_end": year_end,
+        }
+        query = Query.objects.create(
+            user=user,
+            name="Test Query",
+            quarter_start=2,
+            quarter_end=3,
+            year_start=2020,
+            year_end=2020,
+        )
+        serializer = QuerySerializer(instance=query, data=data, partial=True)
+        assert serializer.is_valid()
+        if not is_valid:
+            with pytest.raises(serializers.ValidationError) as excinfo:
+                serializer.save()
+            assert "quarter_start" or "year_start" in excinfo.value.detail
+        else:
+            serializer.save()
 
 
 @pytest.fixture
