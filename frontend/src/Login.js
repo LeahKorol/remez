@@ -74,21 +74,11 @@ function Login() {
   const [showRegisterButton, setShowRegisterButton] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [isResetLoading, setIsResetLoading] = useState(false);
+  const [showEmailNotVerified, setShowEmailNotVerified] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [isResending, setIsResending] = useState(false);
+  const [dynamicButtonType, setDynamicButtonType] = useState(null); // 'verification' או 'reset'
   const navigate = useNavigate();
-
-  const urlParams = new URLSearchParams(window.location.search);
-  const verified = urlParams.get('verified');
-  const error = urlParams.get('error');
-
-  if (verified === 'false') {
-    if (error === 'expired') {
-      // הצג הודעה: "קישור האימות פג תוקפו. אנא בקש קישור חדש"
-    } else if (error === 'notfound') {
-      // הצג הודעה: "קישור אימות לא תקין"
-    } else {
-      // הצג הודעה כללית של שגיאה
-    }
-  }
 
   // Initialize Google One Tap on component mount
   useEffect(() => {
@@ -99,56 +89,14 @@ function Login() {
     }
   }, [navigate]);
 
-  // Check if email exists in the system
-  const checkEmailExists = async (emailToCheck) => {
-    try {
-      // First, try to login with a dummy password to see the error response
-      const response = await fetch('http://127.0.0.1:8000/api/v1/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: emailToCheck, password: 'dummy_password_check' }),
-      });
-
-      const data = await response.json();
-
-      // If we get a 401 or password-related error, it means the email exists
-      if (response.status === 401) {
-        const errorMessages = handleBackendErrors(data);
-        const passwordError = errorMessages.some(error =>
-          error.toLowerCase().includes('password') ||
-          error.toLowerCase().includes('incorrect') ||
-          error.toLowerCase().includes('invalid credentials')
-        );
-        return passwordError; // Email exists if it's a password error
-      }
-
-      // If we get a 400 with email/user not found error, email doesn't exist
-      if (response.status === 400 || response.status === 404) {
-        const errorMessages = handleBackendErrors(data);
-        const emailNotFoundError = errorMessages.some(error =>
-          error.toLowerCase().includes('email') ||
-          error.toLowerCase().includes('user') ||
-          error.toLowerCase().includes('not found') ||
-          error.toLowerCase().includes('does not exist')
-        );
-        return !emailNotFoundError; // Email doesn't exist
-      }
-
-      return false;
-    } catch (err) {
-      console.error('Error checking email:', err);
-      return false;
-    }
-  };
-
   const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setErrors([]);
     setShowRegisterButton(false);
     setShowForgotPassword(false);
+    setShowEmailNotVerified(false);
+    setDynamicButtonType(null);
 
     // Client-side validation
     const validationErrors = [];
@@ -175,19 +123,35 @@ function Login() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email, password: password }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
+        toast.success('Login successful!');
         localStorage.setItem('token', data.access);
         console.log('Token saved:', data.access);
         navigate('/profile');
         return;
       }
 
-      if (response.status === 401) {
+      // Check for email not verified error first
+      const backendErrors = handleBackendErrors(data);
+      const isEmailNotVerified = backendErrors.some(error =>
+        error.toLowerCase().includes('e-mail is not verified') ||
+        error.toLowerCase().includes('email is not verified') ||
+        error.toLowerCase().includes('not verified')
+      );
+
+      if (isEmailNotVerified) {
+        setShowEmailNotVerified(true);
+        setUnverifiedEmail(email); // השתמש במייל שהמשתמש הזין
+        setDynamicButtonType('verification');
+        toast.error('Your email is not verified yet');
+      }
+      // Handle different status codes
+      else if (response.status === 401) {
         const backendErrors = handleBackendErrors(data);
         setErrors(backendErrors.length > 0 ? backendErrors : ['Incorrect email or password.']);
 
@@ -201,6 +165,7 @@ function Login() {
 
         if (passwordError) {
           setShowForgotPassword(true);
+          setDynamicButtonType('reset');
         }
       } else if (response.status === 400) {
         const backendErrors = handleBackendErrors(data);
@@ -214,14 +179,14 @@ function Login() {
         );
 
         if (emailNotFoundError) {
+          setErrors(['This email is not registered in our system.']);
           setShowRegisterButton(true);
-        }
-        else {
-          // If it's not an email not found error, show forgot password
+        } else {
           setShowForgotPassword(true);
+          setDynamicButtonType('reset');
         }
       } else if (response.status === 404) {
-        setErrors(['User not found.']);
+        setErrors(['This email is not registered in our system.']);
         setShowRegisterButton(true);
       } else if (response.status >= 500) {
         setErrors(['Internal server error. Please try again later.']);
@@ -231,10 +196,36 @@ function Login() {
       }
 
     } catch (err) {
-      console.error('Network error:', err);
+      console.error('Login error:', err);
       setErrors(['Network error. Please check your connection and try again.']);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setIsResending(true);
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/v1/auth/resend-verification/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: unverifiedEmail }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success('Verification email resent! Please check your inbox.');
+        setShowEmailNotVerified(false);
+        setDynamicButtonType(null);
+      } else {
+        toast.error(data.error || 'Failed to resend verification email.');
+      }
+    } catch (error) {
+      console.error('Resend verification error:', error);
+      toast.error('Network error. Please try again later.');
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -268,16 +259,15 @@ function Login() {
         toast.success('If an account with this email exists, a reset link has been sent.');
         setErrors([]);
         setShowForgotPassword(false);
+        setDynamicButtonType(null);
       } else {
         const data = await res.json();
         const backendErrors = handleBackendErrors(data);
         setErrors(backendErrors);
       }
     } catch {
-      setErrors(['Network error.']);
       setErrors(['Network error. Please try again.']);
-    }
-    finally {
+    } finally {
       setIsResetLoading(false);
     }
   };
@@ -295,6 +285,34 @@ function Login() {
         <div className="login-form">
           <h1>Welcome Back</h1>
           <p className="login-subtitle">Please login to access your personal area</p>
+
+          {/* Dynamic Alert - handles both email verification and forgot password */}
+          {(showEmailNotVerified || showForgotPassword) && (
+            <div className={`alert ${dynamicButtonType === 'verification' ? 'alert-warning' : 'forgot-password-suggestion'}`}>
+              <div className="alert-content">
+                {dynamicButtonType === 'verification' ? (
+                  <>
+                    <strong>Email verification required</strong>
+                    <p>Please check your email and click the verification link to activate your account.</p>
+                  </>
+                ) : (
+                  <p>Forgot your password?</p>
+                )}
+                
+                <button
+                  className={dynamicButtonType === 'verification' ? 'resend-verification-btn' : 'forgot-password-button'}
+                  onClick={dynamicButtonType === 'verification' ? handleResendVerification : handleForgotPassword}
+                  type="button"
+                  disabled={isResending || isResetLoading}
+                >
+                  {dynamicButtonType === 'verification' 
+                    ? (isResending ? 'Sending verification email...' : 'Resend Verification Email')
+                    : (isResetLoading ? 'Sending reset email...' : 'Reset Password')
+                  }
+                </button>
+              </div>
+            </div>
+          )}
 
           {errors.length > 0 && (
             <div className="error-message">
@@ -315,20 +333,6 @@ function Login() {
                 type="button"
               >
                 Register now
-              </button>
-            </div>
-          )}
-
-          {showForgotPassword && (
-            <div className="forgot-password-suggestion">
-              <p>Forgot your password?</p>
-              <button
-                className="forgot-password-button"
-                onClick={handleForgotPassword}
-                type="button"
-                disabled={isResetLoading}
-              >
-                {isResetLoading ? 'Sending reset link...' : 'Reset Password'}
               </button>
             </div>
           )}
@@ -361,17 +365,12 @@ function Login() {
             >
               {isLoading ? 'Logging in...' : 'Login'}
             </button>
-
-            <p className="forgot-password" onClick={handleForgotPassword}>
-              Forgot your password?
-            </p>
           </form>
 
           <div className="separator">
             <span>or</span>
           </div>
 
-          {/* Replace the old Google button with the new GoogleAuthButton component */}
           <GoogleAuthButton
             isRegistration={false}
             className="google-login-button"

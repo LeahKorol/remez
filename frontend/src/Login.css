@@ -20,7 +20,6 @@
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    text-fill-color: transparent;
   }
   
   .login-form-container {
@@ -325,6 +324,114 @@
   text-decoration: underline;
 }
 
+
+/* Alert styles */
+.alert {
+  padding: 15px;
+  margin-bottom: 20px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+}
+
+.alert-warning {
+  background-color: #fff3cd;
+  border-color: #ffeaa7;
+  color: #856404;
+}
+
+.alert-content strong {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.alert-content p {
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.resend-verification-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: 10px;
+  transition: background-color 0.3s;
+}
+
+.resend-verification-btn:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.resend-verification-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.forgot-password-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+  text-align: center;
+}
+
+.forgot-password-section p {
+  margin-bottom: 10px;
+  color: #666;
+}
+
+/* Alert styles */
+.alert {
+  padding: 15px;
+  margin-bottom: 20px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+}
+
+.alert-warning {
+  background-color: #fff3cd;
+  border-color: #ffeaa7;
+  color: #856404;
+}
+
+.alert-content strong {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.alert-content p {
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.resend-verification-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: 10px;
+  transition: background-color 0.3s;
+}
+
+.resend-verification-btn:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.resend-verification-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+
 /* Responsive styles */
 @media (max-width: 480px) {
   .register-suggestion,
@@ -395,4 +502,95 @@
   50% {
     opacity: 0.5;
   }
+}
+
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.modal-content h2 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.modal-content p {
+  margin-bottom: 20px;
+  color: #666;
+}
+
+.email-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+.email-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.modal-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.3s;
+}
+
+.modal-button.primary {
+  background-color: #007bff;
+  color: white;
+}
+
+.modal-button.primary:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.modal-button.primary:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.modal-button.secondary {
+  background-color: #f8f9fa;
+  color: #6c757d;
+  border: 1px solid #dee2e6;
+}
+
+.modal-button.secondary:hover {
+  background-color: #e9ecef;
 }
