@@ -70,6 +70,7 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    'allauth.account.middleware.AccountMiddleware',
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -312,9 +313,8 @@ logging.config.dictConfig(LOGGING)
 
 # Email verification settings
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
-ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_CONFIRM_EMAIL_ON_GET = True
-ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 0.0035   # 1
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 0.0005   # 1
 
 # Custom adapter
 ACCOUNT_ADAPTER = 'users.adapters.CustomAccountAdapter'
