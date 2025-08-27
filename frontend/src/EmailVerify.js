@@ -134,6 +134,8 @@ function EmailVerify() {
   const [errorType, setErrorType] = useState('');
   const [showResendButton, setShowResendButton] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailForResend, setEmailForResend] = useState('');
   const navigate = useNavigate();
   const { key } = useParams();
   const [searchParams] = useSearchParams();
@@ -213,25 +215,33 @@ function EmailVerify() {
   };
 
   const handleResendVerification = async () => {
+    if (!emailForResend) {
+      toast.error('Please enter your email address');
+      return;
+    }
+
     setIsResending(true);
     try {
-      // You'll need to implement this endpoint or use your existing resend logic
       const response = await fetch('http://127.0.0.1:8000/api/v1/auth/resend-verification/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          // Add email or other identifier if needed
+          email: emailForResend
         })
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        toast.success('קישור אימות חדש נשלח למייל שלך');
+        toast.success('קישור אימות חדש נשלח למייל שלך. בדוק את תיבת הדואר שלך.');
         setShowResendButton(false);
+        setShowEmailModal(false);
+        setEmailForResend('');
         navigate('/login?message=verification_sent');
       } else {
-        toast.error('שגיאה בשליחת קישור האימות החדש');
+        toast.error(data.error || 'שגיאה בשליחת קישור האימות החדש');
       }
     } catch (err) {
       console.error('Resend error:', err);
@@ -239,6 +249,10 @@ function EmailVerify() {
     } finally {
       setIsResending(false);
     }
+  };
+
+  const openResendModal = () => {
+    setShowEmailModal(true);
   };
 
   const handleBackToLogin = () => {
@@ -352,7 +366,7 @@ function EmailVerify() {
             {showResendButton && (
               <button 
                 className="login-button resend-button"
-                onClick={handleResendVerification}
+                onClick={openResendModal}
                 disabled={isResending}
                 type="button"
                 style={{ 
@@ -361,7 +375,7 @@ function EmailVerify() {
                   cursor: isResending ? 'not-allowed' : 'pointer'
                 }}
               >
-                {isResending ? 'Sending...' : 'Send New Verification Link'}
+                Send New Verification Link
               </button>
             )}
             
@@ -375,6 +389,39 @@ function EmailVerify() {
           </div>
         </div>
       </div>
+
+      {/* Email Modal */}
+      {showEmailModal && (
+        <div className="modal-overlay" onClick={() => setShowEmailModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>Resend Verification Email</h2>
+            <p>Enter your email address to receive a new verification link:</p>
+            <input
+              type="email"
+              value={emailForResend}
+              onChange={(e) => setEmailForResend(e.target.value)}
+              placeholder="Enter your email"
+              className="email-input"
+              autoFocus
+            />
+            <div className="modal-buttons">
+              <button 
+                onClick={handleResendVerification}
+                disabled={isResending || !emailForResend}
+                className="modal-button primary"
+              >
+                {isResending ? 'Sending...' : 'Send'}
+              </button>
+              <button 
+                onClick={() => setShowEmailModal(false)}
+                className="modal-button secondary"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
