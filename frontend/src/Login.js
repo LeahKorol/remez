@@ -1,38 +1,10 @@
+// Updated Login.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { GoogleAuthButton, GoogleOneTap } from './GoogleAuth';
+import { fetchWithRefresh } from './tokenService'; // Import the enhanced fetchWithRefresh
 import './Login.css';
-
-// Function to fetch data with token refresh logic
-const fetchWithRefresh = async (url, options = {}) => {
-  let response = await fetch(url, {
-    ...options,
-    credentials: 'include' // Send cookies with request
-  });
-
-  if (response.status === 401) {
-    // Token expired, try to refresh
-    const refreshResponse = await fetch('http://127.0.0.1:8000/api/v1/auth/token/refresh/', {
-      method: 'POST',
-      credentials: 'include'
-    });
-
-    if (refreshResponse.ok) {
-      // Retry original request after refreshing token
-      response = await fetch(url, {
-        ...options,
-        credentials: 'include'
-      });
-    } else {
-      // Redirect to login if refresh fails
-      window.location.href = '/login';
-      return;
-    }
-  }
-
-  return response;
-};
 
 // Function to handle backend error formatting
 const handleBackendErrors = (data) => {
@@ -77,10 +49,9 @@ function Login() {
   const [showEmailNotVerified, setShowEmailNotVerified] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
   const [isResending, setIsResending] = useState(false);
-  const [dynamicButtonType, setDynamicButtonType] = useState(null); // 'verification' או 'reset'
+  const [dynamicButtonType, setDynamicButtonType] = useState(null);
   const navigate = useNavigate();
 
-  // Initialize Google One Tap on component mount
   useEffect(() => {
     // Check if user is already logged in
     const token = localStorage.getItem('token');
@@ -130,8 +101,12 @@ function Login() {
 
       if (response.ok) {
         toast.success('Login successful!');
+        // Store both access and refresh tokens
         localStorage.setItem('token', data.access);
-        console.log('Token saved:', data.access);
+        if (data.refresh) {
+          localStorage.setItem('refreshToken', data.refresh);
+        }
+        console.log('Tokens saved - Access:', data.access, 'Refresh:', data.refresh);
         navigate('/profile');
         return;
       }
@@ -146,7 +121,7 @@ function Login() {
 
       if (isEmailNotVerified) {
         setShowEmailNotVerified(true);
-        setUnverifiedEmail(email); // השתמש במייל שהמשתמש הזין
+        setUnverifiedEmail(email);
         setDynamicButtonType('verification');
         toast.error('Your email is not verified yet');
       }
@@ -155,7 +130,6 @@ function Login() {
         const backendErrors = handleBackendErrors(data);
         setErrors(backendErrors.length > 0 ? backendErrors : ['Incorrect email or password.']);
 
-        // Check if this is a password error (meaning email exists)
         const passwordError = backendErrors.some(error =>
           error.toLowerCase().includes('password') ||
           error.toLowerCase().includes('incorrect') ||
@@ -239,7 +213,6 @@ function Login() {
       return;
     }
 
-    // Validate email format
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setErrors(['Please enter a valid email address.']);
       return;
@@ -274,7 +247,6 @@ function Login() {
 
   return (
     <div className="login-container">
-      {/* Google One Tap Component - will show automatically */}
       <GoogleOneTap />
 
       <div className="login-header">
@@ -286,7 +258,6 @@ function Login() {
           <h1>Welcome Back</h1>
           <p className="login-subtitle">Please login to access your personal area</p>
 
-          {/* Dynamic Alert - handles both email verification and forgot password */}
           {(showEmailNotVerified || showForgotPassword) && (
             <div className={`alert ${dynamicButtonType === 'verification' ? 'alert-warning' : 'forgot-password-suggestion'}`}>
               <div className="alert-content">
