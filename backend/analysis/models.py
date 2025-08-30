@@ -81,8 +81,8 @@ class Query(models.Model):
 
         constraints = [
             CheckConstraint(
-                condition=Q(quarter_start__lte=models.F("quarter_end")),
-                name="quarter_start_lte_quarter_end",
+                condition=Q(year_start__lte=models.F("year_end")),
+                name="year_start_lte_year_end",
             )
         ]
 
