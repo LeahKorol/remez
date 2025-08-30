@@ -75,7 +75,7 @@ class Query(models.Model):
     ror_values = models.JSONField(default=list)
     ror_lower = models.JSONField(default=list)
     ror_upper = models.JSONField(default=list)
-
+ 
     class Meta:
         ordering = ["-updated_at"]
 
