@@ -11,7 +11,6 @@ We would appreciate your help, whether it's fixing a bug, adding a feature, or i
 5. Open a Pull Request
 
 ## Code Style
-- Follow PEP8 (Python)
 - Use clear commit messages
 - Add tests where possible
 
