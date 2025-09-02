@@ -75,7 +75,6 @@ class QuerySerializer(serializers.ModelSerializer):
                     }
                 )
         return data
-        return data
 
     def create(self, validated_data):
         """
@@ -100,9 +99,9 @@ class QuerySerializer(serializers.ModelSerializer):
         """
         # Check if quarter/year fields are being updated
         quarter_year_fields = {"quarter_start", "quarter_end", "year_start", "year_end"}
-        update_fields = set(validated_data.keys())
+        updated_quarter_year_fields = set(validated_data.keys())
 
-        if update_fields.issubset(quarter_year_fields):
+        if updated_quarter_year_fields.issubset(quarter_year_fields):
             year_start = validated_data.get("year_start", instance.year_start)
             year_end = validated_data.get("year_end", instance.year_end)
             quarter_start = validated_data.get("quarter_start", instance.quarter_start)
@@ -123,27 +122,15 @@ class QuerySerializer(serializers.ModelSerializer):
                     }
                 )
 
-        drugs = validated_data.pop("drugs", None)
-        reactions = validated_data.pop("reactions", None)
+        # Handle ROR fields that are read-only but can be updated by the system.
+        # These values are recalculated when other fields change and injected via
+        # the view's perform_update method.
+        # Direct user modifications to read-only fields are ignored by DRF
+        for field in ("ror_values", "ror_lower", "ror_upper", "updated_by"):
+            if field in validated_data:
+                setattr(instance, field, validated_data.pop(field))
 
-        if not drugs and not reactions:
-            return super().update(instance, validated_data)
-
-        with transaction.atomic():
-            instance.name = validated_data.get("name", instance.name)
-            instance.quarter_start = validated_data.get(
-                "quarter_start", instance.quarter_start
-            )
-            instance.quarter_end = validated_data.get(
-                "quarter_end", instance.quarter_end
-            )
-            if drugs:
-                instance.drugs.set(drugs)
-            if reactions:
-                instance.reactions.set(reactions)
-            instance.save()
-            return instance
-        return None
+        return super().update(instance, validated_data)
 
 
 class DrugNameSerializer(serializers.ModelSerializer):

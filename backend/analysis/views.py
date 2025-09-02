@@ -69,52 +69,20 @@ class QueryViewSet(viewsets.ModelViewSet):
         DRF calls serializer.is_valid() before perform_update is invoked.
         If settings.NUM_DEMO_QUARTERS is set to a value between 0 and 4, use demo data for the results.
         """
+        recalculate_ror_fields = ["year_start", "year_end", "quarter_start", "quarter_end", "drugs", "reactions"]
+        if not any(field in self.request.data for field in recalculate_ror_fields):
+            # No relevant fields updated, skip recalculation
+            serializer.save()
+            return
+
         save_kwards = {}
         if settings.NUM_DEMO_QUARTERS >= 0:
-            save_kwards = self.get_demo_data()
+            save_kwards.update(self.get_demo_data())
+        else:
+            # TO-DO: Recalculate ror_values, ror_lower, ror_upper
+            pass
 
-        # TO-DO: Recalculate ror_values, ror_lower, ror_upper
         serializer.save(**save_kwards)
-
-    def partial_update(self, request, *args, **kwargs):
-        """
-        Override partial_update method to calculate ror results.
-        If settings.NUM_DEMO_QUARTERS is set to a value between 0 and 4, use demo data for the results.
-        """
-        kwargs["partial"] = True
-
-        # Serialize and validate request data
-        serializer = self.get_serializer(
-            instance=self.get_object(), data=request.data, partial=True
-        )
-        
-        #DRF doesnt call serializer.is_valid() before partial_update is invoked.
-        serializer.is_valid(raise_exception=True)
-
-        # Modify results if relevant fields were changed
-        validated_data = serializer.validated_data
-        if (
-            any(
-                (
-                    "drugs",
-                    "reactions",
-                    "quarter_start",
-                    "quarter_end",
-                    "year_star",
-                    "year_end",
-                )
-            )
-            in validated_data
-        ):
-            if settings.NUM_DEMO_QUARTERS >= 0:
-                validated_data.update(self.get_demo_data())
-            else:
-                # TO-DO: Recalaculte ror_values, ror_lower, ror_upper
-                pass
-
-        # Save the data
-        serializer.save(**validated_data)
-        return Response(data=serializer.data)
 
     @action(detail=False, methods=["get"], url_path="queries-names")
     def get_queries_names(self, request):
