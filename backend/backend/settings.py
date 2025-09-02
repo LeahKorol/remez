@@ -304,3 +304,8 @@ LOGGING = {
 }
 
 logging.config.dictConfig(LOGGING)
+
+# Num of quarters of demo data to use for the analysis pipeline
+# defaults is -1 , i.e. use real data
+# For testing, use a number between 0 and 4
+NUM_DEMO_QUARTERS = int(os.getenv("NUM_DEMO_QUARTERS", -1))

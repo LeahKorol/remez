@@ -1,15 +1,18 @@
-from rest_framework.permissions import IsAuthenticated
-from rest_framework import viewsets, status
+from django.conf import settings
+from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from analysis.models import Query, DrugName, ReactionName
+
+from analysis.constants import PIPELINE_DEMO_DATA
+from analysis.models import DrugName, Query, ReactionName
 from analysis.serializers import (
-    QuerySerializer,
     DrugNameSerializer,
+    QuerySerializer,
     ReactionNameSerializer,
 )
-from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiParameter
-from django.shortcuts import get_object_or_404
 
 query_schemas = {
     method: extend_schema(
@@ -44,23 +47,48 @@ class QueryViewSet(viewsets.ModelViewSet):
         return get_object_or_404(Query, user=self.request.user, id=self.kwargs["id"])
 
     def perform_create(self, serializer):
-        """Override perform_create method to automatically assign the authenticated user and calculate results."""
-        # TO-DO: Calculate ror_values, ror_lower, ror_upper
-        serializer.save(user=self.request.user)
+        """
+        Override perform_create method to automatically assign the authenticated user and calculate ror results.
+        DRF calls serializer.is_valid() before perform_create is invoked.
+        Pass the calculated results and the user as additional fields to serializer.save().
+        If settings.NUM_DEMO_QUARTERS is set to a value between 0 and 4, use demo data for the results.
+        """
+        # save the user because it's a create operation
+        save_kwards = {"user": self.request.user}
+        if settings.NUM_DEMO_QUARTERS >= 0:
+            save_kwards.update(self.get_demo_data())
+        else:
+            # TO-DO: Calculate ror_values, ror_lower, ror_upper
+            pass
+
+        serializer.save(**save_kwards)
 
     def perform_update(self, serializer):
-        """Override perform_update method to calculate results."""
+        """
+        Override perform_update method to calculate ror results.
+        DRF calls serializer.is_valid() before perform_update is invoked.
+        If settings.NUM_DEMO_QUARTERS is set to a value between 0 and 4, use demo data for the results.
+        """
+        save_kwards = {}
+        if settings.NUM_DEMO_QUARTERS >= 0:
+            save_kwards = self.get_demo_data()
+
         # TO-DO: Recalculate ror_values, ror_lower, ror_upper
-        serializer.save()
+        serializer.save(**save_kwards)
 
     def partial_update(self, request, *args, **kwargs):
-        "Ensure partial updates are allowed when calling PATCH requests"
+        """
+        Override partial_update method to calculate ror results.
+        If settings.NUM_DEMO_QUARTERS is set to a value between 0 and 4, use demo data for the results.
+        """
         kwargs["partial"] = True
 
         # Serialize and validate request data
         serializer = self.get_serializer(
             instance=self.get_object(), data=request.data, partial=True
         )
+        
+        #DRF doesnt call serializer.is_valid() before partial_update is invoked.
         serializer.is_valid(raise_exception=True)
 
         # Modify results if relevant fields were changed
@@ -78,8 +106,11 @@ class QueryViewSet(viewsets.ModelViewSet):
             )
             in validated_data
         ):
-            # TO-DO: Recalaculte ror_values, ror_lower, ror_upper
-            pass
+            if settings.NUM_DEMO_QUARTERS >= 0:
+                validated_data.update(self.get_demo_data())
+            else:
+                # TO-DO: Recalaculte ror_values, ror_lower, ror_upper
+                pass
 
         # Save the data
         serializer.save(**validated_data)
@@ -93,6 +124,18 @@ class QueryViewSet(viewsets.ModelViewSet):
         queries = self.get_queryset()
         query_names = queries.values_list("name", flat=True)
         return Response(query_names, status=status.HTTP_200_OK)
+
+    def get_demo_data(self):
+        if settings.NUM_DEMO_QUARTERS not in range(0, 5):
+            raise ValueError("NUM_DEMO_QUARTERS must be between 0 and 4")
+
+        demo_data = PIPELINE_DEMO_DATA[settings.NUM_DEMO_QUARTERS]
+        demo_data_kwargs = {
+            "ror_values": demo_data["ror_values"],
+            "ror_lower": demo_data["ror_lower"],
+            "ror_upper": demo_data["ror_upper"],
+        }
+        return demo_data_kwargs
 
 
 class TermNameSearchViewSet(viewsets.GenericViewSet):
