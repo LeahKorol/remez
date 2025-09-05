@@ -1,6 +1,8 @@
-from django.test import TestCase
+from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core import mail
+from django.test import TestCase
 
 
 class Registration(TestCase):
@@ -23,9 +25,18 @@ class Registration(TestCase):
         # print("\nResponse cookies:", self.client.cookies)
 
         self.assertEqual(response.status_code, 201)
-        # Check JWT cookies are set
-        self.assertIn(settings.REST_AUTH["JWT_AUTH_COOKIE"], response.cookies)
-        self.assertIn(settings.REST_AUTH["JWT_AUTH_REFRESH_COOKIE"], response.cookies)
+        # Check that no JWT cookies are set, as the user is not verified yet
+        self.assertNotIn(settings.REST_AUTH["JWT_AUTH_COOKIE"], response.cookies)
+        self.assertNotIn(
+            settings.REST_AUTH["JWT_AUTH_REFRESH_COOKIE"], response.cookies
+        )
+
+        # Check that a confirmation email was sent
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(
+            mail.outbox[0].subject,
+            "[example.com] Please Confirm Your Email Address - REMEZ",
+        )
 
     def test_registration_invalid_email(self):
         """Test registration with invalid email"""
@@ -64,6 +75,10 @@ class Login(TestCase):
         self.user = get_user_model().objects.create_user(
             email=self.user_data["email"], password=self.user_data["password"]
         )
+        # Verify the user's email for login tests that require a verified user
+        email_address = EmailAddress.objects.get(user=self.user)
+        email_address.verified = True
+        email_address.save()
 
     def test_login_success(self):
         """Test successful login"""

@@ -1,4 +1,5 @@
 import pytest
+from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.urls import reverse
 from rest_framework import status
@@ -18,9 +19,16 @@ class TestQueryViewSet:
         self.user1 = User.objects.create_user(
             email="user1@example.com", password="testpassword1"
         )
+        email_address1 = EmailAddress.objects.get(user=self.user1)
+        email_address1.verified = True
+        email_address1.save()
+
         self.user2 = User.objects.create_user(
             email="user2@example.com", password="testpassword2"
         )
+        email_address2 = EmailAddress.objects.get(user=self.user2)
+        email_address2.verified = True
+        email_address2.save()
 
         # Create a drug & a reaction
         drug = DrugName.objects.create(name="drug")
