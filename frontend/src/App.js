@@ -12,6 +12,7 @@ import Register from './Registration';
 import EmailVerify from './EmailVerify';
 import EmailVerificationSent from './EmailVerificationSent';
 import UserProfile from './UserProfile';
+import LoadingPage from './LoadingPage';
 
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
         <Route path="/email-verify/:key" element={<EmailVerify />} />
         <Route path="/email-verification-sent" element={<EmailVerificationSent />} />
         <Route path="/profile" element={<UserProfile />} />
+        <Route path="/loading" element={<LoadingPage />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
 
@@ -45,15 +47,15 @@ function App() {
   );
 }
 
-// Protected route component
-function ProtectedRoute({ children }) {
-  const token = localStorage.getItem('token');
+// // Protected route component
+// function ProtectedRoute({ children }) {
+//   const token = localStorage.getItem('token');
 
-  if (!token) {
-    return <Navigate to="/login" />;
-  }
+//   if (!token) {
+//     return <Navigate to="/login" />;
+//   }
 
-  return children;
-}
+//   return children;
+// }
 
 export default App;

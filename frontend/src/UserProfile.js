@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FaUser, FaArrowRight, FaPlus, FaTimes, FaEdit, FaTrash, FaSignOutAlt, FaChevronDown, FaEye } from 'react-icons/fa';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate , useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { fetchWithRefresh } from './tokenService';
 import './UserProfile.css';
@@ -43,6 +43,7 @@ const UserProfile = () => {
     const [toastMessage, setToastMessage] = useState('');
 
     const navigate = useNavigate();
+    const location = useLocation();
 
     // Handle input changes for year and quarter fields
     const handleInputChange = (e) => {
@@ -458,6 +459,20 @@ const UserProfile = () => {
 
             resetForm();
 
+            // redirect to loading page with query data
+            navigate('/loading', {
+                state: {
+                    queryData: {
+                        ...newQuery,
+                        userEmail: user.email,
+                        // Include the actual drug and reaction names for display
+                        drugs: drugs.filter(d => d.id).map(d => ({ name: d.name })),
+                        reactions: reactions.filter(r => r.id).map(r => ({ name: r.name }))
+                    },
+                    isUpdate: !!editingQueryId
+                }
+            });
+
         } catch (error) {
             console.error('Error saving query:', error.response?.data || error);
 
@@ -476,6 +491,20 @@ const UserProfile = () => {
             setIsSubmitting(false);
         }
     };
+
+
+    // Add useEffect to handle success messages from loading page
+    useEffect(() => {
+        // Check for success message from loading page
+        const state = location.state;
+        if (state?.message && state?.type === 'success') {
+            showToastMessage(state.message);
+
+            // Clear the state to prevent re-showing on refresh
+            window.history.replaceState({}, document.title);
+        }
+    }, [location.state]);
+
 
     const handleDeleteQuery = async (queryId) => {
         if (!window.confirm('Are you sure you want to delete this query?')) {
