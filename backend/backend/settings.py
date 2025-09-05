@@ -139,20 +139,17 @@ else:
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ["DB_NAME"],
-        "USER": DB_USER,
-        "PASSWORD": os.environ["DB_PASSWORD"],
-        "HOST": DB_HOST,
-        "PORT": DB_PORT,
-        "OPTIONS": {"sslmode": "require"},  # Supbase requires SSL connection
-        "CONN_MAX_AGE": (
-            600 if not is_management_command else 0
-        ),  # Keep-alive for pooling, improves performance
+        "NAME": os.environ.get("DB_NAME"),
+        "USER": os.environ.get("DB_USER_POOLED"),
+        "PASSWORD": os.environ.get("DB_PASSWORD"),
+        "HOST": os.environ.get("DB_HOST_POOLED", "localhost"),
+        "PORT": os.environ.get("DB_PORT_POOLED", "5432"),
+        "OPTIONS": {"sslmode": "require"},  # Supabase requires SSL
+        "CONN_MAX_AGE": (600 if not is_management_command else 0),
     }
 }
 if not is_management_command:
     DATABASES["default"]["pool_mode"] = "transaction"
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -204,8 +201,9 @@ SITE_ID = 1
 
 # django-allauth configurations so that dj-rest-auth uses email / password authentication
 ACCOUNT_LOGIN_METHODS = {"email"}
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_EMAIL_REQUIRED = True
+# ACCOUNT_USERNAME_REQUIRED = False
+# ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 
