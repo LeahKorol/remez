@@ -15,6 +15,7 @@ import os
 import sys
 from datetime import timedelta
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -70,7 +71,7 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-    'allauth.account.middleware.AccountMiddleware',
+    "allauth.account.middleware.AccountMiddleware",  # Third-party, enable email confirmation
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -315,18 +316,21 @@ logging.config.dictConfig(LOGGING)
 # For testing, use a number between 0 and 4
 NUM_DEMO_QUARTERS = int(os.getenv("NUM_DEMO_QUARTERS", -1))
 
-
 # Email verification settings
-ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_CONFIRM_EMAIL_ON_GET = True
-ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 0.0005   # 1
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 0.0005  # 1
 
 # Custom adapter
-ACCOUNT_ADAPTER = 'users.adapters.CustomAccountAdapter'
+ACCOUNT_ADAPTER = "users.adapters.CustomAccountAdapter"
 
 # Email confirmation redirect URLs
-ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/verify-email/"
-ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/login/"
+ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = (
+    f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/verify-email/"
+)
+ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = (
+    f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/login/"
+)
 
 REST_AUTH_REGISTER_SERIALIZERS = {
     "REGISTER_SERIALIZER": "users.serializers.CustomRegisterSerializer",
