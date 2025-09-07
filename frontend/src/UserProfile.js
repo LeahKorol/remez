@@ -1,9 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FaUser, FaArrowRight, FaPlus, FaTimes, FaEdit, FaTrash, FaSignOutAlt, FaChevronDown, FaEye } from 'react-icons/fa';
-import { useNavigate , useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { fetchWithRefresh } from './tokenService';
 import './UserProfile.css';
+
+
+import { Line } from 'react-chartjs-2';
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    Tooltip,
+    Legend,
+} from 'chart.js';
+
+ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    Tooltip,
+    Legend
+);
+
 
 const UserProfile = () => {
     // form state
@@ -127,6 +151,44 @@ const UserProfile = () => {
     }, []);
 
     // fetch queries when user data is loaded
+    // const fetchQueries = async () => {
+    //     try {
+    //         const token = localStorage.getItem('token');
+
+    //         if (!token) {
+    //             console.log('No token for queries');
+    //             return;
+    //         }
+
+
+    //         const response = await fetchWithRefresh('http://127.0.0.1:8000/api/v1/analysis/queries/', {
+    //             method: 'GET'
+    //         });
+
+    //         if (!response) {
+    //             // fetchWithRefresh handles redirect to login on auth failure
+    //             return;
+    //         }
+
+    //         console.log('Queries response status:', response.status);
+
+
+    //         if (response.ok) {
+    //             const data = await response.json();
+    //             console.log('Queries loaded:', data.length);
+    //             setSavedQueries(data);
+    //         } else {
+    //             console.error('Failed to fetch queries:', response.status);
+    //             // Don't show error for queries, just log it
+    //         }
+    //     } catch (error) {
+    //         console.error('Error fetching queries:', error);
+    //         // Don't show error for queries, just log it
+    //     }
+    // };
+
+
+
     const fetchQueries = async () => {
         try {
             const token = localStorage.getItem('token');
@@ -136,32 +198,54 @@ const UserProfile = () => {
                 return;
             }
 
-
             const response = await fetchWithRefresh('http://127.0.0.1:8000/api/v1/analysis/queries/', {
                 method: 'GET'
             });
 
             if (!response) {
-                // fetchWithRefresh handles redirect to login on auth failure
                 return;
             }
 
             console.log('Queries response status:', response.status);
 
-
             if (response.ok) {
                 const data = await response.json();
                 console.log('Queries loaded:', data.length);
-                setSavedQueries(data);
+
+                console.log('📊 Raw data from server:', data);
+                data.forEach((query, index) => {
+                    console.log(`Query ${index + 1}:`, {
+                        id: query.id,
+                        name: query.name,
+                        created: query.created_at,
+                        hasRorValues: query.ror_values ? query.ror_values.length : 'NONE',
+                        rorValues: query.ror_values,
+                        hasRorLower: !!query.ror_lower,
+                        hasRorUpper: !!query.ror_upper
+                    });
+                });
+
+                // מיין את השאילתות - אלה עם תוצאות למעלה
+                const sortedQueries = data.sort((a, b) => {
+                    const aHasResults = a.ror_values && a.ror_values.length > 0;
+                    const bHasResults = b.ror_values && b.ror_values.length > 0;
+
+                    if (aHasResults && !bHasResults) return -1;
+                    if (!aHasResults && bHasResults) return 1;
+
+                    // אם שתיהן באותה קטגוריה, מיין לפי תאריך יצירה
+                    return new Date(b.created_at) - new Date(a.created_at);
+                });
+
+                setSavedQueries(sortedQueries);
             } else {
                 console.error('Failed to fetch queries:', response.status);
-                // Don't show error for queries, just log it
             }
         } catch (error) {
             console.error('Error fetching queries:', error);
-            // Don't show error for queries, just log it
         }
     };
+
 
     // Handle viewing a saved query
     const handleViewQuery = (query) => {
@@ -173,19 +257,62 @@ const UserProfile = () => {
     };
 
 
+    const createLabelsForActualData = (query) => {
+        const dataLength = query.ror_values ? query.ror_values.length : 0;
+
+        if (dataLength === 0) {
+            return [];
+        }
+
+        // אם יש רק נתון אחד, השתמש בתקופה הראשונה
+        if (dataLength === 1) {
+            return [`${query.year_start} Q${query.quarter_start}`];
+        }
+
+        // צור labels לפי מספר הנתונים בפועל
+        const labels = [];
+        let currentYear = query.year_start;
+        let currentQuarter = query.quarter_start;
+
+        for (let i = 0; i < dataLength; i++) {
+            labels.push(`${currentYear} Q${currentQuarter}`);
+
+            // עבור לרבעון הבא
+            currentQuarter++;
+            if (currentQuarter > 4) {
+                currentQuarter = 1;
+                currentYear++;
+            }
+        }
+
+        return labels;
+    };
+
+
     const QueryDetailsView = ({ query }) => {
+        console.log('🎨 Rendering QueryDetailsView for:', {
+            id: query.id,
+            name: query.name,
+            rorValuesExists: !!query.ror_values,
+            rorValuesLength: query.ror_values ? query.ror_values.length : 0,
+            rorLowerExists: !!query.ror_lower,
+            rorUpperExists: !!query.ror_upper,
+            fullQuery: query
+        });
+
+        const hasResults = query.ror_values && query.ror_values.length > 0 &&
+            query.ror_lower && query.ror_upper;
+
+        console.log('🎯 hasResults calculated as:', hasResults);
+
         return (
             <div className="query-details-container">
                 <div className="form-header">
                     <h2>{query.name}</h2>
                     <div className="query-details-actions">
-                        {/* <button
-                            type="button"
-                            className="edit-button"
-                            onClick={() => handleEditQuery(query)}
-                        >
-                            <FaEdit /> Edit Query
-                        </button> */}
+                        {hasResults && (
+                            <span className="results-badge">✓ Results Ready</span>
+                        )}
                         <button
                             type="button"
                             className="cancel-button"
@@ -210,6 +337,12 @@ const UserProfile = () => {
                             <span className="info-label">Created:</span>
                             <span className="info-value">
                                 {new Date(query.created_at).toLocaleDateString()}
+                            </span>
+                        </div>
+                        <div className="info-item">
+                            <span className="info-label">Status:</span>
+                            <span className="info-value">
+                                {hasResults ? "Analysis Complete" : "Processing..."}
                             </span>
                         </div>
                     </div>
@@ -247,16 +380,209 @@ const UserProfile = () => {
                     </div>
                 </div>
 
-                {/* Results Section - Placeholder for Chart */}
+                {/* Results Section */}
                 <div className="query-section">
-                    <h3>Frequency Analysis</h3>
+                    <h3>Statistical Analysis Results</h3>
                     <div className="chart-placeholder">
                         <div className="chart-container">
-                            <div className="placeholder-content">
-                                <div className="placeholder-icon">📊</div>
-                                <h4>Chart Coming Soon</h4>
-                                <p>Frequency analysis chart will be displayed here</p>
-                            </div>
+                            {hasResults ? (
+                                <div className="chart-wrapper">
+                                    <div className="chart-controls">
+                                        <div className="chart-info-header">
+                                            <h4>ROR Analysis Results (Log₁₀ Scale)</h4>
+                                            <div className="zoom-controls">
+                                                <button
+                                                    className="zoom-button"
+                                                    onClick={() => {
+                                                        const chartElement = document.querySelector('.chart-container canvas');
+                                                        if (chartElement) {
+                                                            chartElement.style.transform = chartElement.style.transform ? '' : 'scale(1.2)';
+                                                            chartElement.style.transformOrigin = 'center';
+                                                        }
+                                                    }}
+                                                >
+                                                    🔍 Zoom
+                                                </button>
+                                                <button
+                                                    className="reset-button"
+                                                    onClick={() => {
+                                                        const chartElement = document.querySelector('.chart-container canvas');
+                                                        if (chartElement) {
+                                                            chartElement.style.transform = '';
+                                                        }
+                                                    }}
+                                                >
+                                                    Reset
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="chart-container-fixed">
+                                        <Line
+                                            data={{
+                                                labels: createLabelsForActualData(query),
+                                                datasets: [
+                                                    {
+                                                        label: 'ROR (Log₁₀)',
+                                                        data: query.ror_values.map(val => Math.log10(val || 0.1)),
+                                                        borderColor: '#2196f3',
+                                                        backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                                                        fill: false,
+                                                        tension: 0.3,
+                                                        pointRadius: 4,
+                                                        pointHoverRadius: 6,
+                                                        borderWidth: 2,
+                                                    },
+                                                    {
+                                                        label: 'Upper CI (Log₁₀)',
+                                                        data: query.ror_upper.map(val => Math.log10(val || 0.1)),
+                                                        borderColor: '#f44336',
+                                                        borderDash: [5, 5],
+                                                        fill: false,
+                                                        pointRadius: 2,
+                                                        tension: 0.3,
+                                                        borderWidth: 1,
+                                                    },
+                                                    {
+                                                        label: 'Lower CI (Log₁₀)',
+                                                        data: query.ror_lower.map(val => Math.log10(val || 0.1)),
+                                                        borderColor: '#4caf50',
+                                                        borderDash: [5, 5],
+                                                        fill: false,
+                                                        pointRadius: 2,
+                                                        tension: 0.3,
+                                                        borderWidth: 1,
+                                                    },
+                                                ],
+                                            }}
+                                            options={{
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                plugins: {
+                                                    legend: {
+                                                        position: 'top',
+                                                        labels: {
+                                                            usePointStyle: true,
+                                                            padding: 15,
+                                                            font: { size: 12 }
+                                                        }
+                                                    },
+                                                    title: {
+                                                        display: true,
+                                                        text: 'Adverse Event Reporting Analysis',
+                                                        font: { size: 14, weight: 'bold' }
+                                                    },
+                                                    tooltip: {
+                                                        mode: 'index',
+                                                        intersect: false,
+                                                        callbacks: {
+                                                            label: function (context) {
+                                                                const originalValue = query.ror_values[context.dataIndex];
+                                                                const originalUpper = query.ror_upper[context.dataIndex];
+                                                                const originalLower = query.ror_lower[context.dataIndex];
+
+                                                                if (context.datasetIndex === 0) {
+                                                                    return `ROR: ${originalValue?.toFixed(3)} (Log₁₀: ${context.parsed.y.toFixed(3)})`;
+                                                                } else if (context.datasetIndex === 1) {
+                                                                    return `Upper CI: ${originalUpper?.toFixed(3)} (Log₁₀: ${context.parsed.y.toFixed(3)})`;
+                                                                } else {
+                                                                    return `Lower CI: ${originalLower?.toFixed(3)} (Log₁₀: ${context.parsed.y.toFixed(3)})`;
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                scales: {
+                                                    y: {
+                                                        title: {
+                                                            display: true,
+                                                            text: 'ROR (Log₁₀ Scale)',
+                                                            font: { size: 12, weight: 'bold' }
+                                                        },
+                                                        ticks: {
+                                                            font: { size: 11 },
+                                                            callback: function (value) {
+                                                                if (value === 0) return '1.0';
+                                                                if (value === 1) return '10';
+                                                                if (value === -1) return '0.1';
+                                                                return Math.pow(10, value).toFixed(1);
+                                                            }
+                                                        },
+                                                        grid: {
+                                                            color: 'rgba(0,0,0,0.1)',
+                                                        }
+                                                    },
+                                                    x: {
+                                                        title: {
+                                                            display: true,
+                                                            text: 'Time Period',
+                                                            font: { size: 12, weight: 'bold' }
+                                                        },
+                                                        ticks: {
+                                                            font: { size: 11 }
+                                                        },
+                                                        grid: {
+                                                            color: 'rgba(0,0,0,0.1)',
+                                                        }
+                                                    }
+                                                },
+                                                interaction: {
+                                                    mode: 'nearest',
+                                                    axis: 'x',
+                                                    intersect: false
+                                                }
+                                            }}
+                                        />
+                                    </div>
+
+                                    <div className="chart-info-compact">
+                                        <div className="info-row">
+                                            <span className="info-icon">ℹ️</span>
+                                            <div className="info-text">
+                                                <strong>About this analysis:</strong>
+                                                Values shown in logarithmic scale (Log₁₀). ROR {'>'} 1.0 indicates increased reporting probability.
+                                                <br />
+                                                <strong>Requested periods:</strong> {(() => {
+                                                    const startYear = query.year_start;
+                                                    const endYear = query.year_end;
+                                                    const startQuarter = query.quarter_start;
+                                                    const endQuarter = query.quarter_end;
+
+                                                    let totalQuarters = 0;
+                                                    let currentYear = startYear;
+                                                    let currentQuarter = startQuarter;
+
+                                                    while (currentYear < endYear || (currentYear === endYear && currentQuarter <= endQuarter)) {
+                                                        totalQuarters++;
+                                                        currentQuarter++;
+                                                        if (currentQuarter > 4) {
+                                                            currentQuarter = 1;
+                                                            currentYear++;
+                                                        }
+                                                    }
+
+                                                    return totalQuarters;
+                                                })()} periods requested, {query.ror_values.length} data points returned
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="placeholder-content">
+                                    <div className="placeholder-icon">⏳</div>
+                                    <h4>Analysis in Progress</h4>
+                                    <p>Your query is being processed. Results will appear here when ready.</p>
+                                    <div className="refresh-button">
+                                        <button
+                                            className="secondary-button"
+                                            onClick={() => window.location.reload()}
+                                        >
+                                            Refresh Status
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -448,6 +774,7 @@ const UserProfile = () => {
             console.log('Submit query response status:', response.status);
 
             const newQuery = response.data;
+            console.log('Received query with ID:', newQuery.id);
 
             if (editingQueryId) {
                 setSavedQueries(savedQueries.map(q => q.id === newQuery.id ? newQuery : q));
@@ -466,8 +793,8 @@ const UserProfile = () => {
                         ...newQuery,
                         userEmail: user.email,
                         // Include the actual drug and reaction names for display
-                        drugs: drugs.filter(d => d.id).map(d => ({ name: d.name })),
-                        reactions: reactions.filter(r => r.id).map(r => ({ name: r.name }))
+                        displayDrugs: drugs.filter(d => d.id).map(d => ({ name: d.name })),
+                        displayReactions: reactions.filter(r => r.id).map(r => ({ name: r.name }))
                     },
                     isUpdate: !!editingQueryId
                 }
@@ -491,6 +818,39 @@ const UserProfile = () => {
             setIsSubmitting(false);
         }
     };
+
+
+    // Add useEffect to handle success messages and updated queries from loading page
+    useEffect(() => {
+        const state = location.state;
+        if (state?.message && state?.type === 'success') {
+            showToastMessage(state.message);
+
+            // if there is an updated query, view it
+            if (state.updatedQuery) {
+                console.log("Received updated query from loading:", state.updatedQuery);
+
+                // update the saved queries list
+                setSavedQueries(prevQueries =>
+                    prevQueries.map(q =>
+                        q.id === state.updatedQuery.id ? state.updatedQuery : q
+                    )
+                );
+
+                // view the updated query
+                setViewMode('view');
+                setViewingQuery(state.updatedQuery);
+
+                // scrolling to top to see the details
+                setTimeout(() => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }, 100);
+            }
+
+            // clean the state to prevent re-showing on refresh
+            window.history.replaceState({}, document.title);
+        }
+    }, [location.state]);
 
 
     // Add useEffect to handle success messages from loading page
@@ -675,7 +1035,7 @@ const UserProfile = () => {
             }
 
             const queryData = await response.json();
-            
+
 
             console.log('Query data from backend:', queryData);
 
@@ -737,7 +1097,7 @@ const UserProfile = () => {
             return false;
         }
 
-        // בדיקה בטוחה לשדות - וידוא שהם לא undefined
+        // Handle undefined or null inputs gracefully
         const safeYearStart = yearStart || '';
         const safeYearEnd = yearEnd || '';
         const safeQuarterStart = quarterStart || '';
