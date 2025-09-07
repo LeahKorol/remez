@@ -363,6 +363,20 @@
     font-style: italic;
 }
 
+
+/* finalizing mode */
+.current-step.finalizing {
+    color: #ff9800;
+    background: #fff8e1;
+    border-left: 4px solid #ff9800;
+}
+
+/* polling mode */
+.loading-subtitle.polling {
+    color: #4caf50;
+    font-weight: 500;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
     .loading-container {
