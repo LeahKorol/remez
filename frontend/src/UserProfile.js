@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaUser, FaArrowRight, FaPlus, FaTimes, FaEdit, FaTrash, FaSignOutAlt, FaChevronDown, FaEye } from 'react-icons/fa';
+import { FaUser, FaArrowRight, FaPlus, FaTimes, FaEdit, FaTrash, FaSignOutAlt, FaChevronDown, FaEye, FaFileCsv, FaFileImage } from 'react-icons/fa';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { fetchWithRefresh } from './tokenService';
@@ -251,9 +251,10 @@ const UserProfile = () => {
         return labels;
     };
 
-
     const QueryDetailsView = ({ query }) => {
-        console.log('🎨 Rendering QueryDetailsView for:', {
+        const chartRef = useRef(null);
+
+        console.log('Rendering QueryDetailsView for:', {
             id: query.id,
             name: query.name,
             rorValuesExists: !!query.ror_values,
@@ -266,7 +267,80 @@ const UserProfile = () => {
         const hasResults = query.ror_values && query.ror_values.length > 0 &&
             query.ror_lower && query.ror_upper;
 
-        console.log('🎯 hasResults calculated as:', hasResults);
+        console.log('hasResults calculated as:', hasResults);
+
+        // function to download the chart as PNG
+        const downloadChart = () => {
+            const chart = chartRef.current;
+            if (chart) {
+                const url = chart.toBase64Image('image/png', 1.0);
+                const link = document.createElement('a');
+                link.download = `${query.name.replace(/[^a-z0-9]/gi, '_')}_analysis.png`;
+                link.href = url;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                // show a success toast message
+                showToastMessage('Chart downloaded successfully!');
+            }
+        };
+
+        // function to download CSV
+        const downloadData = () => {
+            const headers = ['Time Period', 'ROR (Log10)', 'ROR (Original)', 'Lower CI', 'Upper CI'];
+            const csvData = [headers.join(',')];
+
+            // create labels
+            const labels = (() => {
+                const actualDataLength = query.ror_values ? query.ror_values.length : 0;
+                const labels = [];
+                let currentYear = query.year_start;
+                let currentQuarter = query.quarter_start;
+
+                for (let i = 0; i < actualDataLength; i++) {
+                    labels.push(`${currentYear} Q${currentQuarter}`);
+                    currentQuarter++;
+                    if (currentQuarter > 4) {
+                        currentQuarter = 1;
+                        currentYear++;
+                    }
+                }
+                return labels;
+            })();
+
+            // adding data
+            query.ror_values.forEach((rorValue, index) => {
+                const logValue = Math.log10(rorValue || 0.1);
+                const lowerCI = query.ror_lower[index] || '';
+                const upperCI = query.ror_upper[index] || '';
+                const timePeriod = labels[index] || `Period ${index + 1}`;
+
+                csvData.push([
+                    `"${timePeriod}"`,
+                    logValue.toFixed(4),
+                    rorValue.toFixed(4),
+                    lowerCI ? lowerCI.toFixed(4) : '',
+                    upperCI ? upperCI.toFixed(4) : ''
+                ].join(','));
+            });
+
+            // create CSV file and download it
+            const csvContent = csvData.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `${query.name.replace(/[^a-z0-9]/gi, '_')}_data.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            // show a success toast message
+            showToastMessage('Data downloaded as CSV successfully!');
+        };
 
         return (
             <div className="query-details-container">
@@ -345,7 +419,20 @@ const UserProfile = () => {
 
                 {/* Results Section */}
                 <div className="query-section">
-                    <h3>Statistical Analysis Results</h3>
+                    <div className="results-header">
+                        <h3>Statistical Analysis Results</h3>
+                        {hasResults && (
+                            <div className="chart-actions">
+                                <button className="download-button" onClick={downloadChart}>
+                                    <FaFileImage style={{ marginRight: '6px' }} /> Download Chart
+                                </button>
+                                <button className="download-button" onClick={downloadData}>
+                                    <FaFileCsv style={{ marginRight: '6px' }} /> Download CSV
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
                     <div className="chart-placeholder">
                         <div className="chart-container">
                             {hasResults ? (
@@ -383,8 +470,31 @@ const UserProfile = () => {
 
                                     <div className="chart-container-fixed">
                                         <Line
+                                            ref={chartRef}
                                             data={{
-                                                labels: createLabelsForActualData(query),
+                                                // התאמת labels למספר הנתונים בפועל
+                                                labels: (() => {
+                                                    const actualDataLength = query.ror_values ? query.ror_values.length : 0;
+
+                                                    if (actualDataLength === 0) return [];
+
+                                                    const labels = [];
+                                                    let currentYear = query.year_start;
+                                                    let currentQuarter = query.quarter_start;
+
+                                                    for (let i = 0; i < actualDataLength; i++) {
+                                                        labels.push(`${currentYear} Q${currentQuarter}`);
+
+                                                        currentQuarter++;
+                                                        if (currentQuarter > 4) {
+                                                            currentQuarter = 1;
+                                                            currentYear++;
+                                                        }
+                                                    }
+
+                                                    console.log(`Generated ${labels.length} labels for ${actualDataLength} data points:`, labels);
+                                                    return labels;
+                                                })(),
                                                 datasets: [
                                                     {
                                                         label: 'ROR (Log₁₀)',
@@ -422,6 +532,7 @@ const UserProfile = () => {
                                             options={{
                                                 responsive: true,
                                                 maintainAspectRatio: false,
+                                                devicePixelRatio: 2, // לתמונה חדה יותר
                                                 plugins: {
                                                     legend: {
                                                         position: 'top',
@@ -433,25 +544,42 @@ const UserProfile = () => {
                                                     },
                                                     title: {
                                                         display: true,
-                                                        text: 'Adverse Event Reporting Analysis',
-                                                        font: { size: 14, weight: 'bold' }
+                                                        text: `${query.name} - Adverse Event Reporting Analysis`,
+                                                        font: { size: 16, weight: 'bold' },
+                                                        padding: 20
                                                     },
                                                     tooltip: {
                                                         mode: 'index',
                                                         intersect: false,
+                                                        backgroundColor: 'rgba(0,0,0,0.8)',
+                                                        titleColor: '#fff',
+                                                        bodyColor: '#fff',
+                                                        borderColor: '#333',
+                                                        borderWidth: 1,
                                                         callbacks: {
                                                             label: function (context) {
-                                                                const originalValue = query.ror_values[context.dataIndex];
-                                                                const originalUpper = query.ror_upper[context.dataIndex];
-                                                                const originalLower = query.ror_lower[context.dataIndex];
+                                                                const originalValue = Math.pow(10, context.parsed.y);
 
                                                                 if (context.datasetIndex === 0) {
-                                                                    return `ROR: ${originalValue?.toFixed(3)} (Log₁₀: ${context.parsed.y.toFixed(3)})`;
+                                                                    return `ROR: ${originalValue.toFixed(3)} (Log₁₀: ${context.parsed.y.toFixed(3)})`;
                                                                 } else if (context.datasetIndex === 1) {
-                                                                    return `Upper CI: ${originalUpper?.toFixed(3)} (Log₁₀: ${context.parsed.y.toFixed(3)})`;
+                                                                    return `Upper CI: ${originalValue.toFixed(3)} (Log₁₀: ${context.parsed.y.toFixed(3)})`;
                                                                 } else {
-                                                                    return `Lower CI: ${originalLower?.toFixed(3)} (Log₁₀: ${context.parsed.y.toFixed(3)})`;
+                                                                    return `Lower CI: ${originalValue.toFixed(3)} (Log₁₀: ${context.parsed.y.toFixed(3)})`;
                                                                 }
+                                                            },
+                                                            footer: function (context) {
+                                                                if (context.length > 0) {
+                                                                    const rorValue = Math.pow(10, context[0].parsed.y);
+                                                                    if (rorValue > 1) {
+                                                                        return 'Higher than baseline reporting';
+                                                                    } else if (rorValue < 1) {
+                                                                        return 'Lower than baseline reporting';
+                                                                    } else {
+                                                                        return 'Baseline reporting level';
+                                                                    }
+                                                                }
+                                                                return '';
                                                             }
                                                         }
                                                     }
@@ -466,10 +594,12 @@ const UserProfile = () => {
                                                         ticks: {
                                                             font: { size: 11 },
                                                             callback: function (value) {
-                                                                if (value === 0) return '1.0';
-                                                                if (value === 1) return '10';
-                                                                if (value === -1) return '0.1';
-                                                                return Math.pow(10, value).toFixed(1);
+                                                                const originalValue = Math.pow(10, value);
+                                                                if (originalValue >= 1) {
+                                                                    return originalValue.toFixed(1);
+                                                                } else {
+                                                                    return originalValue.toFixed(2);
+                                                                }
                                                             }
                                                         },
                                                         grid: {
@@ -497,6 +627,22 @@ const UserProfile = () => {
                                                 }
                                             }}
                                         />
+                                    </div>
+
+                                    {/* graph metadata*/}
+                                    <div className="chart-metadata">
+                                        <div className="metadata-item">
+                                            <strong>Generated:</strong>
+                                            <span>{new Date().toLocaleDateString()}</span>
+                                        </div>
+                                        <div className="metadata-item">
+                                            <strong>Period:</strong>
+                                            <span>{query.year_start} Q{query.quarter_start} - {query.year_end} Q{query.quarter_end}</span>
+                                        </div>
+                                        <div className="metadata-item">
+                                            <strong>Data Points:</strong>
+                                            <span>{query.ror_values.length}</span>
+                                        </div>
                                     </div>
 
                                     <div className="chart-info-compact">
@@ -553,7 +699,6 @@ const UserProfile = () => {
         );
     };
 
-
     // Search for drugs as the user types
     const searchDrugs = async (prefix, index) => {
         // Only if there are at least 3 characters do the search take place
@@ -589,7 +734,7 @@ const UserProfile = () => {
     // Handle drug input changes with debouncing
     const handleDrugChange = (index, value) => {
         const newDrugs = [...drugs];
-        newDrugs[index] = { name: value || '', id: null }; // וודא שזה לא undefined
+        newDrugs[index] = { name: value || '', id: null }; // ensure it isn't undefined
         setDrugs(newDrugs);
 
         // Debounce the search API call

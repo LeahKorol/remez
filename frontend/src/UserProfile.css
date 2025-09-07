@@ -896,6 +896,63 @@
   box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
 }
 
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.chart-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.download-button {
+  background: #2196f3;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 0.2s;
+}
+
+.download-button:hover {
+  background: #1976d2;
+}
+
+.download-button:active {
+  transform: translateY(1px);
+}
+
+.chart-metadata {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #666;
+}
+
+.metadata-item {
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+}
+
+.metadata-item strong {
+  color: #333;
+  margin-bottom: 2px;
+}
+
+
 .results-badge {
   background: #4caf50;
   color: white;
