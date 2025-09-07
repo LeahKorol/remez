@@ -59,6 +59,7 @@ const UserProfile = () => {
     const [showLogoutPopup, setShowLogoutPopup] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState('');
+    const [globalLoading, setGlobalLoading] = useState(false);
 
     const [viewMode, setViewMode] = useState('new');
     const [viewingQuery, setViewingQuery] = useState(null);
@@ -149,44 +150,6 @@ const UserProfile = () => {
 
         fetchUserData();
     }, []);
-
-    // fetch queries when user data is loaded
-    // const fetchQueries = async () => {
-    //     try {
-    //         const token = localStorage.getItem('token');
-
-    //         if (!token) {
-    //             console.log('No token for queries');
-    //             return;
-    //         }
-
-
-    //         const response = await fetchWithRefresh('http://127.0.0.1:8000/api/v1/analysis/queries/', {
-    //             method: 'GET'
-    //         });
-
-    //         if (!response) {
-    //             // fetchWithRefresh handles redirect to login on auth failure
-    //             return;
-    //         }
-
-    //         console.log('Queries response status:', response.status);
-
-
-    //         if (response.ok) {
-    //             const data = await response.json();
-    //             console.log('Queries loaded:', data.length);
-    //             setSavedQueries(data);
-    //         } else {
-    //             console.error('Failed to fetch queries:', response.status);
-    //             // Don't show error for queries, just log it
-    //         }
-    //     } catch (error) {
-    //         console.error('Error fetching queries:', error);
-    //         // Don't show error for queries, just log it
-    //     }
-    // };
-
 
 
     const fetchQueries = async () => {
@@ -719,10 +682,12 @@ const UserProfile = () => {
     const handleSubmitQuery = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
+        setGlobalLoading(true);
         setSubmitError('');
 
         if (!validateForm()) {
             setIsSubmitting(false);
+            setGlobalLoading(false);
             return;
         }
 
@@ -746,6 +711,9 @@ const UserProfile = () => {
             };
 
             console.log('Submitting payload:', payload);
+
+            const submitButton = e.target.querySelector('button[type="submit"]');
+            submitButton.innerHTML = '<div class="spinner-small"></div> Processing...';
 
             const config = {
                 headers: {
@@ -816,6 +784,7 @@ const UserProfile = () => {
             }
         } finally {
             setIsSubmitting(false);
+            setGlobalLoading(false);
         }
     };
 
@@ -1082,80 +1051,140 @@ const UserProfile = () => {
         resetForm();
     };
 
+    // const validateForm = () => {
+    //     const validDrugs = drugs.filter(drug => drug.id !== null);
+    //     const validReactions = reactions.filter(reaction => reaction.id !== null);
+
+    //     // Check for required fields
+    //     if (validDrugs.length === 0) {
+    //         alert('Please select at least one valid drug from the search results.');
+    //         return false;
+    //     }
+
+    //     if (validReactions.length === 0) {
+    //         alert('Please select at least one valid reaction from the search results.');
+    //         return false;
+    //     }
+
+    //     // Handle undefined or null inputs gracefully
+    //     const safeYearStart = yearStart || '';
+    //     const safeYearEnd = yearEnd || '';
+    //     const safeQuarterStart = quarterStart || '';
+    //     const safeQuarterEnd = quarterEnd || '';
+    //     const safeQueryName = queryName || '';
+
+    //     if (!safeYearStart.trim() || !safeYearEnd.trim() || !safeQuarterStart.trim() || !safeQuarterEnd.trim()) {
+    //         alert('Please fill all year and quarter fields.');
+    //         return false;
+    //     }
+
+    //     if (!safeQueryName.trim()) {
+    //         alert('Please provide a name for your query.');
+    //         return false;
+    //     }
+
+    //     // Enhanced year validation
+    //     const startYear = parseInt(safeYearStart);
+    //     const endYear = parseInt(safeYearEnd);
+    //     const currentYear = new Date().getFullYear();
+
+    //     if (isNaN(startYear) || isNaN(endYear)) {
+    //         alert('Please enter valid year values.');
+    //         return false;
+    //     }
+
+    //     if (startYear > endYear) {
+    //         alert('Start year cannot be greater than end year');
+    //         return false;
+    //     }
+
+    //     if (startYear < 1900 || endYear > currentYear + 10) {
+    //         alert('Please enter realistic year values');
+    //         return false;
+    //     }
+
+    //     // Quarter validation
+    //     const startQuarter = parseInt(safeQuarterStart);
+    //     const endQuarter = parseInt(safeQuarterEnd);
+
+    //     if (isNaN(startQuarter) || isNaN(endQuarter)) {
+    //         alert('Please enter valid quarter values.');
+    //         return false;
+    //     }
+
+    //     if (startQuarter < 1 || startQuarter > 4 || endQuarter < 1 || endQuarter > 4) {
+    //         alert('Quarters must be between 1 and 4.');
+    //         return false;
+    //     }
+
+    //     // Additional validation: if same year, start quarter should not be after end quarter
+    //     if (startYear === endYear && startQuarter > endQuarter) {
+    //         alert('Start quarter cannot be after end quarter in the same year');
+    //         return false;
+    //     }
+
+    //     return true;
+    // };
+
+
+
     const validateForm = () => {
+        // Reset any previous errors
+        setSubmitError('');
+
         const validDrugs = drugs.filter(drug => drug.id !== null);
         const validReactions = reactions.filter(reaction => reaction.id !== null);
 
-        // Check for required fields
+        // Check for partial entries (typed but not selected)
+        const partialDrugs = drugs.filter(drug => drug.name.trim() && !drug.id);
+        const partialReactions = reactions.filter(reaction => reaction.name.trim() && !reaction.id);
+
+        if (partialDrugs.length > 0) {
+            setSubmitError('Please select drugs from the search results dropdown, don\'t just type them.');
+            return false;
+        }
+
+        if (partialReactions.length > 0) {
+            setSubmitError('Please select reactions from the search results dropdown, don\'t just type them.');
+            return false;
+        }
+
         if (validDrugs.length === 0) {
-            alert('Please select at least one valid drug from the search results.');
+            setSubmitError('Please select at least one drug from the search results.');
             return false;
         }
 
         if (validReactions.length === 0) {
-            alert('Please select at least one valid reaction from the search results.');
+            setSubmitError('Please select at least one reaction from the search results.');
             return false;
         }
 
-        // Handle undefined or null inputs gracefully
-        const safeYearStart = yearStart || '';
-        const safeYearEnd = yearEnd || '';
-        const safeQuarterStart = quarterStart || '';
-        const safeQuarterEnd = quarterEnd || '';
-        const safeQueryName = queryName || '';
+        // Enhanced time period validation
+        const startYear = parseInt(yearStart);
+        const endYear = parseInt(yearEnd);
+        const startQuarter = parseInt(quarterStart);
+        const endQuarter = parseInt(quarterEnd);
 
-        if (!safeYearStart.trim() || !safeYearEnd.trim() || !safeQuarterStart.trim() || !safeQuarterEnd.trim()) {
-            alert('Please fill all year and quarter fields.');
+        if (startYear === endYear && startQuarter === endQuarter) {
+            setSubmitError('Analysis requires at least 2 time periods. Please select a longer time range.');
             return false;
         }
 
-        if (!safeQueryName.trim()) {
-            alert('Please provide a name for your query.');
+        const totalPeriods = (endYear - startYear) * 4 + (endQuarter - startQuarter + 1);
+        if (totalPeriods > 40) { // Limit to 10 years
+            setSubmitError('Please select a shorter time period (maximum 10 years).');
             return false;
         }
 
-        // Enhanced year validation
-        const startYear = parseInt(safeYearStart);
-        const endYear = parseInt(safeYearEnd);
-        const currentYear = new Date().getFullYear();
-
-        if (isNaN(startYear) || isNaN(endYear)) {
-            alert('Please enter valid year values.');
-            return false;
-        }
-
-        if (startYear > endYear) {
-            alert('Start year cannot be greater than end year');
-            return false;
-        }
-
-        if (startYear < 1900 || endYear > currentYear + 10) {
-            alert('Please enter realistic year values');
-            return false;
-        }
-
-        // Quarter validation
-        const startQuarter = parseInt(safeQuarterStart);
-        const endQuarter = parseInt(safeQuarterEnd);
-
-        if (isNaN(startQuarter) || isNaN(endQuarter)) {
-            alert('Please enter valid quarter values.');
-            return false;
-        }
-
-        if (startQuarter < 1 || startQuarter > 4 || endQuarter < 1 || endQuarter > 4) {
-            alert('Quarters must be between 1 and 4.');
-            return false;
-        }
-
-        // Additional validation: if same year, start quarter should not be after end quarter
-        if (startYear === endYear && startQuarter > endQuarter) {
-            alert('Start quarter cannot be after end quarter in the same year');
+        if (!queryName.trim() || queryName.trim().length < 3) {
+            setSubmitError('Please provide a meaningful name for your query (at least 3 characters).');
             return false;
         }
 
         return true;
     };
+
+
 
     const handleLogout = async () => {
         setShowLogoutPopup(true);
