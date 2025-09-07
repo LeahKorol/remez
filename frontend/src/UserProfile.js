@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaUser, FaArrowRight, FaPlus, FaTimes, FaEdit, FaTrash, FaSignOutAlt, FaChevronDown, FaEye, FaFileCsv, FaFileImage } from 'react-icons/fa';
+import { FaUser, FaArrowRight, FaPlus, FaTimes, FaEdit, FaTrash, FaSignOutAlt, FaChevronDown, FaEye, FaFileCsv, FaFileImage, FaArrowDown } from 'react-icons/fa';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { fetchWithRefresh } from './tokenService';
@@ -254,6 +254,8 @@ const UserProfile = () => {
     const QueryDetailsView = ({ query }) => {
         const chartRef = useRef(null);
 
+        const [showCsvModal, setShowCsvModal] = useState(false);
+
         console.log('Rendering QueryDetailsView for:', {
             id: query.id,
             name: query.name,
@@ -268,6 +270,27 @@ const UserProfile = () => {
             query.ror_lower && query.ror_upper;
 
         console.log('hasResults calculated as:', hasResults);
+
+        const csvHeaders = ['Time Period', 'ROR (Log10)', 'ROR (Original)', 'Lower CI', 'Upper CI'];
+        const csvRows = query.ror_values?.map((rorValue, index) => {
+            const logValue = Math.log10(rorValue || 0.1);
+            const lowerCI = query.ror_lower[index] || '';
+            const upperCI = query.ror_upper[index] || '';
+            let currentYear = query.year_start;
+            let currentQuarter = query.quarter_start + index;
+            while (currentQuarter > 4) {
+                currentQuarter -= 4;
+                currentYear++;
+            }
+            const timePeriod = `${currentYear} Q${currentQuarter}`;
+            return {
+                timePeriod,
+                logValue: logValue.toFixed(4),
+                rorValue: rorValue.toFixed(4),
+                lowerCI: lowerCI ? lowerCI.toFixed(4) : '',
+                upperCI: upperCI ? upperCI.toFixed(4) : ''
+            };
+        }) || [];
 
         // function to download the chart as PNG
         const downloadChart = () => {
@@ -429,9 +452,103 @@ const UserProfile = () => {
                                 <button className="download-button" onClick={downloadData}>
                                     <FaFileCsv style={{ marginRight: '6px' }} /> Download CSV
                                 </button>
+                                <button
+                                    className="download-button"
+                                    onClick={() => setShowCsvModal(true)}
+                                    title="View CSV"
+                                >
+                                    <FaArrowDown style={{ marginRight: '6px' }} /> View CSV
+                                </button>
                             </div>
                         )}
                     </div>
+
+                    {/* CSV Modal */}
+                    {showCsvModal && (
+                        <div className="csv-modal-overlay">
+                            <div className="csv-modal">
+                                <div className="csv-modal-header">
+                                    <h3>CSV Preview - {query.name}</h3>
+                                    <button className="close-button" onClick={() => setShowCsvModal(false)}>
+                                        <FaTimes />
+                                    </button>
+                                </div>
+                                <div className="csv-modal-content">
+                                    <table className="csv-table">
+                                        <thead>
+                                            <tr>
+                                                {csvHeaders.map((header, i) => <th key={i}>{header}</th>)}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {csvRows.map((row, i) => (
+                                                <tr key={i}>
+                                                    <td>{row.timePeriod}</td>
+                                                    <td>{row.logValue}</td>
+                                                    <td>{row.rorValue}</td>
+                                                    <td>{row.lowerCI}</td>
+                                                    <td>{row.upperCI}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* CSS */}
+                    <style jsx>{`
+                .csv-modal-overlay {
+                    position: fixed;
+                    top: 0; left: 0;
+                    width: 100%; height: 100%;
+                    background: rgba(0,0,0,0.5);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 1000;
+                }
+                .csv-modal {
+                    background: #fff;
+                    border-radius: 8px;
+                    width: 90%;
+                    max-width: 800px;
+                    max-height: 80%;
+                    overflow-y: auto;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                }
+                .csv-modal-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 12px 16px;
+                    border-bottom: 1px solid #eee;
+                    background: #f5f5f5;
+                }
+                .csv-modal-content {
+                    padding: 16px;
+                }
+                .csv-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+                .csv-table th, .csv-table td {
+                    border: 1px solid #ddd;
+                    padding: 8px;
+                    text-align: center;
+                }
+                .csv-table th {
+                    background: #f0f0f0;
+                    font-weight: bold;
+                }
+                .close-button {
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                    font-size: 16px;
+                }
+            `}</style>
 
                     <div className="chart-placeholder">
                         <div className="chart-container">
