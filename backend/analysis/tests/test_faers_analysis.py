@@ -244,7 +244,7 @@ def test_report_main_returns_plot_data(outcome):
         config_dir=f"{Path(__file__).resolve().parent}/output/config",
         dir_reports=f"{Path(__file__).resolve().parent}/output/reports",
         output_raw_exposure_data=False,
-        return_plot_data=True,
+        return_plot_data_only=True,
     )
 
     # Test overall structure
@@ -267,6 +267,7 @@ def test_report_main_returns_plot_data(outcome):
             assert isinstance(plot_data, dict), (
                 f"Plot data for {config_name}.{report_type} should be a dictionary"
             )
+            ror_data = plot_data["ror_data"]
 
             # Verify required plot data fields
             required_fields = {
@@ -278,19 +279,19 @@ def test_report_main_returns_plot_data(outcome):
                 "log10_ror_lower",
                 "log10_ror_upper",
             }
-            assert set(plot_data.keys()) == required_fields, (
+            assert set(ror_data.keys()) == required_fields, (
                 f"Missing data fields in {config_name}.{report_type}"
             )
 
             # Verify data types and consistency
-            assert isinstance(plot_data["quarters"], list), "quarters should be a list"
-            assert isinstance(plot_data["ror_values"], list), (
+            assert isinstance(ror_data["quarters"], list), "quarters should be a list"
+            assert isinstance(ror_data["ror_values"], list), (
                 "ror_values should be a list"
             )
 
             # All arrays should have the same length
-            array_length = len(plot_data["quarters"])
+            array_length = len(ror_data["quarters"])
             for key in required_fields - {"quarters"}:
-                assert len(plot_data[key]) == array_length, (
+                assert len(ror_data[key]) == array_length, (
                     f"Inconsistent array length in {key} for {config_name}.{report_type}"
                 )

@@ -45,7 +45,7 @@ class Command(BaseCommand):
             help="Include raw table of exposure cases in the report.",
         )
         parser.add_argument(
-            "--return-plot-data",
+            "--return-plot-data-only",
             action="store_true",
             help="Return graph data points instead of generating graphs.",
         )
@@ -59,7 +59,7 @@ class Command(BaseCommand):
                 config_dir=options["config_dir"],
                 dir_reports=options["dir_reports"],
                 output_raw_exposure_data=options["output_raw_exposure_data"],
-                return_plot_data=options["return_plot_data"],
+                return_plot_data_only=options["return_plot_data_only"],
             )
             self.stdout.write(
                 self.style.SUCCESS("Report generation completed successfully.")

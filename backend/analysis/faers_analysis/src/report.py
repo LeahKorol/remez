@@ -9,7 +9,7 @@ import logging
 import os
 import pickle
 from glob import glob
-from typing import Dict, List, Optional, Tuple, TypeAlias, Union
+from typing import Dict, List, Optional, TypeAlias, Union
 
 import numpy as np
 import pandas as pd
@@ -53,18 +53,42 @@ class Reporter:
         q_from: Quarter,
         q_to: Quarter,
         output_raw_exposure_data: bool,
+        return_plot_data_only: bool = False,
     ) -> None:
+        """Initialize the Reporter with configuration and mode settings.
+
+        Args:
+            config: Analysis configuration
+            dir_out: Base output directory
+            q_from: Starting quarter
+            q_to: Ending quarter
+            output_raw_exposure_data: Whether to include raw exposure data
+            return_plot_data_only: If True, only process data without generating files
+        """
+        # Analysis configuration
         self.config = config
         self.title = config.name
-        self.dir_out = os.path.join(dir_out, self.title)
         self.q_from = q_from
         self.q_to = q_to
+
+        # Output settings
+        self.dir_out = os.path.join(dir_out, self.title)
+        self.output_raw_exposure_data = output_raw_exposure_data
+        self.return_plot_data_only = return_plot_data_only
+        self.figure_count = 0
+
+        # Setup output directories only if generating files
+        if not self.return_plot_data_only:
+            self._setup_directories()
+
+    def _setup_directories(self) -> None:
+        """Create output directories if not in plot-data-only mode."""
         for format_ in self.FORMATS:
             os.makedirs(os.path.join(self.dir_out, format_), exist_ok=True)
-        self.figure_count = 0
-        self.output_raw_exposure_data = output_raw_exposure_data
+            logger.debug(f"Created directory: {os.path.join(self.dir_out, format_)}")
 
     def subplots(self, figsize=(8, 4), dpi=360):
+        """Create matplotlib subplots with default settings."""
         return plt.subplots(figsize=figsize, dpi=dpi)
 
     def handle_fig(self, fig, caption=None):
@@ -90,36 +114,81 @@ class Reporter:
         config: QuestionConfig,
         explanation: Optional[str] = None,
         skip_lr: bool = False,
-        return_plot_data: bool = False,
-    ) -> Optional[PlotDataDict]:
-        # Check for duplicate indices and reset index if needed
+    ) -> PlotDataDict:
+        """
+        Process data and generate plot data.
+        Optionally creating files - if return_plot_data_only=False
+        """
+        # Process data
+        processed_data = self._process_data(data)
+
+        # Generate plot data
+        plot_data = self._calculate_ror_data(processed_data)
+        plot_data_dict = {"ror_data": plot_data}
+
+        # Generate report files
+        if not self.return_plot_data_only:
+            self._generate_report_files(
+                processed_data, plot_data_dict, title, config, explanation, skip_lr
+            )
+
+        # return plot_data in a dictionary for optionally return other values (i.e. regression_data) in the future
+        return plot_data_dict
+
+    def _process_data(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Process and validate input data."""
+        # Check for duplicate indices
         if len(set(data.index)) != len(data):
             logger.warning("Found duplicate indices in data. Resetting index.")
             data = data.reset_index(drop=False)
 
+        # Apply data controls
+        return self.handle_controls(data, self.config)
+
+    def _generate_report_files(
+        self,
+        data: pd.DataFrame,
+        plot_data: PlotDataDict,
+        title: str,
+        config: QuestionConfig,
+        explanation: Optional[str],
+        skip_lr: bool,
+    ) -> None:
+        """Generate HTML report and associated files."""
         lines = []
+
+        # Title and explanation
         lines.append(f"<H1>{self.title}</H1>")
         if explanation is not None:
             lines.append(explanation)
-        data = self.handle_controls(data, config)
+
+        # Configuration summary
         config_summary = self.summarize_config(config)
         lines.append(config_summary)
 
-        summary_result = self.summarize_data(
-            data, title, config, skip_lr=skip_lr, return_plot_data=return_plot_data
-        )
-        if return_plot_data:
-            summary_html, plot_data = summary_result
-            lines.append(summary_html)
-        else:
-            lines.append(summary_result)
+        # Demographic tables
+        demographic_html = self.demographic_summary(data)
+        lines.append(demographic_html)
 
+        # ROR visualization (using processed data)
+        ror_html = self._generate_plot_html(plot_data["ror_data"])
+        lines.append(ror_html)
+
+        # Get regression data if needed, using processed data
+        if not skip_lr:
+            regression_data = self.regression_analysis(data)
+            lines.append(regression_data)
+
+        # True-True cases table (if enabled)
+        if self.output_raw_exposure_data:
+            true_true_html = self.true_true(data, config)
+            lines.append(true_true_html)
+
+        # Write report file
         fn = os.path.join(self.dir_out, f"report {self.config.name} {title}.html")
-        open(fn, "w").write("\n".join(lines))
-        print(f"Saved {fn}")
-
-        if return_plot_data:
-            return plot_data
+        with open(fn, "w") as f:
+            f.write("\n".join(lines))
+        logger.info(f"Saved report to {fn}")
 
     def handle_controls(self, data, config):
         if config.control is None:
@@ -127,7 +196,7 @@ class Reporter:
         control_col = f"control {config.name}"
         col_exposure = f"exposed {config.name}"
         sel = data[control_col] | data[col_exposure]
-        print(
+        logger.info(
             f"{config.name:40s}: Due to control handling, removing {(1 - sel.mean()) * 100:.1f}% of lines"
         )
         return data.loc[sel]
@@ -141,33 +210,6 @@ class Reporter:
             str_control = ", ".join(config.control)
             lines.append(f"<strong>Controls:</strong> {str_control}<br>")
         lines.append(f"<strong>Reactions:</strong> {str_reactions}<br>")
-        return "\n".join(lines)
-
-    def summarize_data(
-        self,
-        data: pd.DataFrame,
-        title: str,
-        config: QuestionConfig,
-        skip_lr: bool = False,
-        return_plot_data: bool = False,
-    ) -> Union[str, Tuple[str, PlotDataDict]]:
-        lines = ["<H2>%s</H2>" % title]
-        lines.append(self.demographic_summary(data))
-
-        ror_result = self.ror_dynamics(data, return_data=return_plot_data)
-        if return_plot_data:
-            ror_html, plot_data = ror_result
-            lines.append(ror_html)
-        else:
-            lines.append(ror_result)
-
-        if not skip_lr:
-            lines.append(self.regression_analysis(data))
-        if self.output_raw_exposure_data:
-            lines.append(self.true_true(data, config))
-
-        if return_plot_data:
-            return "\n".join(lines), plot_data
         return "\n".join(lines)
 
     def true_true(self, data, config):
@@ -196,12 +238,17 @@ class Reporter:
 
         return "\n".join(lines)
 
-    def regression_analysis(self, data_regression):
+    def _calculate_regression_data(self, data_regression):
+        """Process regression data.
+        Returns:
+            dict: Contains processed regression data and any error messages
+        """
         config = self.config
         data_regression = data_regression.copy()
         col_exposure = f"exposed {config.name}"
         col_ouctome = f"reacted {config.name}"
 
+        # Prepare data
         data_regression["exposure"] = data_regression[col_exposure].astype(int)
         data_regression["outcome"] = data_regression[col_ouctome].astype(int)
         data_regression["is_female"] = (data_regression["sex"] == "F").astype(int)
@@ -213,40 +260,63 @@ class Reporter:
         outcome_col = "outcome"
         data_regression = data_regression[regression_cols + [outcome_col]]
 
-        # Check if the dataset is empty before attempting regression
+        # Handle empty dataset
         if len(data_regression) == 0 or data_regression[regression_cols].empty:
-            return "ERROR: Empty dataset for regression analysis<br>"
+            return {"error": "Empty dataset for regression analysis"}
 
         try:
+            # Fit model
             logit = sm.Logit(
                 data_regression[outcome_col], data_regression[regression_cols]
             )
-        except Exception as e:
-            logger.error(f"Error in Logit model creation: {str(e)}")
-            return f"ERROR in regression: {str(e)}<br>"
-        try:
             result = logit.fit()
-        except Exception as e:
-            logger.warning(f"Error fitting logistic regression: {str(e)}")
-            result_summary = "ERROR. Most probably, singular matrix<br>"
-            or_estimates = "<br>"
-        else:
-            result_summary = result.summary2(title=config.name).as_html()
+
+            # Process results
             or_estimates = result.conf_int().rename(columns={0: "lower", 1: "upper"})
             or_estimates["OR"] = result.params
             or_estimates = np.round(np.exp(or_estimates)[["lower", "OR", "upper"]], 3)
-            or_estimates = "OR estimates<br>" + or_estimates.to_html()
+
+            return {
+                "result": result,
+                "or_estimates": or_estimates,
+                "data_regression": data_regression,
+                "regression_cols": regression_cols,
+                "error": None,
+            }
+        except Exception as e:
+            logger.error(f"Error in regression analysis: {str(e)}")
+            return {"error": str(e)}
+
+    def regression_analysis(self, data_regression):
+        """Combines data processing and visualization for regression analysis."""
+        # Process data
+        reg_data = self._calculate_regression_data(data_regression)
+
+        # Handle errors
+        if reg_data.get("error"):
+            logger.error(f"Regression analysis error: {reg_data['error']}")
+            return f"ERROR: {reg_data['error']}<br>"
+
+        # Generate visualization
+        result = reg_data["result"]
+        or_estimates = reg_data["or_estimates"]
+
+        # Build HTML
+        result_summary = result.summary2(title=self.config.name).as_html()
+        or_estimates_html = "OR estimates<br>" + or_estimates.to_html()
+
+        colinearity_html = self.colinearity_analysis(
+            data_regression=reg_data["data_regression"],
+            regression_cols=reg_data["regression_cols"],
+            name=None,
+        )
 
         html_summary = (
             "<h3>Logistic regression</h3>\n"
             + result_summary
             + "\n<br>\n"
-            + or_estimates
-            + self.colinearity_analysis(
-                data_regression=data_regression,
-                regression_cols=regression_cols,
-                name=None,
-            )
+            + or_estimates_html
+            + colinearity_html
         )
         return html_summary
 
@@ -409,146 +479,181 @@ class Reporter:
 
         return ret
 
-    def ror_dynamics(
-        self, data: pd.DataFrame, return_data: bool = False
-    ) -> Union[str, Tuple[str, PlotDataDict]]:
-        """Generate ROR dynamics report section and optionally return plot data
-
-        Returns:
-            If return_data=True: Tuple of (html_string, plot_data_dict)
-            If return_data=False: html_string
-        """
-        config = self.config
+    def _calculate_ror_data(self, data: pd.DataFrame) -> PlotDataDict:
+        """Calculate ROR values and prepare plot data."""
         rors = []
+
+        # Select relevant columns
         columns_to_keep = ["age", "sex", "event_date", "q"] + [
-            c for c in data.columns if c.endswith(config.name)
+            c for c in data.columns if c.endswith(self.config.name)
         ]
         if "wt" in data.columns:
             columns_to_keep.append("wt")
+
+        # Process data by quarter
         ror_data = pd.DataFrame()
         gr = data[columns_to_keep].groupby("q")
+
         for q, curr in sorted(gr):
             ror_data = pd.concat((ror_data, curr))
-            contingency_matrix = ContingencyMatrix.from_results_table(ror_data, config)
+            contingency_matrix = ContingencyMatrix.from_results_table(
+                ror_data, self.config
+            )
             ror, (lower, upper) = contingency_matrix.ror()
             rors.append([q, lower, ror, upper])
+
+        # Convert to DataFrame for data processing
         df_rors = pd.DataFrame(rors, columns=["q", "ROR_lower", "ROR", "ROR_upper"])
 
-        # Generate HTML without plotting if return_data is True
-        lines = []
-        lines.append("<H3>ROR data</H3>")
-        if return_data:
-            plot_data = self.plot_ror(df_rors, return_data=True)
-            return "\n".join(lines), plot_data
-        else:
-            fig, ax = self.subplots()
-            self.plot_ror(df_rors, ax_ror=ax)
-            lines.append(self.handle_fig(fig, "ROR dynamics"))
-            return "\n".join(lines)
+        return self.plot_ror_data(df_rors)
+
+    def _generate_plot_html(self, plot_data: PlotDataDict) -> str:
+        """Generate plot visualization and return HTML.
+
+        This function has the single responsibility of visualization.
+        Only called when return_plot_data_only=False.
+        """
+        lines = ["<H3>ROR data</H3>"]
+
+        # Create visualization
+        fig, ax = self.subplots()
+        self.draw_ror_plot(plot_data, ax_ror=ax)
+        lines.append(self.handle_fig(fig, "ROR dynamics"))
+
+        return "\n".join(lines)
 
     @staticmethod
-    def plot_ror(
-        tbl_report: pd.DataFrame,
+    def plot_ror_data(tbl_report: pd.DataFrame) -> PlotDataDict:
+        """Calculate log10 ROR data values and return plot data points.
+
+        Args:
+            tbl_report: DataFrame with ROR data
+
+        Returns:
+            Dictionary containing all data needed for plotting:
+            - quarters: List of quarter identifiers
+            - ror_values: Linear ROR values
+            - ror_lower/upper: Linear confidence bounds
+            - log10_ror: Log10 of ROR values for plotting
+            - log10_ror_lower/upper: Log10 of confidence bounds
+        """
+        # Extract and sort quarters
+        quarters = list(sorted(tbl_report.q.unique()))
+
+        # Calculate logarithmic values
+        df = tbl_report.copy()
+        df["l10_ROR"] = np.log10(df.ROR)
+        df["l10_ROR_lower"] = np.log10(df.ROR_lower)
+        df["l10_ROR_upper"] = np.log10(df.ROR_upper)
+
+        # Create data dictionary
+        return {
+            "quarters": quarters,
+            "ror_values": df.ROR.values.tolist(),
+            "ror_lower": df.ROR_lower.values.tolist(),
+            "ror_upper": df.ROR_upper.values.tolist(),
+            "log10_ror": df.l10_ROR.values.tolist(),
+            "log10_ror_lower": df.l10_ROR_lower.values.tolist(),
+            "log10_ror_upper": df.l10_ROR_upper.values.tolist(),
+        }
+
+    def draw_ror_plot(
+        self,
+        plot_data: PlotDataDict,
         ax_ror: Optional[plt.Axes] = None,
         xticklabels: bool = True,
         figwidth: int = 8,
         dpi: int = 360,
-        return_data: bool = False,
-    ) -> Union[plt.Axes, PlotDataDict]:
-        """
-        Plot ROR dynamics or return the plot data points.
-        IMPORTANT: It plots log(10) values, but labels are back-converted to a linear form.
+    ) -> plt.Axes:
+        """Draw ROR plot using prepared data.
+
+        This function handles only visualization, using pre-calculated data.
+        It's only called when return_plot_data_only=False.
+
+        Args:
+            plot_data: Dictionary with all required plotting data
+            ax_ror: Optional matplotlib axis for plotting
+            xticklabels: Whether to show x-axis labels
+            figwidth: Width of the figure
+            dpi: DPI for the figure
 
         Returns:
-            If return_data=True: Dict with plot data points - both linear and log10 values.
-            If return_data=False: Matplotlib axis object.
+            Matplotlib axis with the plot
         """
-        quarters = list(sorted(tbl_report.q.unique()))  # we assume no Q is missing
-        x = list(range(len(quarters)))
-
-        # Calculate log10 values as in original plotting code
-        tbl_report["l10_ROR"] = np.log10(tbl_report.ROR)
-        tbl_report["l10_ROR_lower"] = np.log10(tbl_report.ROR_lower)
-        tbl_report["l10_ROR_upper"] = np.log10(tbl_report.ROR_upper)
-
-        plot_data = {
-            "quarters": quarters,
-            "ror_values": tbl_report.ROR.values.tolist(),
-            "ror_lower": tbl_report.ROR_lower.values.tolist(),
-            "ror_upper": tbl_report.ROR_upper.values.tolist(),
-            "log10_ror": tbl_report.l10_ROR.values.tolist(),
-            "log10_ror_lower": tbl_report.l10_ROR_lower.values.tolist(),
-            "log10_ror_upper": tbl_report.l10_ROR_upper.values.tolist(),
-        }
-
-        if return_data:
-            return plot_data
-
+        # Create axis if needed
         if ax_ror is None:
             figsize = (figwidth, figwidth * 0.5)
-            fig_ror, ax_ror = plt.subplots(figsize=figsize, dpi=dpi)
+            _, ax_ror = plt.subplots(figsize=figsize, dpi=dpi)
 
-        ax_ror.plot(x, tbl_report.l10_ROR, "-o", color="C0", zorder=99)
+        # Setup basic plot elements
+        quarters = plot_data["quarters"]
+        x = list(range(len(quarters)))
+
+        # Plot main line
+        ax_ror.plot(x, plot_data["log10_ror"], "-o", color="C0", zorder=99)
+
+        # Plot confidence interval
         try:
             ax_ror.fill_between(
                 x,
-                tbl_report.l10_ROR_lower,
-                tbl_report.l10_ROR_upper,
+                plot_data["log10_ror_lower"],
+                plot_data["log10_ror_upper"],
                 color="C0",
                 alpha=0.3,
             )
         except Exception as e:
             logger.warning(f"Error filling between curves: {str(e)}")
             return ax_ror
-        
+
+        # Style the plot
         ax_ror.set_ylim(-2.1, 2.1)
         tkx = [-1, 0, 1]
         ax_ror.set_yticks(tkx)
         ax_ror.set_yticklabels([f"$\\times {10**t}$" for t in tkx])
-        sns.despine(ax=ax_ror)
-        ax_ror.spines["bottom"].set_position("zero")
-        tkx = []
-        lbls = []
-        for i, q in enumerate(quarters):
-            if q.endswith("1"):
-                tkx.append(i)
-                lbls.append(q.split("q")[0])
 
+        # X-axis labels
+        tkx = [i for i, q in enumerate(quarters) if q.endswith("1")]
+        lbls = [quarters[i].split("q")[0] for i in tkx]
         ax_ror.set_xticks(tkx)
         if xticklabels:
             ax_ror.set_xticklabels(lbls)
         else:
             ax_ror.set_xticklabels([])
+
+        # Additional styling
+        sns.despine(ax=ax_ror)
+        ax_ror.spines["bottom"].set_position("zero")
+        ax_ror.set_ylabel("ROR", rotation=0, ha="right", y=0.9)
+        ax_ror.set_xlim(0, max(x) + 1)
+
+        # Add value labels
         ax_ror.text(
             x=max(x) + 0.15,
-            y=tbl_report.l10_ROR.iloc[-1],
-            s=f"${tbl_report.ROR.iloc[-1]:.2f}$",
+            y=plot_data["log10_ror"][-1],
+            s=f"${plot_data['ror_values'][-1]:.2f}$",
             ha="left",
             va="center",
             color="gray",
         )
-
         ax_ror.text(
             x=max(x) + 0.1,
-            y=tbl_report.l10_ROR_lower.iloc[-1],
-            s=f"${tbl_report.ROR_lower.iloc[-1]:.2f}$",
+            y=plot_data["log10_ror_lower"][-1],
+            s=f"${plot_data['ror_lower'][-1]:.2f}$",
             ha="left",
             va="top",
             size="small",
             color="gray",
         )
-
         ax_ror.text(
             x=max(x) + 0.1,
-            y=tbl_report.l10_ROR_upper.iloc[-1],
-            s=f"${tbl_report.ROR_upper.iloc[-1]:.2f}$",
+            y=plot_data["log10_ror_upper"][-1],
+            s=f"${plot_data['ror_upper'][-1]:.2f}$",
             ha="left",
             va="bottom",
             size="small",
             color="gray",
         )
-        ax_ror.set_ylabel("ROR", rotation=0, ha="right", y=0.9)
-        ax_ror.set_xlim(0, max(x) + 1)
+
         return ax_ror
 
 
@@ -597,8 +702,8 @@ def main(
     config_dir: str,
     dir_reports: str,
     output_raw_exposure_data: bool = False,
-    return_plot_data: bool = False,
-) -> Optional[Dict[str, Dict[str, Reporter.PlotDataDict]]]:
+    return_plot_data_only: bool = False,
+) -> Dict[str, Dict[str, Reporter.PlotDataDict]]:
     """
     Generate reports and optionally return plot data
 
@@ -618,38 +723,53 @@ def main(
         If True, returns a dict containing plot data points instead of generating plots
 
     :return:
-        If return_plot_data=True: Dict containing plot data for each config
         If return_plot_data=False: None
+        If return_plot_data=True: Dict containing plot data for each config, for example:
+
+        {'saxenda_et_al - liraglutide_saxenda_victoza':
+            {'initial_data': {'ror_data': {'quarters': ['2020q1'],
+                'ror_values': [0.6726039259706947], 'ror_lower': [0.5633208387774181], 'ror_upper': [0.8030877079091061],
+                'log10_ror': [-0.17224060204898844], 'log10_ror_lower': [-0.24924418272764398], 'log10_ror_upper': [-0.09523702137033288]}},
+            'stratified_lr': {'ror_data': {'quarters': ['2020q1'],
+                'ror_values': [0.7909182992810732], 'ror_lower': [0.5622737524599851], 'ror_upper': [1.1125394941535764],
+                'log10_ror': [-0.10186837617863559],'log10_ror_lower': [-0.2500521893482361], 'log10_ror_upper': [0.046315436990964826]}},
+            'stratified_lr_no_weight': {'ror_data': {'quarters': ['2020q1'],
+                'ror_values': [0.8536837501490995], 'ror_lower': [0.616947607155467], 'ror_upper': [1.1812606724074433],
+                'log10_ror': [-0.06870298528530162], 'log10_ror_lower': [-0.2097517158523444], 'log10_ror_upper': [0.07234574528174116]}}}}
     """
 
     config_items = QuestionConfig.load_config_items(config_dir)
     files = sorted(glob(os.path.join(dir_marked_data, "*.pkl")))
     data_all_configs = pd.concat([pickle.load(open(f, "rb")) for f in files])
 
-    if return_plot_data:
-        plot_data_by_config = {}
+    # Always create the plot data dictionary now
+    plot_data_by_config = {}
 
     for config in tqdm.tqdm(config_items):
-        print(f"DEBUG {config.name}")
+        logger.info(f"Processing config: {config.name}")
+
+        # Data selection
         columns_to_keep = ["age", "sex", "wt", "event_date", "q"] + [
             c for c in data_all_configs.columns if c.endswith(config.name)
         ]
         data = data_all_configs[columns_to_keep]
+
+        # Initialize reporter with plot data only mode
         reporter = Reporter(
             config,
             dir_reports,
             q_from=Quarter(year_q_from),
             q_to=Quarter(year_q_to),
             output_raw_exposure_data=output_raw_exposure_data,
+            return_plot_data_only=return_plot_data_only,
         )
 
         # Initialize plot data structure for this config
-        if return_plot_data:
-            plot_data_by_config[config.name] = {
-                "initial_data": None,
-                "stratified_lr": None,
-                "stratified_lr_no_weight": None,
-            }
+        plot_data_by_config[config.name] = {
+            "initial_data": None,
+            "stratified_lr": None,
+            "stratified_lr_no_weight": None,
+        }
 
         # Report 1: Initial data
         plot_data = reporter.report(
@@ -658,11 +778,10 @@ def main(
             explanation="Raw data",
             skip_lr=True,
             config=config,
-            return_plot_data=return_plot_data,
         )
-        if return_plot_data:
-            plot_data_by_config[config.name]["initial_data"] = plot_data
+        plot_data_by_config[config.name]["initial_data"] = plot_data
 
+        # Filter and process data
         data = filter_illegal_values(data)
         data_lr = filter_data_for_regression(data, config)
 
@@ -672,10 +791,8 @@ def main(
             "02 Stratified for LR",
             config=config,
             explanation="After filtering out age and weight values that do not fit 99 percentile of the exposed population",
-            return_plot_data=return_plot_data,
         )
-        if return_plot_data:
-            plot_data_by_config[config.name]["stratified_lr"] = plot_data
+        plot_data_by_config[config.name]["stratified_lr"] = plot_data
 
         # Report 3: Stratified for LR without weight
         data_lr = filter_data_for_regression(data, config, including_the_weight=False)
@@ -684,20 +801,19 @@ def main(
             "03 Stratified for LR ignoring weight",
             config=config,
             explanation="After filtering out age values that do not fit 99 percentile of the exposed population",
-            return_plot_data=return_plot_data,
         )
-        if return_plot_data:
-            plot_data_by_config[config.name]["stratified_lr_no_weight"] = plot_data
+        plot_data_by_config[config.name]["stratified_lr_no_weight"] = plot_data
 
-    if return_plot_data:
-        # Log data for each config item and report type
-        for config_name, config_data in plot_data_by_config.items():
-            logger.debug(f"\nPlot data for {config_name}:")
-            for report_type, plot_data in config_data.items():
-                logger.debug(f"{report_type}:")
-                logger.debug(f"Quarters: {plot_data['quarters']}")
-                logger.debug(f"ROR values: {plot_data['ror_values']}")
-                logger.debug(f"ROR lower bounds: {plot_data['ror_lower']}")
-                logger.debug(f"ROR upper bounds: {plot_data['ror_upper']}")
+    for config_name, config_data in plot_data_by_config.items():
+        logger.debug(f"\nPlot data for {config_name}:")
+        for report_type, plot_data in config_data.items():
+            logger.debug(f"{report_type}:")
+            # Log ROR data
+            ror_data = plot_data["ror_data"]
+            logger.debug("ROR Data:")
+            logger.debug(f"Quarters: {ror_data.get('quarters', [])}")
+            logger.debug(f"ROR values: {ror_data.get('ror_values', [])}")
+            logger.debug(f"ROR lower bounds: {ror_data.get('ror_lower', [])}")
+            logger.debug(f"ROR upper bounds: {ror_data.get('ror_upper', [])}")
 
-        return plot_data_by_config
+    return plot_data_by_config
