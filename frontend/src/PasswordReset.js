@@ -98,7 +98,7 @@ function PasswordReset() {
         <div className="password-reset-header">
           <div className="logo">REMEZ</div>
         </div>
-        
+
         <div className="password-reset-form-container">
           <div className="password-reset-form">
             <div className="success-icon">✓</div>
@@ -109,15 +109,15 @@ function PasswordReset() {
             <p className="success-note">
               Please check your inbox and spam folder. The link will expire in 24 hours.
             </p>
-            
-            <button 
+
+            <button
               className="back-to-login-button"
               onClick={handleBackToLogin}
               type="button"
             >
               Back to Login
             </button>
-            
+
             <p className="resend-note">
               Didn't receive the email? Check your spam folder or try again with a different email address.
             </p>
@@ -132,7 +132,7 @@ function PasswordReset() {
       <div className="password-reset-header">
         <div className="logo">REMEZ</div>
       </div>
-      
+
       <div className="password-reset-form-container">
         <div className="password-reset-form">
           <h1>Reset Your Password</h1>
@@ -173,7 +173,7 @@ function PasswordReset() {
           </form>
 
           <div className="back-to-login">
-            <button 
+            <button
               className="back-link"
               onClick={handleBackToLogin}
               type="button"

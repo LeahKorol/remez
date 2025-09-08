@@ -26,114 +26,7 @@ const LoadingPage = () => {
         pollForResults(queryData.id);
     }, [queryData, navigate]);
 
-    //   const pollForResults = (queryId) => {
-    //     let attempts = 0;
-    //     const maxAttempts = 120; // 10 minutes max (120 attempts every 5 seconds)
-
-    //     const interval = setInterval(async () => {
-    //       try {
-    //         attempts++;
-    //         console.log(`Polling attempt ${attempts} for query ${queryId}`);
-
-    //         const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`);
-
-    //         if (!response) {
-    //           console.error("No response from fetchWithRefresh");
-    //           clearInterval(interval);
-    //           navigate("/");
-    //           return;
-    //         }
-
-    //         if (!response.ok) {
-    //           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    //         }
-
-    //         const data = await response.json();
-    //         console.log("Received data from server:", {
-    //           id: data.id,
-    //           name: data.name,
-    //           hasRorValues: !!(data.ror_values && data.ror_values.length > 0),
-    //           hasRorLower: !!(data.ror_lower && data.ror_lower.length > 0),
-    //           hasRorUpper: !!(data.ror_upper && data.ror_upper.length > 0)
-    //         });
-
-    //         // update progress and status text
-    //         const progressValue = Math.min(90, 10 + (attempts * 1.5));
-    //         setProgress(progressValue);
-
-    //         if (attempts < 10) {
-    //           setStatusText("Processing drug data...");
-    //         } else if (attempts < 20) {
-    //           setStatusText("Analyzing adverse reactions...");
-    //         } else if (attempts < 40) {
-    //           setStatusText("Computing statistical analysis...");
-    //         } else {
-    //           setStatusText("Finalizing results...");
-    //         }
-
-    //         // check if results are ready
-    //         if (data.ror_values && data.ror_values.length > 0 && 
-    //             data.ror_lower && data.ror_lower.length > 0 &&
-    //             data.ror_upper && data.ror_upper.length > 0) {
-
-    //           console.log("Results are ready! Navigating to profile...");
-    //           clearInterval(interval);
-    //           setProgress(100);
-    //           setStatusText("Analysis complete!");
-
-    //           // wait a moment before navigating to show 100% completion
-    //           setTimeout(() => {
-    //             navigate("/profile", {
-    //               state: {
-    //                 message: isUpdate ? "Query updated and analysis completed!" : "Query analysis completed successfully!",
-    //                 type: "success",
-    //                 // update the profile page with new data for user
-    //                 updatedQuery: data
-    //               },
-    //             });
-    //           }, 1500);
-
-    //           return; 
-    //         }
-
-    //         // if max attempts reached, stop polling
-    //         if (attempts >= maxAttempts) {
-    //           console.log("Max attempts reached, stopping polling");
-    //           clearInterval(interval);
-    //           setStatusText("Analysis is taking longer than expected...");
-
-    //           setTimeout(() => {
-    //             navigate("/profile", {
-    //               state: {
-    //                 message: "Analysis is still in progress. Results will appear in your saved queries when ready.",
-    //                 type: "info",
-    //               },
-    //             });
-    //           }, 3000);
-    //         }
-
-    //       } catch (err) {
-    //         console.error("Error during polling:", err);
-    //         attempts++; // Count failed attempts too
-
-    //         if (attempts >= 5) { // after 5 consecutive errors, give up
-    //           clearInterval(interval);
-    //           navigate("/profile", {
-    //             state: {
-    //               message: "Error occurred while checking results. Please check your saved queries later.",
-    //               type: "error",
-    //             },
-    //           });
-    //         }
-    //       }
-    //     }, 5000); // every 5 seconds
-
-    //     // Cleanup function
-    //     return () => {
-    //       console.log("Cleaning up polling interval");
-    //       clearInterval(interval);
-    //     };
-    //   };
+   
 
     const pollForResults = (queryId) => {
         let attempts = 0;
@@ -180,7 +73,68 @@ const LoadingPage = () => {
                     throw new Error("Invalid data structure received from server");
                 }
 
-                // ... rest of polling logic
+                console.log("Received data from server:", {
+                    id: data.id,
+                    name: data.name,
+                    hasRorValues: !!(data.ror_values && data.ror_values.length > 0),
+                    hasRorLower: !!(data.ror_lower && data.ror_lower.length > 0),
+                    hasRorUpper: !!(data.ror_upper && data.ror_upper.length > 0)
+                });
+
+                // update progress and status text
+                const progressValue = Math.min(90, 10 + (attempts * 1.5));
+                setProgress(progressValue);
+
+                if (attempts < 10) {
+                    setStatusText("Processing drug data...");
+                } else if (attempts < 20) {
+                    setStatusText("Analyzing adverse reactions...");
+                } else if (attempts < 40) {
+                    setStatusText("Computing statistical analysis...");
+                } else {
+                    setStatusText("Finalizing results...");
+                }
+
+                // check if results are ready
+                if (data.ror_values && data.ror_values.length > 0 &&
+                    data.ror_lower && data.ror_lower.length > 0 &&
+                    data.ror_upper && data.ror_upper.length > 0) {
+
+                    console.log("Results are ready! Navigating to profile...");
+                    clearInterval(interval);
+                    setProgress(100);
+                    setStatusText("Analysis complete!");
+
+                    // wait a moment before navigating to show 100% completion
+                    setTimeout(() => {
+                        navigate("/profile", {
+                            state: {
+                                message: isUpdate ? "Query updated and analysis completed!" : "Query analysis completed successfully!",
+                                type: "success",
+                                // update the profile page with new data for user
+                                updatedQuery: data
+                            },
+                        });
+                    }, 1500);
+
+                    return;
+                }
+
+                // if max attempts reached, stop polling
+                if (attempts >= maxAttempts) {
+                    console.log("Max attempts reached, stopping polling");
+                    clearInterval(interval);
+                    setStatusText("Analysis is taking longer than expected...");
+
+                    setTimeout(() => {
+                        navigate("/profile", {
+                            state: {
+                                message: "Analysis is still in progress. Results will appear in your saved queries when ready.",
+                                type: "info",
+                            },
+                        });
+                    }, 3000);
+                }
 
             } catch (err) {
                 console.error("Error during polling:", err);

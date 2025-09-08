@@ -188,7 +188,7 @@ const UserProfile = () => {
                     });
                 });
 
-                // מיין את השאילתות - אלה עם תוצאות למעלה
+                // Sort queries: those with results first, then by creation date descending
                 const sortedQueries = data.sort((a, b) => {
                     const aHasResults = a.ror_values && a.ror_values.length > 0;
                     const bHasResults = b.ror_values && b.ror_values.length > 0;
@@ -196,7 +196,7 @@ const UserProfile = () => {
                     if (aHasResults && !bHasResults) return -1;
                     if (!aHasResults && bHasResults) return 1;
 
-                    // אם שתיהן באותה קטגוריה, מיין לפי תאריך יצירה
+                    // if both have or both don't have results, sort by creation date descending
                     return new Date(b.created_at) - new Date(a.created_at);
                 });
 
@@ -227,12 +227,12 @@ const UserProfile = () => {
             return [];
         }
 
-        // אם יש רק נתון אחד, השתמש בתקופה הראשונה
+        // if there is only one data point, return just that period
         if (dataLength === 1) {
             return [`${query.year_start} Q${query.quarter_start}`];
         }
 
-        // צור labels לפי מספר הנתונים בפועל
+        // create labels based on actual data length
         const labels = [];
         let currentYear = query.year_start;
         let currentQuarter = query.quarter_start;
@@ -240,7 +240,7 @@ const UserProfile = () => {
         for (let i = 0; i < dataLength; i++) {
             labels.push(`${currentYear} Q${currentQuarter}`);
 
-            // עבור לרבעון הבא
+            // pass to the next quarter
             currentQuarter++;
             if (currentQuarter > 4) {
                 currentQuarter = 1;
@@ -497,59 +497,6 @@ const UserProfile = () => {
                         </div>
                     )}
 
-                    {/* CSS */}
-                    <style jsx>{`
-                .csv-modal-overlay {
-                    position: fixed;
-                    top: 0; left: 0;
-                    width: 100%; height: 100%;
-                    background: rgba(0,0,0,0.5);
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    z-index: 1000;
-                }
-                .csv-modal {
-                    background: #fff;
-                    border-radius: 8px;
-                    width: 90%;
-                    max-width: 800px;
-                    max-height: 80%;
-                    overflow-y: auto;
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-                }
-                .csv-modal-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: 12px 16px;
-                    border-bottom: 1px solid #eee;
-                    background: #f5f5f5;
-                }
-                .csv-modal-content {
-                    padding: 16px;
-                }
-                .csv-table {
-                    width: 100%;
-                    border-collapse: collapse;
-                }
-                .csv-table th, .csv-table td {
-                    border: 1px solid #ddd;
-                    padding: 8px;
-                    text-align: center;
-                }
-                .csv-table th {
-                    background: #f0f0f0;
-                    font-weight: bold;
-                }
-                .close-button {
-                    background: none;
-                    border: none;
-                    cursor: pointer;
-                    font-size: 16px;
-                }
-            `}</style>
-
                     <div className="chart-placeholder">
                         <div className="chart-container">
                             {hasResults ? (
@@ -589,7 +536,7 @@ const UserProfile = () => {
                                         <Line
                                             ref={chartRef}
                                             data={{
-                                                // התאמת labels למספר הנתונים בפועל
+                                                // make labels based on actual data length
                                                 labels: (() => {
                                                     const actualDataLength = query.ror_values ? query.ror_values.length : 0;
 
@@ -649,7 +596,7 @@ const UserProfile = () => {
                                             options={{
                                                 responsive: true,
                                                 maintainAspectRatio: false,
-                                                devicePixelRatio: 2, // לתמונה חדה יותר
+                                                devicePixelRatio: 2, // for sharper rendering
                                                 plugins: {
                                                     legend: {
                                                         position: 'top',

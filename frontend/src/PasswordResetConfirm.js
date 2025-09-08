@@ -45,11 +45,11 @@ function PasswordResetConfirm() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [isTokenExpired, setIsTokenExpired] = useState(false);
   const [isValidatingToken, setIsValidatingToken] = useState(true);
-  
+
   const navigate = useNavigate();
   const { uidb64, token } = useParams();
 
-  // Function to validate token on page load - FIXED VERSION
+  // Function to validate token on page load 
   const validateToken = async () => {
     if (!uidb64 || !token) {
       setErrors(['Invalid password reset link. Please request a new one.']);
@@ -60,12 +60,12 @@ function PasswordResetConfirm() {
 
     try {
       setIsValidatingToken(true);
-      
+
       // Create a validation endpoint request or use GET method if available
       // If your backend supports GET validation, use this:
       const response = await fetch(`http://127.0.0.1:8000/api/v1/auth/password/reset/validate/${uidb64}/${token}/`, {
         method: 'GET',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
         },
       });
@@ -116,12 +116,11 @@ function PasswordResetConfirm() {
 
   // Validate token on component mount
   useEffect(() => {
-    // Choose one of these approaches:
-    
-    // Option 1: Try to validate token (recommended if you have a validation endpoint)
+
+    // it is an option to try to validate token (recommended if you have a validation endpoint)
     // validateToken();
-    
-    // Option 2: Skip validation entirely and let form submission handle it
+
+    // Skip validation entirely and let form submission handle it
     skipTokenValidation();
   }, [uidb64, token]);
 
@@ -147,7 +146,7 @@ function PasswordResetConfirm() {
       const hasUpperCase = /[A-Z]/.test(newPassword1);
       const hasLowerCase = /[a-z]/.test(newPassword1);
       const hasNumbers = /\d/.test(newPassword1);
-      
+
       if (!hasUpperCase || !hasLowerCase || !hasNumbers) {
         validationErrors.push('Password must contain at least one uppercase letter, one lowercase letter, and one number.');
       }
@@ -178,10 +177,10 @@ function PasswordResetConfirm() {
     try {
       const response = await fetch('http://127.0.0.1:8000/api/v1/auth/password/reset/confirm/', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           new_password1: newPassword1,
           new_password2: newPassword2,
           uid: uidb64,
@@ -199,16 +198,16 @@ function PasswordResetConfirm() {
       } else {
         const data = await response.json();
         const backendErrors = handleBackendErrors(data);
-        
+
         // Handle specific error cases
         if (response.status === 400) {
-          const tokenErrors = backendErrors.filter(error => 
-            error.toLowerCase().includes('token') || 
+          const tokenErrors = backendErrors.filter(error =>
+            error.toLowerCase().includes('token') ||
             error.toLowerCase().includes('invalid') ||
             error.toLowerCase().includes('expired') ||
             error.toLowerCase().includes('stale')
           );
-          
+
           if (tokenErrors.length > 0) {
             setIsTokenExpired(true);
             setErrors(['This password reset link has expired or is no longer valid.']);
@@ -240,7 +239,7 @@ function PasswordResetConfirm() {
 
   const getPasswordStrength = (password) => {
     if (!password) return { strength: 0, label: '' };
-    
+
     let strength = 0;
     const checks = {
       length: password.length >= 8,
@@ -249,12 +248,12 @@ function PasswordResetConfirm() {
       numbers: /\d/.test(password),
       special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
     };
-    
+
     strength = Object.values(checks).filter(Boolean).length;
-    
+
     const labels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
     const colors = ['#dc3545', '#fd7e14', '#ffc107', '#20c997', '#28a745'];
-    
+
     return {
       strength: Math.min(strength, 5),
       label: labels[Math.min(strength - 1, 4)] || '',
@@ -271,7 +270,7 @@ function PasswordResetConfirm() {
         <div className="password-reset-confirm-header">
           <div className="logo">REMEZ</div>
         </div>
-        
+
         <div className="password-reset-confirm-form-container">
           <div className="password-reset-confirm-form">
             <div className="loading-icon">⏳</div>
@@ -292,7 +291,7 @@ function PasswordResetConfirm() {
         <div className="password-reset-confirm-header">
           <div className="logo">REMEZ</div>
         </div>
-        
+
         <div className="password-reset-confirm-form-container">
           <div className="password-reset-confirm-form">
             <div className="error-icon">⚠️</div>
@@ -301,19 +300,19 @@ function PasswordResetConfirm() {
               This password reset link has expired or is no longer valid.
             </p>
             <p className="error-description">
-              For your security, password reset links expire after 24 hours. 
+              For your security, password reset links expire after 24 hours.
               Please request a new password reset link to continue.
             </p>
-            
-            <button 
+
+            <button
               className="request-new-reset-button"
               onClick={handleRequestNewReset}
               type="button"
             >
               Request New Reset Link
             </button>
-            
-            <button 
+
+            <button
               className="back-to-login-button secondary"
               onClick={handleBackToLogin}
               type="button"
@@ -333,7 +332,7 @@ function PasswordResetConfirm() {
         <div className="password-reset-confirm-header">
           <div className="logo">REMEZ</div>
         </div>
-        
+
         <div className="password-reset-confirm-form-container">
           <div className="password-reset-confirm-form">
             <div className="success-icon">✓</div>
@@ -344,8 +343,8 @@ function PasswordResetConfirm() {
             <p className="success-note">
               You will be redirected to the login page in a few seconds.
             </p>
-            
-            <button 
+
+            <button
               className="login-redirect-button"
               onClick={handleBackToLogin}
               type="button"
@@ -364,7 +363,7 @@ function PasswordResetConfirm() {
       <div className="password-reset-confirm-header">
         <div className="logo">REMEZ</div>
       </div>
-      
+
       <div className="password-reset-confirm-form-container">
         <div className="password-reset-confirm-form">
           <h1>Reset Your Password</h1>
@@ -402,19 +401,19 @@ function PasswordResetConfirm() {
                   {showPassword1 ? '👁️' : '👁️‍🗨️'}
                 </button>
               </div>
-              
+
               {newPassword1 && (
                 <div className="password-strength">
                   <div className="strength-bar">
-                    <div 
-                      className="strength-fill" 
+                    <div
+                      className="strength-fill"
                       style={{
                         width: `${(passwordStrength.strength / 5) * 100}%`,
                         backgroundColor: passwordStrength.color
                       }}
                     ></div>
                   </div>
-                  <span className="strength-label" style={{color: passwordStrength.color}}>
+                  <span className="strength-label" style={{ color: passwordStrength.color }}>
                     {passwordStrength.label}
                   </span>
                 </div>
@@ -440,13 +439,13 @@ function PasswordResetConfirm() {
                   {showPassword2 ? '👁️' : '👁️‍🗨️'}
                 </button>
               </div>
-              
+
               {newPassword2 && newPassword1 !== newPassword2 && (
                 <div className="password-match-error">
                   Passwords do not match
                 </div>
               )}
-              
+
               {newPassword2 && newPassword1 === newPassword2 && newPassword1 && (
                 <div className="password-match-success">
                   ✓ Passwords match
@@ -482,7 +481,7 @@ function PasswordResetConfirm() {
           </form>
 
           <div className="back-to-login">
-            <button 
+            <button
               className="back-link"
               onClick={handleBackToLogin}
               type="button"

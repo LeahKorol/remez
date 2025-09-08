@@ -142,17 +142,6 @@ function Register() {
       const data = await response.json();
       console.log('Response data:', data);
 
-      // if (response.ok) {
-      //   if (data.token || data.access) {
-      //     localStorage.setItem('token', data.token || data.access);
-      //     toast.success('Registration successful!');
-      //     navigate('/dashboard');
-      //   } else {
-      //     toast.info('Registration successful. Please verify your email before logging in.');
-      //   }
-      //   return;
-      // }
-
       if (response.ok) {
         toast.success('Registration successful! Please check your email and click the verification link to activate your account.');
         navigate('/email-verification-sent');
@@ -257,8 +246,7 @@ function Register() {
             <span>or</span>
           </div>
 
-          {/* Replace the old Google button with the new GoogleAuthButton component */}
-          <GoogleAuthButton 
+          <GoogleAuthButton
             isRegistration={true}
             className="google-login-button"
             size="large"

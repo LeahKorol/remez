@@ -76,8 +76,8 @@
 }
 
 .logout-button svg {
-  font-size: 10rem; 
-  vertical-align: middle; 
+  font-size: 10rem;
+  vertical-align: middle;
 }
 
 /* Sidebar Styles */
@@ -141,7 +141,7 @@
   margin-bottom: 20px;
   flex: 1;
   overflow-y: auto;
-  min-height: 10rem; 
+  min-height: 10rem;
 }
 
 .section-title {
@@ -193,7 +193,8 @@
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-  line-clamp: 2; /* Standard property for compatibility */
+  line-clamp: 2;
+  /* Standard property for compatibility */
   -webkit-box-orient: vertical;
 }
 
@@ -307,7 +308,7 @@
 .chart-wrapper {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   margin-bottom: 20px;
 }
@@ -338,7 +339,8 @@
   gap: 8px;
 }
 
-.zoom-button, .reset-button {
+.zoom-button,
+.reset-button {
   padding: 6px 12px;
   border: 2px solid #2196f3;
   background: white;
@@ -351,7 +353,8 @@
   min-width: 70px;
 }
 
-.zoom-button:hover, .reset-button:hover {
+.zoom-button:hover,
+.reset-button:hover {
   background: #2196f3;
   color: white;
   transform: translateY(-1px);
@@ -412,21 +415,22 @@
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .chart-info-header {
-      flex-direction: column;
-      align-items: stretch;
+    flex-direction: column;
+    align-items: stretch;
   }
-  
+
   .zoom-controls {
-      justify-content: center;
+    justify-content: center;
   }
-  
+
   .chart-container-fixed {
-      height: 300px;
-      padding: 15px;
+    height: 300px;
+    padding: 15px;
   }
-  
-  .zoom-button, .reset-button {
-      flex: 1;
+
+  .zoom-button,
+  .reset-button {
+    flex: 1;
   }
 }
 
@@ -453,7 +457,7 @@
 
 @keyframes spin {
   to {
-      transform: rotate(360deg);
+    transform: rotate(360deg);
   }
 }
 
@@ -486,7 +490,7 @@
   margin-bottom: 20px;
 }
 
-/* Chart section improvements */
+/* Chart section */
 .query-section {
   margin-bottom: 30px;
 }
@@ -524,13 +528,13 @@
   color: #ff9800;
 }
 
-/* Chart container improvements */
+/* Chart container */
 .chart-container {
   min-height: 400px;
   padding: 20px;
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .placeholder-content {
@@ -763,7 +767,7 @@
   border: 1px solid #ddd;
   border-radius: 6px;
   font-size: 16px;
-  text-align: left; 
+  text-align: left;
   box-sizing: border-box;
 }
 
@@ -783,13 +787,13 @@
 
 .mb-2.inline label {
   margin-bottom: 0;
-  flex-shrink: 0; 
-  width: 120px; 
+  flex-shrink: 0;
+  width: 120px;
 }
 
 .mb-2.inline input,
 .mb-2.inline .custom-select-container {
-  flex: 1; 
+  flex: 1;
 }
 
 /* Buttons Style */
@@ -952,7 +956,6 @@
   margin-bottom: 2px;
 }
 
-
 .results-badge {
   background: #4caf50;
   color: white;
@@ -999,7 +1002,7 @@
   cursor: not-allowed;
 }
 
-/* Query Components Style */
+/* Query Components */
 .query-item {
   display: flex;
   justify-content: space-between;
@@ -1065,15 +1068,22 @@
   color: white;
   padding: 16px 24px;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   z-index: 1000;
   animation: slideIn 0.3s ease-in-out;
 }
 
 /* Anomation for slide in */
 @keyframes slideIn {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 /* Responsive Design */
@@ -1110,4 +1120,65 @@
   .search-results {
     width: 85%;
   }
+}
+
+
+.csv-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.csv-modal {
+  background: #fff;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 80%;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.csv-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee;
+  background: #f5f5f5;
+}
+
+.csv-modal-content {
+  padding: 16px;
+}
+
+.csv-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.csv-table th,
+.csv-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: center;
+}
+
+.csv-table th {
+  background: #f0f0f0;
+  font-weight: bold;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
 }

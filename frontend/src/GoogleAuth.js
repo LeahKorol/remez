@@ -157,14 +157,14 @@ export const useGoogleAuth = () => {
 
     try {
       // Show loading toast
-      const loadingToast = toast.loading('מתחבר עם Google...');
+      const loadingToast = toast.loading('login with Google...');
 
       // Get user data from Google
       const googleUser = await googleAuthService.signInWithPopup();
       
       // Update loading message
       toast.update(loadingToast, {
-        render: 'מאמת נתונים...',
+        render: 'Data Validator...',
         type: 'loading'
       });
 
@@ -179,7 +179,7 @@ export const useGoogleAuth = () => {
 
       // Success toast
       toast.update(loadingToast, {
-        render: isRegistration ? 'נרשמת בהצלחה!' : 'התחברת בהצלחה!',
+        render: isRegistration ? 'You have successfully registered!' : 'You have successfully logged in!',
         type: 'success',
         isLoading: false,
         autoClose: 2000
@@ -195,14 +195,14 @@ export const useGoogleAuth = () => {
       setError(error.message);
       
       // Show appropriate error message
-      let errorMessage = 'שגיאה בהתחברות עם Google';
+      let errorMessage = 'Error login to Google';
       
       if (error.message.includes('User not found')) {
-        errorMessage = 'המשתמש לא נמצא. אנא הרשם תחילה.';
+        errorMessage = 'User not found. Please register first.';
       } else if (error.message.includes('already exists')) {
-        errorMessage = 'החשבון כבר קיים. נסה להתחבר במקום להרשם.';
+        errorMessage = 'The account already exists. Try logging in instead of signing up.';
       } else if (error.message.includes('Network error')) {
-        errorMessage = 'בעיית רשת. בדוק את החיבור לאינטרנט.';
+        errorMessage = 'Network problem. Check your internet connection.';
       }
       
       toast.error(errorMessage, {
@@ -234,7 +234,7 @@ export const useGoogleAuth = () => {
         
         if (authResult.access) {
           localStorage.setItem('token', authResult.access);
-          toast.success('התחברת בהצלחה!');
+          toast.success('You have successfully connected!');
           navigate('/profile');
         }
       } catch (loginError) {
@@ -245,7 +245,7 @@ export const useGoogleAuth = () => {
             
             if (registerResult.access) {
               localStorage.setItem('token', registerResult.access);
-              toast.success('נרשמת והתחברת בהצלחה!');
+              toast.success('You have successfully registered and logged in!');
               navigate('/profile');
             }
           } catch (registerError) {
@@ -257,7 +257,7 @@ export const useGoogleAuth = () => {
       }
     } catch (error) {
       console.error('One Tap error:', error);
-      toast.error('שגיאה בהתחברות מהירה');
+      toast.error('Quick connect error');
     } finally {
       setIsLoading(false);
     }
@@ -288,8 +288,8 @@ export const GoogleAuthButton = ({
     signInWithGoogle(isRegistration);
   };
 
-  const buttonText = isRegistration ? 'הרשמה עם Google' : 'התחברות עם Google';
-  const loadingText = isRegistration ? 'נרשם...' : 'מתחבר...';
+  const buttonText = isRegistration ? 'Registration with Google' : 'login with Google';
+  const loadingText = isRegistration ? 'Registering...' : 'Connecting...';
 
   return (
     <button

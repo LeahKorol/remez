@@ -73,7 +73,7 @@ class TokenService {
                 const newToken = await this.refreshAccessToken();
                 this.isRefreshing = false;
                 this.onRefreshed(newToken);
-                
+
                 // Retry original request with new token
                 return this.executeRequest(originalRequest, newToken);
             } catch (error) {
@@ -99,7 +99,7 @@ class TokenService {
 
     async executeRequest(requestConfig, token = null) {
         const accessToken = token || this.getAccessToken();
-        
+
         const config = {
             ...requestConfig,
             headers: {
@@ -130,7 +130,7 @@ export const fetchWithRefresh = async (url, options = {}) => {
         // If unauthorized and we have a refresh token, try to refresh
         if (response.status === 401) {
             const refreshToken = tokenService.getRefreshToken();
-            
+
             if (refreshToken) {
                 try {
                     response = await tokenService.handleTokenRefresh(requestConfig);
