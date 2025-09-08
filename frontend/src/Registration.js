@@ -1,67 +1,49 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { GoogleAuthButton } from './GoogleAuth'; // Import Google auth component
+import { GoogleAuthButton } from './GoogleAuth';
 import './Login.css';
 
 const handleBackendErrors = (data) => {
   let errorMessages = [];
 
   if (data.errors) {
-    if (Array.isArray(data.errors)) {
-      errorMessages = data.errors;
-    } else if (typeof data.errors === 'object') {
+    if (Array.isArray(data.errors)) errorMessages = data.errors;
+    else if (typeof data.errors === 'object') {
       Object.keys(data.errors).forEach((field) => {
         const fieldErrors = data.errors[field];
-        if (Array.isArray(fieldErrors)) {
-          fieldErrors.forEach((error) => {
-            errorMessages.push(`${field}: ${error}`);
-          });
-        } else {
-          errorMessages.push(`${field}: ${fieldErrors}`);
-        }
+        if (Array.isArray(fieldErrors)) fieldErrors.forEach((error) => errorMessages.push(`${field}: ${error}`));
+        else errorMessages.push(`${field}: ${fieldErrors}`);
       });
     }
-  } else if (data.detail) {
-    errorMessages.push(data.detail);
-  } else if (data.message) {
-    errorMessages.push(data.message);
-  } else if (data.non_field_errors) {
-    if (Array.isArray(data.non_field_errors)) {
-      errorMessages = [...errorMessages, ...data.non_field_errors];
-    }
-  }
-
-  if (data.email) {
-    Array.isArray(data.email)
-      ? data.email.forEach((e) => errorMessages.push(`Email: ${e}`))
-      : errorMessages.push(`Email: ${data.email}`);
-  }
-
-  if (data.name) {
-    Array.isArray(data.name)
-      ? data.name.forEach((e) => errorMessages.push(`name: ${e}`))
-      : errorMessages.push(`name: ${data.name}`);
-  }
-
-  if (data.password1) {
-    Array.isArray(data.password1)
-      ? data.password1.forEach((e) => errorMessages.push(`Password: ${e}`))
-      : errorMessages.push(`Password: ${data.password1}`);
-  }
-
-  if (data.password2) {
-    Array.isArray(data.password2)
-      ? data.password2.forEach((e) => errorMessages.push(`Confirm Password: ${e}`))
-      : errorMessages.push(`Confirm Password: ${data.password2}`);
+  } else if (data.detail) errorMessages.push(data.detail);
+  else if (data.message) errorMessages.push(data.message);
+  else if (data.non_field_errors) {
+    if (Array.isArray(data.non_field_errors)) errorMessages = [...errorMessages, ...data.non_field_errors];
   }
 
   return errorMessages.length > 0 ? errorMessages : ['Unknown error occurred.'];
 };
 
+// Check if email exists in DB
+const checkEmailExists = async (email) => {
+  try {
+    const res = await fetch('http://127.0.0.1:8000/api/v1/auth/check-email/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    return data.exists;
+  } catch (err) {
+    console.error('Email check failed:', err);
+    return false;
+  }
+};
+
 function Register() {
   const [email, setEmail] = useState('');
-  const [name, setname] = useState('');
+  const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -71,11 +53,7 @@ function Register() {
   const [hasLetter, setHasLetter] = useState(false);
   const [notCommon, setNotCommon] = useState(true);
 
-  const commonPasswords = [
-    '123456', 'password', '123456789', '12345678', '12345',
-    'qwerty', 'abc123', 'football', 'monkey', 'letmein',
-    '111111', '123123', 'welcome', 'admin', 'passw0rd',
-  ];
+  const commonPasswords = ['123456','password','123456789','12345678','12345','qwerty','abc123','football','monkey','letmein','111111','123123','welcome','admin','passw0rd'];
 
   useEffect(() => {
     setIsLongEnough(password.length >= 8);
@@ -83,80 +61,72 @@ function Register() {
     setNotCommon(!commonPasswords.includes(password.toLowerCase()));
   }, [password]);
 
-  // Check if user is already logged in
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
-      navigate('/profile');
-    }
+    if (token) navigate('/profile');
   }, [navigate]);
 
-  const handlenameChange = (e) => {
+  const handleNameChange = (e) => {
     const value = e.target.value;
-    if (value.length <= 200) {
-      setname(value);
-    } else {
-      toast.error('name cannot exceed 200 characters.');
-    }
+    if (value.length <= 200) setName(value);
+    else toast.error('Name cannot exceed 200 characters.');
   };
 
   const handleRegister = async (e) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Check name length
-    if (name.length > 200) {
-      toast.error('name cannot exceed 200 characters.');
+    // Check if email already exists
+    const emailExists = await checkEmailExists(email);
+    if (emailExists) {
+      toast.error('This email is already registered. Redirecting to login...');
+      navigate('/login', { state: { email } });
       setIsLoading(false);
       return;
     }
 
+    // Name length
+    if (name.length > 200) {
+      toast.error('Name cannot exceed 200 characters.');
+      setIsLoading(false);
+      return;
+    }
+
+    // Password match
     if (password !== confirmPassword) {
       toast.error('Passwords do not match.');
       setIsLoading(false);
       return;
     }
 
+    // Password requirements
     if (!isLongEnough || !hasLetter || !notCommon) {
       toast.error('Password does not meet the requirements.');
       setIsLoading(false);
       return;
     }
 
-    const requestBody = {
-      email,
-      password1: password,
-      password2: confirmPassword,
-      name,
-    };
+    const requestBody = { email, password1: password, password2: confirmPassword, name };
 
     try {
       const response = await fetch('http://127.0.0.1:8000/api/v1/auth/registration/', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
       });
-
       const data = await response.json();
-      console.log('Response data:', data);
 
       if (response.ok) {
-        toast.success('Registration successful! Please check your email and click the verification link to activate your account.');
+        toast.success('Registration successful! Please check your email to verify your account.');
         navigate('/email-verification-sent');
         return;
       }
 
       const backendErrors = handleBackendErrors(data);
       backendErrors.forEach((err) => toast.error(err));
+
     } catch (err) {
       console.error('Network error:', err);
-      console.error('Error details:', {
-        message: err.message,
-        stack: err.stack,
-        name: err.name
-      });
       toast.error('Network error. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
@@ -165,9 +135,7 @@ function Register() {
 
   return (
     <div className="login-container">
-      <div className="login-header">
-        <div className="logo">REMEZ</div>
-      </div>
+      <div className="login-header"><div className="logo">REMEZ</div></div>
 
       <div className="login-form-container">
         <div className="login-form">
@@ -177,64 +145,30 @@ function Register() {
           <form onSubmit={handleRegister}>
             <div className="form-group">
               <label htmlFor="email">Email</label>
-              <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+              <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </div>
 
             <div className="form-group">
-              <label htmlFor="name">username</label>
-              <input
-                type="text"
-                id="name"
-                value={name}
-                onChange={handlenameChange}
-                maxLength={200}
-                required
-              />
-              <small style={{ color: name.length > 180 ? 'orange' : 'gray' }}>
-                {name.length}/200 characters
-              </small>
+              <label htmlFor="name">Username</label>
+              <input type="text" id="name" value={name} onChange={handleNameChange} maxLength={200} required />
+              <small style={{ color: name.length > 180 ? 'orange' : 'gray' }}>{name.length}/200 characters</small>
             </div>
 
             <div className="form-group">
               <label htmlFor="password">Password</label>
-              <input
-                type="password"
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
               <div className="password-guidelines">
-                <p>Password must:</p>
                 <ul>
-                  <li style={{ color: isLongEnough ? 'green' : 'red' }}>
-                    {isLongEnough ? '✔' : '✖'} At least 8 characters
-                  </li>
-                  <li style={{ color: hasLetter ? 'green' : 'red' }}>
-                    {hasLetter ? '✔' : '✖'} Include at least one letter
-                  </li>
-                  <li style={{ color: notCommon ? 'green' : 'red' }}>
-                    {notCommon ? '✔' : '✖'} Not be too common
-                  </li>
+                  <li style={{ color: isLongEnough ? 'green' : 'red' }}>{isLongEnough ? '✔' : '✖'} At least 8 characters</li>
+                  <li style={{ color: hasLetter ? 'green' : 'red' }}>{hasLetter ? '✔' : '✖'} Include at least one letter</li>
+                  <li style={{ color: notCommon ? 'green' : 'red' }}>{notCommon ? '✔' : '✖'} Not be too common</li>
                 </ul>
               </div>
             </div>
 
             <div className="form-group">
               <label htmlFor="confirmPassword">Confirm Password</label>
-              <input
-                type="password"
-                id="confirmPassword"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
+              <input type="password" id="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
             </div>
 
             <button type="submit" className="login-button" disabled={isLoading}>
@@ -242,15 +176,8 @@ function Register() {
             </button>
           </form>
 
-          <div className="separator">
-            <span>or</span>
-          </div>
-
-          <GoogleAuthButton
-            isRegistration={true}
-            className="google-login-button"
-            size="large"
-          />
+          <div className="separator"><span>or</span></div>
+          <GoogleAuthButton isRegistration={true} className="google-login-button" size="large" />
 
           <p className="register-link">
             Already have an account? <a href="/login">Login</a>
