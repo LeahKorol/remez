@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import { GoogleAuthButton } from './GoogleAuth';
 import './Login.css';
 
+// פונקציה לטיפול בשגיאות מה-backend
 const handleBackendErrors = (data) => {
   let errorMessages = [];
 
@@ -25,7 +26,7 @@ const handleBackendErrors = (data) => {
   return errorMessages.length > 0 ? errorMessages : ['Unknown error occurred.'];
 };
 
-// Check if email exists in DB
+// בדיקה אם האימייל כבר קיים בבסיס הנתונים
 const checkEmailExists = async (email) => {
   try {
     const res = await fetch('http://127.0.0.1:8000/api/v1/auth/check-email/', {
@@ -53,7 +54,10 @@ function Register() {
   const [hasLetter, setHasLetter] = useState(false);
   const [notCommon, setNotCommon] = useState(true);
 
-  const commonPasswords = ['123456','password','123456789','12345678','12345','qwerty','abc123','football','monkey','letmein','111111','123123','welcome','admin','passw0rd'];
+  const commonPasswords = [
+    '123456','password','123456789','12345678','12345','qwerty','abc123',
+    'football','monkey','letmein','111111','123123','welcome','admin','passw0rd'
+  ];
 
   useEffect(() => {
     setIsLongEnough(password.length >= 8);
@@ -76,7 +80,7 @@ function Register() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Check if email already exists
+    // בדיקה אם האימייל כבר רשום
     const emailExists = await checkEmailExists(email);
     if (emailExists) {
       toast.error('This email is already registered. Redirecting to login...');
@@ -85,21 +89,17 @@ function Register() {
       return;
     }
 
-    // Name length
+    // בדיקות בסיסיות
     if (name.length > 200) {
       toast.error('Name cannot exceed 200 characters.');
       setIsLoading(false);
       return;
     }
-
-    // Password match
     if (password !== confirmPassword) {
       toast.error('Passwords do not match.');
       setIsLoading(false);
       return;
     }
-
-    // Password requirements
     if (!isLongEnough || !hasLetter || !notCommon) {
       toast.error('Password does not meet the requirements.');
       setIsLoading(false);
@@ -124,7 +124,6 @@ function Register() {
 
       const backendErrors = handleBackendErrors(data);
       backendErrors.forEach((err) => toast.error(err));
-
     } catch (err) {
       console.error('Network error:', err);
       toast.error('Network error. Please check your connection and try again.');
