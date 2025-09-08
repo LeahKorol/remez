@@ -3,6 +3,7 @@ import { FaUser, FaArrowRight, FaPlus, FaTimes, FaEdit, FaTrash, FaSignOutAlt, F
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { fetchWithRefresh } from './tokenService';
+import { useUser } from "./UserContext";
 import './UserProfile.css';
 
 
@@ -69,6 +70,7 @@ const UserProfile = () => {
 
     const navigate = useNavigate();
     const location = useLocation();
+    const { userId } = useUser();
 
     // Handle input changes for year and quarter fields
     const handleInputChange = (e) => {
@@ -916,7 +918,8 @@ const UserProfile = () => {
                 quarter_start: parseInt(quarterStart),
                 quarter_end: parseInt(quarterEnd),
                 drugs: drugs.filter(d => d.id).map(d => d.id),
-                reactions: reactions.filter(r => r.id).map(r => r.id)
+                reactions: reactions.filter(r => r.id).map(r => r.id),
+                user_id: userId
             };
 
             console.log('Submitting payload:', payload);
@@ -968,7 +971,8 @@ const UserProfile = () => {
                 state: {
                     queryData: {
                         ...newQuery,
-                        userEmail: user.email,
+                        userId: userId,
+                        userEmail: user?.email,
                         // Include the actual drug and reaction names for display
                         displayDrugs: drugs.filter(d => d.id).map(d => ({ name: d.name })),
                         displayReactions: reactions.filter(r => r.id).map(r => ({ name: r.name }))

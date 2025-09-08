@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { GoogleAuthButton, GoogleOneTap } from './GoogleAuth'; 
 import { fetchWithRefresh } from './tokenService';
+import { useUser } from './UserContext';
 import './Login.css';
 
 // Handle backend errors
@@ -64,6 +65,7 @@ function Login() {
   const [dynamicButtonType, setDynamicButtonType] = useState(null);
 
   const navigate = useNavigate();
+  const { login } = useUser(); 
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -100,7 +102,15 @@ function Login() {
       if (response.ok) {
         toast.success('Login successful!');
         localStorage.setItem('token', data.access);
-        if (data.refresh) localStorage.setItem('refreshToken', data.refresh);
+        if (data.refresh) {
+          localStorage.setItem('refreshToken', data.refresh);
+        }
+
+        if (data.user_id) {
+          console.log("!!!!!!!!!!!!!!!!!! user_id:", data.user_id);
+          login(data.user_id);
+        }
+        
         navigate('/profile');
         return;
       }

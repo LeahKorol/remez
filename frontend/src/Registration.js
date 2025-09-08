@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { GoogleAuthButton } from './GoogleAuth';
+import { useUser } from './UserContext';
 import './Login.css';
 
-// פונקציה לטיפול בשגיאות מה-backend
+// handle backend errors and return an array of error messages
 const handleBackendErrors = (data) => {
   let errorMessages = [];
 
@@ -26,7 +27,7 @@ const handleBackendErrors = (data) => {
   return errorMessages.length > 0 ? errorMessages : ['Unknown error occurred.'];
 };
 
-// בדיקה אם האימייל כבר קיים בבסיס הנתונים
+// check if email already exists
 const checkEmailExists = async (email) => {
   try {
     const res = await fetch('http://127.0.0.1:8000/api/v1/auth/check-email/', {
@@ -59,6 +60,8 @@ function Register() {
     'football','monkey','letmein','111111','123123','welcome','admin','passw0rd'
   ];
 
+  const { login } = useUser();
+  
   useEffect(() => {
     setIsLongEnough(password.length >= 8);
     setHasLetter(/[A-Za-z]/.test(password));
@@ -80,7 +83,7 @@ function Register() {
     e.preventDefault();
     setIsLoading(true);
 
-    // בדיקה אם האימייל כבר רשום
+    // check if email already exists
     const emailExists = await checkEmailExists(email);
     if (emailExists) {
       toast.error('This email is already registered. Redirecting to login...');
@@ -89,7 +92,7 @@ function Register() {
       return;
     }
 
-    // בדיקות בסיסיות
+    // client-side validations
     if (name.length > 200) {
       toast.error('Name cannot exceed 200 characters.');
       setIsLoading(false);
@@ -117,6 +120,8 @@ function Register() {
       const data = await response.json();
 
       if (response.ok) {
+        if (data.user_id) login(data.user_id);
+        
         toast.success('Registration successful! Please check your email to verify your account.');
         navigate('/email-verification-sent');
         return;
