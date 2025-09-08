@@ -1,5 +1,5 @@
 from django.urls import path, include
-from users.views import CustomRegisterView, password_reset_confirm_redirect, verify_email_api, resend_email_verification
+from users.views import CustomRegisterView, password_reset_confirm_redirect, verify_email_api, resend_email_verification, check_email_exists
 from users.google_auth import google_login, google_register
 from dj_rest_auth.views import PasswordResetConfirmView, PasswordResetView
 
@@ -28,4 +28,6 @@ urlpatterns = [
 
     path("google/login/", google_login, name="google_login"),
     path("google/register/", google_register, name="google_register"),
+
+    path("check-email/", check_email_exists, name="check_email"),
 ]
