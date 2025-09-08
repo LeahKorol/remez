@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { GoogleAuthButton, GoogleOneTap } from './GoogleAuth';
+import { GoogleAuthButton, GoogleOneTap } from './GoogleAuth'; 
 import { fetchWithRefresh } from './tokenService';
 import './Login.css';
 
@@ -204,7 +204,8 @@ function Login() {
 
   return (
     <div className="login-container">
-      <GoogleOneTap />
+      <GoogleOneTap /> 
+
       <div className="login-header"><div className="logo">REMEZ</div></div>
 
       <div className="login-form-container">
