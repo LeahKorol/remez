@@ -19,8 +19,7 @@ import statsmodels.api as sm
 import tqdm
 from matplotlib import pylab as plt
 from statsmodels.stats.outliers_influence import variance_inflation_factor
-
-from src.utils import (
+from utils import (
     ContingencyMatrix,
     QuestionConfig,
     html_from_fig,
@@ -799,6 +798,10 @@ def main(
             logger.debug(f"ROR values: {ror_data.get('ror_values', [])}")
             logger.debug(f"ROR lower bounds: {ror_data.get('ror_lower', [])}")
             logger.debug(f"ROR upper bounds: {ror_data.get('ror_upper', [])}")
+
+    # TO-DO: save results to database after saving to file
+    with open(dir_reports + "/results", "w") as f:
+        f.write(str(plot_data_by_config))
 
     return plot_data_by_config
 

@@ -11,8 +11,8 @@ import defopt
 import numpy as np
 import tqdm
 
-from src import utils
-from src.utils import Quarter, generate_quarters, QuestionConfig
+from utils import Quarter, generate_quarters, QuestionConfig
+import utils
 
 logger = logging.getLogger("FAERS")
 

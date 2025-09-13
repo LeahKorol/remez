@@ -144,7 +144,7 @@ DATABASES = {
         "PASSWORD": os.environ.get("DB_PASSWORD"),
         "HOST": os.environ.get("DB_HOST_POOLED", "localhost"),
         "PORT": os.environ.get("DB_PORT_POOLED", "5432"),
-        "OPTIONS": {"sslmode": "require"},  # Supabase requires SSL
+        # "OPTIONS": {"sslmode": "require"},  # Supabase requires SSL
         "CONN_MAX_AGE": (600 if not is_management_command else 0),
     }
 }
@@ -295,7 +295,7 @@ LOGGING = {
     "loggers": {
         "FAERS": {
             "handlers": ["console"],
-            "level": "INFO",
+            "level": "DEBUG",
             "propagate": False,
         },
     },
