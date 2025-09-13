@@ -1,5 +1,10 @@
 from fastapi import APIRouter, BackgroundTasks
-from services.pipeline_runner import run_pipeline, get_status
+
+# import the pipeline runner functions
+try:
+    from fast_api.services.pipeline_runner import run_pipeline, get_status
+except ModuleNotFoundError:
+    from ..services.pipeline_runner import run_pipeline, get_status
 
 router = APIRouter()
 

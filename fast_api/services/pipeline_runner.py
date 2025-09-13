@@ -1,50 +1,39 @@
-import subprocess
-from services.db import get_query, save_results
-from pipeline.pipeline import Faers_Pipeline
-import luigi
 import os
+import defopt
+from mark_data_runner import mark_data
+from report import main as report_main
 
-# In-memory status tracking (simplest approach)
-STATUS = {}
-
-def run_pipeline(query_id: int):
+def run_pipeline(
+    dir_raw_data,
+    dir_config,
+    dir_marked_data,
+    dir_reports,
+    output_raw_exposure_data=False,
+):
     """
-    Runs the pipeline for a given query ID.
+    רץ את כל הצינור:
+    1. סימון הנתונים
+    2. הפקת הדוחות
     """
-    STATUS[query_id] = "running"
-    query = get_query(query_id)
-    if not query:
-        STATUS[query_id] = "not_found"
-        return
+    os.makedirs(dir_marked_data, exist_ok=True)
+    os.makedirs(dir_reports, exist_ok=True)
 
-    # Example: get parameters from query
-    year_q_from = f"{query.year_start}q{query.quarter_start}"
-    year_q_to = f"{query.year_end}q{query.quarter_end}"
+    # שלב 1: סימון הנתונים
+    mark_data(
+        dir_raw_data=dir_raw_data,
+        dir_config=dir_config,
+        dir_marked_data=dir_marked_data,
+    )
 
-    # Run Luigi pipeline
-    try:
-        luigi.build(
-            [
-                Faers_Pipeline(
-                    year_q_from=year_q_from,
-                    year_q_to=year_q_to
-                )
-            ],
-            local_scheduler=True
-        )
-        # Optionally, retrieve results from the pipeline output
-        results = {
-            "ror_values": [],  # Implement actual logic
-            "ror_lower": [],
-            "ror_upper": []
-        }
-        save_results(query_id, results)
-        STATUS[query_id] = "finished"
-    except Exception as e:
-        STATUS[query_id] = f"error: {str(e)}"
+    # שלב 2: הפקת דוחות
+    report_main(
+        dir_marked_data=dir_marked_data,
+        dir_raw_data=dir_raw_data,
+        config_dir=dir_config,
+        dir_reports=dir_reports,
+        output_raw_exposure_data=output_raw_exposure_data,
+    )
 
-def get_status(query_id: int):
-    """
-    Returns the current status for a given query ID.
-    """
-    return {"query_id": query_id, "status": STATUS.get(query_id, "not_started")}
+
+if __name__ == "__main__":
+    defopt.run(run_pipeline)

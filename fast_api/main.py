@@ -1,5 +1,11 @@
 from fastapi import FastAPI
-from routers import pipeline
+
+# import the pipeline router
+try:
+    from fast_api.routers import pipeline
+except ModuleNotFoundError:
+    # if it fails, try relative import (for local testing)
+    from .routers import pipeline
 
 app = FastAPI(
     title="Pipeline API",
