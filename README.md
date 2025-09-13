@@ -1,17 +1,15 @@
 # REMEZ
 
-[![Build Status](https://github.com/LeahKorol/remez/actions/workflows/ci.yml/badge.svg)](…)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **REMEZ** is a web application designed to identify and visualize risk signals for pharmaceutical drugs using data-driven analysis.  
-It provides valuable insights by analyzing post-marketing surveillance data (FAERS).
+It provides valuable insights by analyzing post-marketing surveillance data from the FDA Adverse Event Reporting System (FAERS).
 
 This project reimplements the logic from [faers-analysis](https://github.com/Boris-Gorelik/faers-analysis) by Dr. Boris Gorelik, adapting the original CSV-based computations into a scalable, queryable database-backed approach.
 
 ---
 
 ## 🏗️ Architecture
-![Architecture](docs/architecture.png)
 
 **Stack:**
 - Frontend: React, JavaScript, CSS  
