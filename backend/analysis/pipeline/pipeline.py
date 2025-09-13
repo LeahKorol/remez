@@ -2,11 +2,8 @@ import logging
 import os
 
 import luigi
-
-from src import (
-    mark_data,
-    report,
-)
+import mark_data
+import report
 
 # Ensure logging is configured
 logging.basicConfig(level=logging.INFO)
@@ -21,12 +18,21 @@ logging_config = {
 }
 
 
+# Get the directory where this script is located
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+# Go up one level to project root
+# PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+
+
 class Faers_Pipeline(luigi.Task):
-    dir_data = "data"
+    print("Starting FAERS Pipeline...")
+
+    # Use absolute paths based on script location
+    dir_data = os.path.join(PROJECT_ROOT, "data")
     dir_external = os.path.join(dir_data, "external/faers")
     dir_interim = os.path.join(dir_data, "interim")
     dir_processed = os.path.join(dir_data, "processed")
-    config_dir = "config"
+    config_dir = os.path.join(PROJECT_ROOT, "config")
 
     dir_out_report = dir_processed
 
@@ -124,13 +130,17 @@ class Report(luigi.Task):
 
 
 if __name__ == "__main__":
-    luigi.run(
-        [
-            "--local-scheduler",
-            "--Faers-Pipeline-year-q-from",
-            "2020q1",
-            "--Faers-Pipeline-year-q-to",
-            "2020q2",
-        ],
-        main_task_cls=Faers_Pipeline,
-    )
+    # Luigi reads sys.argv - the command line arguments passed to the script
+    luigi.run()
+
+    # Command to run the pipeline directly
+    # luigi.run(
+    #     [
+    #         "--local-scheduler",
+    #         "--Faers-Pipeline-year-q-from",
+    #         "2020q1",
+    #         "--Faers-Pipeline-year-q-to",
+    #         "2020q2",
+    #     ],
+    #     main_task_cls=Faers_Pipeline,
+    # )
