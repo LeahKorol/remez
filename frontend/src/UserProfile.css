@@ -349,7 +349,7 @@
   cursor: pointer;
   font-size: 12px;
   font-weight: 500;
-  transition: all 0.3s ease;
+  transition: all 0.7s ease;
   min-width: 70px;
 }
 
@@ -380,7 +380,9 @@
 
 .chart-container-fixed canvas {
   transition: transform 0.3s ease;
+  transform-origin: top left;
   cursor: crosshair;
+  overflow: auto;
 }
 
 /* Compact info section */
