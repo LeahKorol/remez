@@ -1,5 +1,6 @@
 import logging
 import os
+import shutil
 
 import luigi
 import mark_data
@@ -19,25 +20,42 @@ logging_config = {
 
 
 # Get the directory where this script is located
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
-# Go up one level to project root
-# PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Directory for the output of pipeline tasks
+PIPELINE_OUTPUT_DIR = os.path.join(SCRIPT_DIR, "pipeline_output")
 
 
 class Faers_Pipeline(luigi.Task):
-    print("Starting FAERS Pipeline...")
-
-    # Use absolute paths based on script location
-    dir_data = os.path.join(PROJECT_ROOT, "data")
-    dir_external = os.path.join(dir_data, "external/faers")
-    dir_interim = os.path.join(dir_data, "interim")
-    dir_processed = os.path.join(dir_data, "processed")
-    config_dir = os.path.join(PROJECT_ROOT, "config")
-
-    dir_out_report = dir_processed
-
     year_q_from = luigi.Parameter(default="2013q1")
     year_q_to = luigi.Parameter(default="2023q1")
+    query_id = luigi.OptionalParameter(default=None)
+
+    # Use absolute paths based on script location
+    dir_data = os.path.join(SCRIPT_DIR, "data")
+    dir_external = os.path.join(dir_data, "external/faers")
+    config_dir = os.path.join(SCRIPT_DIR, "config")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Use query_id for paths of tasks output if query_id was spesified
+        self.dir_internal = (
+            os.path.join(PIPELINE_OUTPUT_DIR, f"{self.query_id}")
+            if self.query_id
+            else PIPELINE_OUTPUT_DIR
+        )
+        self.dir_interim = os.path.join(self.dir_internal, "interim")
+        self.dir_processed = os.path.join(self.dir_internal, "processed")
+
+        # Clean up any existing directory for this query
+        # This prevents parallel processing of same query_id
+        if os.path.exists(self.dir_internal):
+            logger.warning(
+                f"Removing existing processing directory for query {self.query_id}"
+            )
+            shutil.rmtree(self.dir_internal)
+            logger.info(f"Cleaned up existing directory: {self.dir_internal}")
 
     def requires(self):
         # mark the data
