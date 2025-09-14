@@ -69,11 +69,11 @@ class Faers_Pipeline(luigi.Task):
         yield marked
 
         # generate reports
-        yielded_report = Report(
+        report = Report(
             dir_marked_data=os.path.dirname(marked.output().path),
             dir_raw_data=self.dir_external,
             config_dir=self.config_dir,
-            dir_reports=self.output().path,
+            dir_reports=os.path.join(self.dir_processed, "reports"),
             output_raw_exposure_data=True,
             dependency_params={
                 "mark_the_data": marked.param_kwargs,
@@ -82,7 +82,7 @@ class Faers_Pipeline(luigi.Task):
         yield yielded_report
 
     def output(self):
-        return luigi.LocalTarget(os.path.join(self.dir_processed, "reports"))
+        return luigi.LocalTarget(self.dir_processed)
 
 
 class MarkTheData(luigi.Task):
@@ -96,7 +96,7 @@ class MarkTheData(luigi.Task):
     version = luigi.Parameter(default="v3")
 
     def output(self):
-        return luigi.LocalTarget(os.path.join(self.dir_out, "_SUCCESS"))
+        return luigi.LocalTarget(os.path.join(self.dir_out, "_MARK_DATA"))
 
     def run(self):
         os.makedirs(self.dir_out, exist_ok=True)
@@ -130,7 +130,7 @@ class Report(luigi.Task):
         return MarkTheData(**self.dependency_params.get("mark_the_data", {}))
 
     def output(self):
-        return luigi.LocalTarget(os.path.join(self.dir_reports, "output.txt"))
+        return luigi.LocalTarget(os.path.join(self.dir_reports, "_REPORT"))
 
     def run(self):
         os.makedirs(self.dir_reports, exist_ok=True)
