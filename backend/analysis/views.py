@@ -1,8 +1,4 @@
 import logging
-import os
-import subprocess
-import sys
-from datetime import datetime
 
 from django.conf import settings
 from django.shortcuts import get_object_or_404
@@ -14,6 +10,7 @@ from rest_framework.response import Response
 
 from analysis.constants import PIPELINE_DEMO_DATA
 from analysis.models import DrugName, Query, ReactionName
+from analysis.pipeline.trigger_pipeline import run_luigi_pipeline
 from analysis.serializers import (
     DrugNameSerializer,
     QuerySerializer,
@@ -66,70 +63,29 @@ class QueryViewSet(viewsets.ModelViewSet):
         if settings.NUM_DEMO_QUARTERS >= 0:
             save_kwards.update(self.get_demo_data())
         else:
-            # Calculate ror_values, ror_lower, ror_upper
+            query = serializer.save(**save_kwards)
+            # Trigger the pipeline to calculate ror_values, ror_lower, ror_upper
             try:
-                # Use the same Python executable that Django is using
-                python_executable = sys.executable
-
-                # Get project root dynamically
-                project_root = getattr(
-                    settings,
-                    "BASE_DIR",
-                    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                )
-
-                # Build pipeline script path relative to project root
-                pipeline_script = os.path.join(
-                    project_root, "analysis", "pipeline", "pipeline.py"
-                )
-
                 year_start = serializer.validated_data["year_start"]
                 year_end = serializer.validated_data["year_end"]
 
-                querter_start = serializer.validated_data["quarter_start"]
+                quarter_start = serializer.validated_data["quarter_start"]
                 quarter_end = serializer.validated_data["quarter_end"]
 
-                year_q_from = f"{year_start}q{querter_start}"
-                year_q_to = f"{year_end}q{quarter_end}"
-
-                logger.debug("year_q_from: {year_q_from}")
-                logger.debug("year_q_to: {year_q_to}")
-
-                cmd = [
-                    python_executable,
-                    pipeline_script,
-                    "Faers_Pipeline",
-                    f"--Faers-Pipeline-year-q-from={year_q_from}",
-                    f"--Faers-Pipeline-year-q-to={year_q_to}",
-                ]
-
-                logger.debug(f"Using Python: {python_executable}")
-                logger.debug(f"Project root: {project_root}")
-                logger.debug(f"Pipeline script: {pipeline_script}")
-                logger.info(f"Starting Luigi pipeline: {' '.join(cmd)}")
-
-                # Redirect output to file
-                log_filename = (
-                    f"luigi_pipeline_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-                )
-                log_file = open(log_filename, "w")
-
-                process = subprocess.Popen(
-                    cmd,
-                    stdout=log_file,
-                    stderr=log_file,
-                    text=True,
-                    bufsize=1,
-                    universal_newlines=True,
-                    cwd=project_root,  # This fixes the relative path issue, so the pipeline can use absolute paths
+                pid = run_luigi_pipeline(
+                    year_start, year_end, quarter_start, quarter_end, query.id
                 )
 
-                logger.info(f"Luigi pipeline started with PID: {process.pid}")
-                logger.debug("Check output in: luigi_pipeline.log")
+                logger.debug(f"Luigi pipeline started with PID: {pid}")
+
             except Exception as e:
-                raise RuntimeError(f"Error running luigi pipeline: {e}")
-
-        serializer.save(**save_kwards)
+                logger.error(f"Error starting Luigi pipeline: {str(e)}")
+                return Response(
+                    {
+                        "error": "Failed to start pipeline",
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
 
     def perform_update(self, serializer):
         """
