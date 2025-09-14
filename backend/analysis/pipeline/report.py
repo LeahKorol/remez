@@ -10,6 +10,7 @@ import os
 import pickle
 from glob import glob
 from typing import Dict, List, Optional, TypeAlias, Union
+import json
 
 import defopt
 import numpy as np
@@ -799,9 +800,13 @@ def main(
             logger.debug(f"ROR lower bounds: {ror_data.get('ror_lower', [])}")
             logger.debug(f"ROR upper bounds: {ror_data.get('ror_upper', [])}")
 
-    # TO-DO: save results to database after saving to file
-    with open(dir_reports + "/results", "w") as f:
-        f.write(str(plot_data_by_config))
+    # Save ror results to file in json format
+    try:
+        with open(os.path.join(dir_reports, "results.json"), "w") as f:
+            json.dump(plot_data_by_config, f, indent=2, ensure_ascii=False)
+    except (TypeError, ValueError) as e:
+        logger.error(f"Failed to serialize data to JSON: {e}")
+        raise
 
     return plot_data_by_config
 
