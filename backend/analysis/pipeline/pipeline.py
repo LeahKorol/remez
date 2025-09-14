@@ -5,6 +5,7 @@ import shutil
 import luigi
 import mark_data
 import report
+import save_to_db
 
 # Ensure logging is configured
 logging.basicConfig(level=logging.INFO)
@@ -30,6 +31,7 @@ class Faers_Pipeline(luigi.Task):
     year_q_from = luigi.Parameter(default="2013q1")
     year_q_to = luigi.Parameter(default="2023q1")
     query_id = luigi.OptionalParameter(default=None)
+    save_results_to_db = luigi.BoolParameter(default=False)
 
     # Use absolute paths based on script location
     dir_data = os.path.join(SCRIPT_DIR, "data")
@@ -38,6 +40,8 @@ class Faers_Pipeline(luigi.Task):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.validate_parameters()
 
         # Use query_id for paths of tasks output if query_id was spesified
         self.dir_internal = (
@@ -56,6 +60,14 @@ class Faers_Pipeline(luigi.Task):
             )
             shutil.rmtree(self.dir_internal)
             logger.info(f"Cleaned up existing directory: {self.dir_internal}")
+
+    def validate_parameters(self):
+        # Validation: can't save to DB without query_id
+        if self.save_results_to_db and not self.query_id:
+            raise luigi.parameter.ParameterException(
+                "Cannot save results to database without query_id. "
+                "Either provide --query-id or set --no-save-results-to-db"
+            )
 
     def requires(self):
         # mark the data
@@ -79,7 +91,18 @@ class Faers_Pipeline(luigi.Task):
                 "mark_the_data": marked.param_kwargs,
             },
         )
-        yield yielded_report
+        yield report
+
+        # save results to db
+        if self.save_results_to_db:
+            saved_results = SaveToDB(
+                dir_processed=self.dir_processed,
+                dependency_params={
+                    "report": report.param_kwargs,
+                },
+                query_id=self.query_id,
+            )
+            yield saved_results
 
     def output(self):
         return luigi.LocalTarget(self.dir_processed)
@@ -146,6 +169,29 @@ class Report(luigi.Task):
             out_file.write("\n")
             out_file.write(f"Version: {self.version}")
 
+
+class SaveToDB(luigi.Task):
+    dir_processed = luigi.Parameter(default="data/processed")
+    dependency_params = luigi.DictParameter(default={})
+    version = luigi.Parameter(default="v3")
+    query_id = luigi.Parameter()
+
+    def requires(self):
+        return Report(**self.dependency_params.get("report", {}))
+
+    def output(self):
+        return luigi.LocalTarget(os.path.join(self.dir_processed, "_DB_SAVED"))
+
+    def run(self):
+        results_file = os.path.join(self.dir_processed, "reports", "results.json")
+
+        save_to_db.save_ror_values(results_file=results_file, query_id=self.query_id)
+
+        # Write marker to indicate success
+        with self.output().open("w") as out_file:
+            out_file.write(f"Results were saved to DB using data from:{results_file}")
+            out_file.write("\n")
+            out_file.write(f"Version: {self.version}")
 
 if __name__ == "__main__":
     # Luigi reads sys.argv - the command line arguments passed to the script
