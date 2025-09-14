@@ -33,7 +33,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', '{settings.SETTINGS_MODULE}')
 django.setup()
 import luigi
 from analysis.pipeline.pipeline import Faers_Pipeline
-task = Faers_Pipeline(year_q_from='{year_q_from}', year_q_to='{year_q_to}', query_id='{query_id}')
+task = Faers_Pipeline(year_q_from='{year_q_from}', year_q_to='{year_q_to}', query_id={query_id}, save_results_to_db={True})
 result = luigi.build([task], workers=1, local_scheduler=True, detailed_summary=True)
 exit(0 if result.scheduling_succeeded else 1)
 """

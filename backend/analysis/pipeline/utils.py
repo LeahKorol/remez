@@ -2,16 +2,16 @@ import io
 import json
 import logging
 import os
-from collections import namedtuple
-from glob import glob
-
-import pandas as pd
-import numpy as np
-import scipy.stats as stats
 import re
+from glob import glob
+from pathlib import Path
+from typing import Any, Dict, Union
+
+import numpy as np
+import pandas as pd
+import scipy.stats as stats
 
 logger = logging.getLogger("FAERS")
-import tqdm
 import base64
 
 
@@ -111,7 +111,6 @@ class ContingencyMatrix:
                 except:
                     tbl = pd.DataFrame(columns=["exposure", "outcome", "n"])
             else:
-
                 for c in ["exposure", "outcome", "n"]:
                     assert c in tbl.columns
                 for c in ["exposure", "outcome"]:
@@ -347,6 +346,43 @@ def compute_df_uniqueness(df, cols=None, do_print=False, print_prefix=None):
     frac_unique = n_unique / n_total
     if do_print:
         print(
-            f"{print_prefix}Of {n_total:6,d} entries {n_unique:6,d} are unique ({frac_unique*100:.1f}%)"
+            f"{print_prefix}Of {n_total:6,d} entries {n_unique:6,d} are unique ({frac_unique * 100:.1f}%)"
         )
     return frac_unique
+
+
+def get_ror_fields(json_file: Union[str, Path]) -> Dict[str, Any]:
+    """Extract ROR fields from the JSON file that main function of report.py creates
+
+    Args:
+        json_file: Path to the JSON file containing ROR data
+
+    Returns:
+        Dictionary with ror_values, ror_lower, and ror_upper
+
+    Raises:
+        FileNotFoundError: If the JSON file doesn't exist
+        KeyError: If expected keys are missing from the JSON structure
+        json.JSONDecodeError: If the file contains invalid JSON
+    """
+    try:
+        with open(json_file, "r", encoding="utf-8") as f:
+            file_content = json.load(f)
+
+        # Access the ROR data structure
+        if not file_content:
+            raise KeyError("JSON file is empty")
+    
+        # Get first key - the website enables submit one query only at the same time
+        first_key = next(iter(file_content))
+    
+        ror_data = file_content[first_key]["initial_data"]["ror_data"]
+
+        return {
+            "ror_values": ror_data["ror_values"],
+            "ror_lower": ror_data["ror_lower"],
+            "ror_upper": ror_data["ror_upper"],
+        }
+
+    except (FileNotFoundError, KeyError, IndexError, json.JSONDecodeError) as e:
+        raise ValueError(f"Error processing ROR data from {json_file}: {e}")
