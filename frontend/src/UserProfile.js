@@ -17,6 +17,7 @@ import {
     Title,
     Tooltip,
     Legend,
+    Filler,
 } from 'chart.js';
 
 ChartJS.register(
@@ -26,7 +27,8 @@ ChartJS.register(
     LineElement,
     Title,
     Tooltip,
-    Legend
+    Legend,
+    Filler,
 );
 
 
@@ -253,6 +255,7 @@ const UserProfile = () => {
         return labels;
     };
 
+    
     const QueryDetailsView = ({ query }) => {
         const chartRef = useRef(null);
 
@@ -561,51 +564,65 @@ const UserProfile = () => {
                                                     console.log(`Generated ${labels.length} labels for ${actualDataLength} data points:`, labels);
                                                     return labels;
                                                 })(),
+                                                
                                                 datasets: [
+                                                    // Lower CI line (for fill reference)
+                                                    {
+                                                        label: 'Lower CI',
+                                                        data: query.ror_lower.map(val => Math.log10(val || 0.1)),
+                                                        borderColor: 'rgba(76, 175, 80, 0.8)',
+                                                        backgroundColor: 'transparent',
+                                                        fill: false,
+                                                        pointRadius: 0,
+                                                        pointHoverRadius: 3,
+                                                        tension: 0.3,
+                                                        borderWidth: 1,
+                                                        borderDash: [3, 3],
+                                                    },
+                                                    // ROR main line (fills down to Lower CI)
                                                     {
                                                         label: 'ROR (Log₁₀)',
                                                         data: query.ror_values.map(val => Math.log10(val || 0.1)),
                                                         borderColor: '#2196f3',
-                                                        backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                                                        fill: false,
+                                                        backgroundColor: 'rgba(76, 175, 80, 0.3)',
+                                                        fill: '-1', // Fill down to Lower CI
                                                         tension: 0.3,
                                                         pointRadius: 4,
                                                         pointHoverRadius: 6,
-                                                        borderWidth: 2,
+                                                        borderWidth: 3,
+                                                        pointBackgroundColor: '#2196f3',
+                                                        pointBorderColor: '#fff',
+                                                        pointBorderWidth: 2,
                                                     },
+                                                    // Upper CI line (fills down to ROR)
                                                     {
-                                                        label: 'Upper CI (Log₁₀)',
+                                                        label: 'Upper CI',
                                                         data: query.ror_upper.map(val => Math.log10(val || 0.1)),
-                                                        borderColor: '#f44336',
-                                                        borderDash: [5, 5],
-                                                        fill: false,
-                                                        pointRadius: 2,
+                                                        borderColor: 'rgba(244, 67, 54, 0.8)',
+                                                        backgroundColor: 'rgba(244, 67, 54, 0.2)',
+                                                        fill: '-1', // Fill down to ROR line
+                                                        pointRadius: 0,
+                                                        pointHoverRadius: 3,
                                                         tension: 0.3,
                                                         borderWidth: 1,
-                                                    },
-                                                    {
-                                                        label: 'Lower CI (Log₁₀)',
-                                                        data: query.ror_lower.map(val => Math.log10(val || 0.1)),
-                                                        borderColor: '#4caf50',
-                                                        borderDash: [5, 5],
-                                                        fill: false,
-                                                        pointRadius: 2,
-                                                        tension: 0.3,
-                                                        borderWidth: 1,
-                                                    },
+                                                        borderDash: [3, 3],
+                                                    }
                                                 ],
                                             }}
                                             options={{
                                                 responsive: true,
                                                 maintainAspectRatio: false,
-                                                devicePixelRatio: 2, // for sharper rendering
+                                                devicePixelRatio: 2,
                                                 plugins: {
                                                     legend: {
                                                         position: 'top',
                                                         labels: {
                                                             usePointStyle: true,
                                                             padding: 15,
-                                                            font: { size: 12 }
+                                                            font: { size: 12 },
+                                                            filter: function (item, chart) {
+                                                                return true;
+                                                            }
                                                         }
                                                     },
                                                     title: {
@@ -625,24 +642,30 @@ const UserProfile = () => {
                                                         callbacks: {
                                                             label: function (context) {
                                                                 const originalValue = Math.pow(10, context.parsed.y);
+                                                                const datasetIndex = context.datasetIndex;
 
-                                                                if (context.datasetIndex === 0) {
+                                                                if (datasetIndex === 2) { // Main ROR line
                                                                     return `ROR: ${originalValue.toFixed(3)} (Log₁₀: ${context.parsed.y.toFixed(3)})`;
-                                                                } else if (context.datasetIndex === 1) {
+                                                                } else if (datasetIndex === 0) { // Upper CI
                                                                     return `Upper CI: ${originalValue.toFixed(3)} (Log₁₀: ${context.parsed.y.toFixed(3)})`;
-                                                                } else {
+                                                                } else if (datasetIndex === 1) { // Lower CI
                                                                     return `Lower CI: ${originalValue.toFixed(3)} (Log₁₀: ${context.parsed.y.toFixed(3)})`;
                                                                 }
+                                                                return '';
                                                             },
                                                             footer: function (context) {
                                                                 if (context.length > 0) {
-                                                                    const rorValue = Math.pow(10, context[0].parsed.y);
-                                                                    if (rorValue > 1) {
-                                                                        return 'Higher than baseline reporting';
-                                                                    } else if (rorValue < 1) {
-                                                                        return 'Lower than baseline reporting';
-                                                                    } else {
-                                                                        return 'Baseline reporting level';
+                                                                    // Find the ROR value (dataset index 2)
+                                                                    const rorContext = context.find(c => c.datasetIndex === 2);
+                                                                    if (rorContext) {
+                                                                        const rorValue = Math.pow(10, rorContext.parsed.y);
+                                                                        if (rorValue > 1) {
+                                                                            return 'Higher than baseline reporting';
+                                                                        } else if (rorValue < 1) {
+                                                                            return 'Lower than baseline reporting';
+                                                                        } else {
+                                                                            return 'Baseline reporting level';
+                                                                        }
                                                                     }
                                                                 }
                                                                 return '';
@@ -717,6 +740,7 @@ const UserProfile = () => {
                                             <div className="info-text">
                                                 <strong>About this analysis:</strong>
                                                 Values shown in logarithmic scale (Log₁₀). ROR {'>'} 1.0 indicates increased reporting probability.
+                                                The shaded area represents the confidence interval.
                                                 <br />
                                                 <strong>Requested periods:</strong> {(() => {
                                                     const startYear = query.year_start;
