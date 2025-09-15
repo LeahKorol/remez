@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaUser, FaArrowRight, FaPlus, FaTimes, FaEdit, FaTrash, FaSignOutAlt, FaChevronDown, FaEye, FaFileCsv, FaFileImage, FaArrowDown } from 'react-icons/fa';
+import { FaUser, FaArrowRight, FaPlus, FaTimes, FaEdit, FaTrash, FaSignOutAlt, FaChevronDown, FaEye, FaFileCsv, FaFileImage, FaArrowDown, FaSearchPlus } from 'react-icons/fa';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { fetchWithRefresh } from './tokenService';
@@ -69,6 +69,11 @@ const UserProfile = () => {
 
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState('');
+
+    const [zoomLevel, setZoomLevel] = useState(1);
+    const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
     const navigate = useNavigate();
     const location = useLocation();
@@ -255,7 +260,7 @@ const UserProfile = () => {
         return labels;
     };
 
-    
+
     const QueryDetailsView = ({ query }) => {
         const chartRef = useRef(null);
 
@@ -509,7 +514,7 @@ const UserProfile = () => {
                                     <div className="chart-controls">
                                         <div className="chart-info-header">
                                             <h4>ROR Analysis Results (Log₁₀ Scale)</h4>
-                                            <div className="zoom-controls">
+                                            {/* <div className="zoom-controls">
                                                 <button
                                                     className="zoom-button"
                                                     onClick={() => {
@@ -520,7 +525,7 @@ const UserProfile = () => {
                                                         }
                                                     }}
                                                 >
-                                                    🔍 Zoom
+                                                    <FaSearchPlus style={{ marginRight: '6px' }} /> Zoom
                                                 </button>
                                                 <button
                                                     className="reset-button"
@@ -533,189 +538,241 @@ const UserProfile = () => {
                                                 >
                                                     Reset
                                                 </button>
+                                            </div> */}
+                                            <div className="zoom-controls">
+                                                <button
+                                                    className="zoom-button"
+                                                    onClick={() => {
+                                                        setZoomLevel(3); // קפוץ ישר לזום מקסימום
+                                                    }}
+                                                    disabled={zoomLevel > 1}
+                                                    style={{ opacity: zoomLevel > 1 ? 0.5 : 1 }}
+                                                >
+                                                    <FaSearchPlus style={{ marginRight: '6px' }} />
+                                                    {zoomLevel > 1 ? 'Zoomed' : 'Zoom'}
+                                                </button>
+                                                <button
+                                                    className="reset-button"
+                                                    onClick={() => {
+                                                        setZoomLevel(1);
+                                                        setPanOffset({ x: 0, y: 0 });
+                                                    }}
+                                                    disabled={zoomLevel === 1}
+                                                    style={{ opacity: zoomLevel === 1 ? 0.5 : 1 }}
+                                                >
+                                                    Reset
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="chart-container-fixed">
-                                        <Line
-                                            ref={chartRef}
-                                            data={{
-                                                // make labels based on actual data length
-                                                labels: (() => {
-                                                    const actualDataLength = query.ror_values ? query.ror_values.length : 0;
+                                    <div
+                                        className="chart-container-fixed"
+                                        onMouseDown={(e) => {
+                                            if (zoomLevel > 1) {
+                                                setIsDragging(true);
+                                                setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+                                            }
+                                        }}
+                                        onMouseMove={(e) => {
+                                            if (isDragging && zoomLevel > 1) {
+                                                setPanOffset({
+                                                    x: e.clientX - dragStart.x,
+                                                    y: e.clientY - dragStart.y
+                                                });
+                                            }
+                                        }}
+                                        onMouseUp={() => setIsDragging(false)}
+                                        onMouseLeave={() => setIsDragging(false)}
+                                        style={{
+                                            cursor: zoomLevel > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default',
+                                            overflow: 'hidden'
+                                        }}
+                                    >
+                                        <div style={{
+                                            transform: `scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`,
+                                            transformOrigin: 'center center',
+                                            transition: isDragging ? 'none' : 'transform 0.2s ease'
+                                        }}>
+                                            <Line
+                                                ref={chartRef}
+                                                data={{
+                                                    // make labels based on actual data length
+                                                    labels: (() => {
+                                                        const actualDataLength = query.ror_values ? query.ror_values.length : 0;
 
-                                                    if (actualDataLength === 0) return [];
+                                                        if (actualDataLength === 0) return [];
 
-                                                    const labels = [];
-                                                    let currentYear = query.year_start;
-                                                    let currentQuarter = query.quarter_start;
+                                                        const labels = [];
+                                                        let currentYear = query.year_start;
+                                                        let currentQuarter = query.quarter_start;
 
-                                                    for (let i = 0; i < actualDataLength; i++) {
-                                                        labels.push(`${currentYear} Q${currentQuarter}`);
+                                                        for (let i = 0; i < actualDataLength; i++) {
+                                                            labels.push(`${currentYear} Q${currentQuarter}`);
 
-                                                        currentQuarter++;
-                                                        if (currentQuarter > 4) {
-                                                            currentQuarter = 1;
-                                                            currentYear++;
-                                                        }
-                                                    }
-
-                                                    console.log(`Generated ${labels.length} labels for ${actualDataLength} data points:`, labels);
-                                                    return labels;
-                                                })(),
-                                                
-                                                datasets: [
-                                                    // Lower CI line (for fill reference)
-                                                    {
-                                                        label: 'Lower CI',
-                                                        data: query.ror_lower.map(val => Math.log10(val || 0.1)),
-                                                        borderColor: 'rgba(76, 175, 80, 0.8)',
-                                                        backgroundColor: 'transparent',
-                                                        fill: false,
-                                                        pointRadius: 0,
-                                                        pointHoverRadius: 3,
-                                                        tension: 0.3,
-                                                        borderWidth: 1,
-                                                        borderDash: [3, 3],
-                                                    },
-                                                    // ROR main line (fills down to Lower CI)
-                                                    {
-                                                        label: 'ROR (Log₁₀)',
-                                                        data: query.ror_values.map(val => Math.log10(val || 0.1)),
-                                                        borderColor: '#2196f3',
-                                                        backgroundColor: 'rgba(76, 175, 80, 0.3)',
-                                                        fill: '-1', // Fill down to Lower CI
-                                                        tension: 0.3,
-                                                        pointRadius: 4,
-                                                        pointHoverRadius: 6,
-                                                        borderWidth: 3,
-                                                        pointBackgroundColor: '#2196f3',
-                                                        pointBorderColor: '#fff',
-                                                        pointBorderWidth: 2,
-                                                    },
-                                                    // Upper CI line (fills down to ROR)
-                                                    {
-                                                        label: 'Upper CI',
-                                                        data: query.ror_upper.map(val => Math.log10(val || 0.1)),
-                                                        borderColor: 'rgba(244, 67, 54, 0.8)',
-                                                        backgroundColor: 'rgba(244, 67, 54, 0.2)',
-                                                        fill: '-1', // Fill down to ROR line
-                                                        pointRadius: 0,
-                                                        pointHoverRadius: 3,
-                                                        tension: 0.3,
-                                                        borderWidth: 1,
-                                                        borderDash: [3, 3],
-                                                    }
-                                                ],
-                                            }}
-                                            options={{
-                                                responsive: true,
-                                                maintainAspectRatio: false,
-                                                devicePixelRatio: 2,
-                                                plugins: {
-                                                    legend: {
-                                                        position: 'top',
-                                                        labels: {
-                                                            usePointStyle: true,
-                                                            padding: 15,
-                                                            font: { size: 12 },
-                                                            filter: function (item, chart) {
-                                                                return true;
+                                                            currentQuarter++;
+                                                            if (currentQuarter > 4) {
+                                                                currentQuarter = 1;
+                                                                currentYear++;
                                                             }
                                                         }
-                                                    },
-                                                    title: {
-                                                        display: true,
-                                                        text: `${query.name} - Adverse Event Reporting Analysis`,
-                                                        font: { size: 16, weight: 'bold' },
-                                                        padding: 20
-                                                    },
-                                                    tooltip: {
-                                                        mode: 'index',
-                                                        intersect: false,
-                                                        backgroundColor: 'rgba(0,0,0,0.8)',
-                                                        titleColor: '#fff',
-                                                        bodyColor: '#fff',
-                                                        borderColor: '#333',
-                                                        borderWidth: 1,
-                                                        callbacks: {
-                                                            label: function (context) {
-                                                                const originalValue = Math.pow(10, context.parsed.y);
-                                                                const datasetIndex = context.datasetIndex;
 
-                                                                if (datasetIndex === 2) { // Main ROR line
-                                                                    return `ROR: ${originalValue.toFixed(3)} (Log₁₀: ${context.parsed.y.toFixed(3)})`;
-                                                                } else if (datasetIndex === 0) { // Upper CI
-                                                                    return `Upper CI: ${originalValue.toFixed(3)} (Log₁₀: ${context.parsed.y.toFixed(3)})`;
-                                                                } else if (datasetIndex === 1) { // Lower CI
-                                                                    return `Lower CI: ${originalValue.toFixed(3)} (Log₁₀: ${context.parsed.y.toFixed(3)})`;
+                                                        console.log(`Generated ${labels.length} labels for ${actualDataLength} data points:`, labels);
+                                                        return labels;
+                                                    })(),
+
+                                                    datasets: [
+                                                        // Lower CI line (for fill reference)
+                                                        {
+                                                            label: 'Lower CI',
+                                                            data: query.ror_lower.map(val => Math.log10(val || 0.1)),
+                                                            borderColor: '#7b61ff',
+                                                            backgroundColor: 'transparent',
+                                                            fill: false,
+                                                            pointRadius: 0,
+                                                            pointHoverRadius: 3,
+                                                            tension: 0.3,
+                                                            borderWidth: 1,
+                                                            borderDash: [3, 3],
+                                                        },
+                                                        // ROR main line (fills down to Lower CI)
+                                                        {
+                                                            label: 'ROR (Log₁₀)',
+                                                            data: query.ror_values.map(val => Math.log10(val || 0.1)),
+                                                            borderColor: '#7b61ff',
+                                                            backgroundColor: 'rgba(123, 97, 255, 0.2)',
+                                                            fill: '-1', // Fill down to Lower CI
+                                                            tension: 0.3,
+                                                            pointRadius: 4,
+                                                            pointHoverRadius: 6,
+                                                            borderWidth: 3,
+                                                            pointBackgroundColor: '#7b61ff',
+                                                            pointBorderColor: '#fff',
+                                                            pointBorderWidth: 2,
+                                                        },
+                                                        // Upper CI line (fills down to ROR)
+                                                        {
+                                                            label: 'Upper CI',
+                                                            data: query.ror_upper.map(val => Math.log10(val || 0.1)),
+                                                            borderColor: '#7b61ff',
+                                                            backgroundColor: 'rgba(123, 97, 255, 0.2)',
+                                                            fill: '-1', // Fill down to ROR line
+                                                            pointRadius: 0,
+                                                            pointHoverRadius: 3,
+                                                            tension: 0.3,
+                                                            borderWidth: 1,
+                                                            borderDash: [3, 3],
+                                                        }
+                                                    ],
+                                                }}
+                                                options={{
+                                                    responsive: true,
+                                                    maintainAspectRatio: false,
+                                                    devicePixelRatio: 2,
+                                                    plugins: {
+                                                        legend: {
+                                                            position: 'top',
+                                                            labels: {
+                                                                usePointStyle: true,
+                                                                padding: 15,
+                                                                font: { size: 12 },
+                                                                filter: function (item, chart) {
+                                                                    return true;
                                                                 }
-                                                                return '';
-                                                            },
-                                                            footer: function (context) {
-                                                                if (context.length > 0) {
-                                                                    // Find the ROR value (dataset index 2)
-                                                                    const rorContext = context.find(c => c.datasetIndex === 2);
-                                                                    if (rorContext) {
-                                                                        const rorValue = Math.pow(10, rorContext.parsed.y);
-                                                                        if (rorValue > 1) {
-                                                                            return 'Higher than baseline reporting';
-                                                                        } else if (rorValue < 1) {
-                                                                            return 'Lower than baseline reporting';
-                                                                        } else {
-                                                                            return 'Baseline reporting level';
+                                                            }
+                                                        },
+                                                        title: {
+                                                            display: true,
+                                                            text: `${query.name} - Adverse Event Reporting Analysis`,
+                                                            font: { size: 16, weight: 'bold' },
+                                                            padding: 20
+                                                        },
+                                                        tooltip: {
+                                                            mode: 'index',
+                                                            intersect: false,
+                                                            backgroundColor: 'rgba(0,0,0,0.8)',
+                                                            titleColor: '#fff',
+                                                            bodyColor: '#fff',
+                                                            borderColor: '#333',
+                                                            borderWidth: 1,
+                                                            callbacks: {
+                                                                label: function (context) {
+                                                                    const originalValue = Math.pow(10, context.parsed.y);
+                                                                    const datasetIndex = context.datasetIndex;
+
+                                                                    if (datasetIndex === 2) { // Main ROR line
+                                                                        return `ROR: ${originalValue.toFixed(3)} (Log₁₀: ${context.parsed.y.toFixed(3)})`;
+                                                                    } else if (datasetIndex === 0) { // Upper CI
+                                                                        return `Upper CI: ${originalValue.toFixed(3)} (Log₁₀: ${context.parsed.y.toFixed(3)})`;
+                                                                    } else if (datasetIndex === 1) { // Lower CI
+                                                                        return `Lower CI: ${originalValue.toFixed(3)} (Log₁₀: ${context.parsed.y.toFixed(3)})`;
+                                                                    }
+                                                                    return '';
+                                                                },
+                                                                footer: function (context) {
+                                                                    if (context.length > 0) {
+                                                                        // Find the ROR value (dataset index 2)
+                                                                        const rorContext = context.find(c => c.datasetIndex === 2);
+                                                                        if (rorContext) {
+                                                                            const rorValue = Math.pow(10, rorContext.parsed.y);
+                                                                            if (rorValue > 1) {
+                                                                                return 'Higher than baseline reporting';
+                                                                            } else if (rorValue < 1) {
+                                                                                return 'Lower than baseline reporting';
+                                                                            } else {
+                                                                                return 'Baseline reporting level';
+                                                                            }
                                                                         }
                                                                     }
-                                                                }
-                                                                return '';
-                                                            }
-                                                        }
-                                                    }
-                                                },
-                                                scales: {
-                                                    y: {
-                                                        title: {
-                                                            display: true,
-                                                            text: 'ROR (Log₁₀ Scale)',
-                                                            font: { size: 12, weight: 'bold' }
-                                                        },
-                                                        ticks: {
-                                                            font: { size: 11 },
-                                                            callback: function (value) {
-                                                                const originalValue = Math.pow(10, value);
-                                                                if (originalValue >= 1) {
-                                                                    return originalValue.toFixed(1);
-                                                                } else {
-                                                                    return originalValue.toFixed(2);
+                                                                    return '';
                                                                 }
                                                             }
-                                                        },
-                                                        grid: {
-                                                            color: 'rgba(0,0,0,0.1)',
                                                         }
                                                     },
-                                                    x: {
-                                                        title: {
-                                                            display: true,
-                                                            text: 'Time Period',
-                                                            font: { size: 12, weight: 'bold' }
+                                                    scales: {
+                                                        y: {
+                                                            title: {
+                                                                display: true,
+                                                                text: 'ROR (Log₁₀ Scale)',
+                                                                font: { size: 12, weight: 'bold' }
+                                                            },
+                                                            ticks: {
+                                                                font: { size: 11 },
+                                                                callback: function (value) {
+                                                                    const originalValue = Math.pow(10, value);
+                                                                    if (originalValue >= 1) {
+                                                                        return originalValue.toFixed(1);
+                                                                    } else {
+                                                                        return originalValue.toFixed(2);
+                                                                    }
+                                                                }
+                                                            },
+                                                            grid: {
+                                                                color: 'rgba(0,0,0,0.1)',
+                                                            }
                                                         },
-                                                        ticks: {
-                                                            font: { size: 11 }
-                                                        },
-                                                        grid: {
-                                                            color: 'rgba(0,0,0,0.1)',
+                                                        x: {
+                                                            title: {
+                                                                display: true,
+                                                                text: 'Time Period',
+                                                                font: { size: 12, weight: 'bold' }
+                                                            },
+                                                            ticks: {
+                                                                font: { size: 11 }
+                                                            },
+                                                            grid: {
+                                                                color: 'rgba(0,0,0,0.1)',
+                                                            }
                                                         }
+                                                    },
+                                                    interaction: {
+                                                        mode: 'nearest',
+                                                        axis: 'x',
+                                                        intersect: false
                                                     }
-                                                },
-                                                interaction: {
-                                                    mode: 'nearest',
-                                                    axis: 'x',
-                                                    intersect: false
-                                                }
-                                            }}
-                                        />
+                                                }}
+                                            />
+                                        </div>
                                     </div>
 
                                     {/* graph metadata*/}
