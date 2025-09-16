@@ -46,9 +46,9 @@
   
   .google-button-content {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
+    /* align-items: center;
+    justify-content: center; */
+    gap: 102px;
     position: relative;
   }
   
