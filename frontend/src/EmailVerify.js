@@ -45,18 +45,18 @@ function EmailVerify() {
 
   const handleVerificationError = (errorType) => {
     if (errorType === 'expired') {
-      setError('The compatibility link has expired. The link is only valid for 24 hours.');
+      setError('The verification link has expired. The link is only valid for 24 hours.');
       setErrorType('expired');
       setShowResendButton(true);
-      toast.error('The compatibility link has expired. Please request a new link.');
+      toast.error('The verification link has expired. Please request a new link.');
     } else if (errorType === 'notfound') {
-      setError('The appropriate link is invalid or not found in the system.');
+      setError('The verification link is invalid or not found in the system.');
       setErrorType('notfound');
-      toast.error('Invalid matching link');
+      toast.error('Invalid verification link');
     } else if (errorType === 'invalid') {
-      setError('Error matching email. The link may be broken.');
+      setError('Error verifying email. The link may be corrupted.');
       setErrorType('invalid');
-      toast.error('Error matching email. Try again.');
+      toast.error('Error verifying email. Try again.');
     } else {
       setError('Unexpected error in email verification.');
       setErrorType('general');
@@ -176,7 +176,7 @@ function EmailVerify() {
           <div className="login-form">
             <div className="loading-icon">⏳</div>
             <h1>Verifying Email...</h1>
-            <p>Please wait while we verify your email address.</p>
+            <p className="verification-message">Please wait while we verify your email address.</p>
           </div>
         </div>
       </div>
@@ -194,11 +194,11 @@ function EmailVerify() {
           <div className="login-form">
             <div className="success-icon">✅</div>
             <h1>Email Verified Successfully!</h1>
-            <p>Your email has been verified. You can now log in to your account.</p>
+            <p className="verification-message">Your email has been verified. You can now log in to your account.</p>
             <p className="redirect-info">You will be redirected to the login page in a few seconds.</p>
             
             <button 
-              className="login-button"
+              className="login-button primary"
               onClick={handleBackToLogin}
               type="button"
             >
@@ -238,25 +238,20 @@ function EmailVerify() {
             <p>Please check your internet connection and try again.</p>
           )}
           
-          <div className="button-group" style={{ marginTop: '20px' }}>
+          <div className="button-group">
             {showResendButton && (
               <button 
                 className="login-button resend-button"
                 onClick={openResendModal}
                 disabled={isResending}
                 type="button"
-                style={{ 
-                  marginBottom: '10px',
-                  backgroundColor: isResending ? '#ccc' : '#007bff',
-                  cursor: isResending ? 'not-allowed' : 'pointer'
-                }}
               >
-                Send New Verification Link
+                {isResending ? 'Sending...' : 'Send New Verification Link'}
               </button>
             )}
             
             <button 
-              className="login-button"
+              className="login-button secondary"
               onClick={handleBackToLogin}
               type="button"
             >
