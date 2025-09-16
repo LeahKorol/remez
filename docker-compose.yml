@@ -37,6 +37,21 @@ services:
       - /app/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true
+      
+  pipeline-api:
+    build:
+      context: .
+      dockerfile: ./pipeline/Dockerfile
+    ports:
+      - "8080:8000"  # Map to 8080 to avoid conflict with backend service
+    volumes:
+      - ./pipeline:/app/pipeline
+      - ./pipeline/data:/app/pipeline/data
+      - ./pipeline/config:/app/pipeline/config
+      - ./pipeline/pipeline_output:/app/pipeline/pipeline_output
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
 
 volumes:
   db_data:
