@@ -1,0 +1,8 @@
+from django.core.management.base import BaseCommand, CommandError
+
+from ..cli_utils import QuarterRangeArgMixin
+
+
+class Command(QuarterRangeArgMixin, BaseCommand):
+    help = "Run pipeline to generate query results"
+    
