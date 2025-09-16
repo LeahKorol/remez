@@ -1,13 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import './Login.css';
+import './EmailVerificationSent.css';
 
 function EmailVerificationSent() {
   const navigate = useNavigate();
-
-  const handleBackToLogin = () => {
-    navigate('/login');
-  };
 
   const handleBackToRegister = () => {
     navigate('/register');
@@ -46,12 +42,11 @@ function EmailVerificationSent() {
             </ul>
           </div>
           
-          <div className="button-group">       
+          <div className="button-group">
             <button 
               className="login-button secondary"
               onClick={handleBackToRegister}
               type="button"
-              style={{ marginTop: '10px', backgroundColor: '#6c757d' }}
             >
               Back to Registration
             </button>
