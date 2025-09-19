@@ -1,123 +1,137 @@
 <!DOCTYPE html>
-<html dir="rtl" lang="he">
+<html dir="ltr" lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Confirmation</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-        }
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            text-align: center;
-            padding: 30px 20px;
-        }
-        .logo {
-            font-size: 36px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            letter-spacing: 2px;
-        }
-        .content {
-            padding: 40px 30px;
-        }
-        .welcome-text {
-            font-size: 24px;
-            color: #2c3e50;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        .message {
-            font-size: 16px;
-            line-height: 1.8;
-            color: #555;
-            margin-bottom: 30px;
-        }
-        .verify-button {
-            display: inline-block;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white !important;
-            padding: 15px 40px;
-            border-radius: 50px;
-            text-decoration: none;
-            font-weight: bold;
-            text-align: center;
-            transition: transform 0.3s ease;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
-        .verify-button:hover {
-            transform: translateY(-2px);
-        }
-        .button-container {
-            text-align: center;
-            margin: 30px 0;
-        }
-        .footer {
-            background-color: #f8f9fa;
-            padding: 20px;
-            text-align: center;
-            color: #666;
-            font-size: 14px;
-        }
-        .link-text {
-            font-size: 12px;
-            color: #999;
-            margin-top: 20px;
-            word-break: break-all;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Confirmation</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 30px 0;
+      color: #333;
+      direction: ltr;
+    }
+    .container {
+      max-width: 650px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 18px rgba(0,0,0,0.08);
+    }
+    .header {
+      background: linear-gradient(90deg, #7b42e0 0%, #5e68f1 100%);
+      padding: 30px 20px;
+      text-align: center;
+      color: #fff;
+    }
+    .header .logo {
+      font-size: 32px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+    }
+    .header p {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.9;
+    }
+    .content {
+      padding: 40px 30px;
+      text-align: center;
+    }
+    .welcome-banner {
+      display: inline-block;
+      background-color: #f5f0ff;
+      color: #7b42e0;
+      font-size: 14px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+    }
+    .main-title {
+      font-size: 28px;
+      font-weight: 600;
+      margin: 10px 0 20px;
+      background: linear-gradient(90deg, #7b42e0 0%, #5e68f1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .message {
+      font-size: 16px;
+      color: #555;
+      line-height: 1.8;
+      margin-bottom: 35px;
+    }
+    .verify-button {
+      display: inline-block;
+      background-color: #111827;
+      color: #fff !important;
+      text-decoration: none;
+      font-weight: bold;
+      padding: 14px 36px;
+      border-radius: 6px;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.15);
+      transition: background 0.3s ease;
+    }
+    .verify-button:hover {
+      background-color: #000;
+    }
+    .link-text {
+      font-size: 12px;
+      color: #888;
+      margin-top: 25px;
+      word-break: break-all;
+      line-height: 1.6;
+    }
+    .footer {
+      background-color: #fafafa;
+      padding: 20px;
+      font-size: 13px;
+      color: #888;
+      text-align: center;
+    }
+    .footer p {
+      margin: 5px 0;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="logo">REMEZ</div>
-            <div>Welcome to our platform!</div>
-        </div>
-        
-        <div class="content">
-            <h1 class="welcome-text">Welcome, {{ user.username|default:user.email }}!</h1>
-            
-            <div class="message">
-                <p>Thank you for signing up for REMEZ! We're excited to have you on board.</p>
-                <p>To complete your registration and start using our platform, please verify your email address by clicking the button below:</p>
-            </div>
-            
-            <div class="button-container">
-                <a href="{{ activate_url }}" class="verify-button">
-                    Verify Email Address
-                </a>
-            </div>
-            
-            <div class="message">
-                <p><strong>Important:</strong> This verification link will expire in 24 hours for security reasons.</p>
-                <p>If you didn't create an account with REMEZ, you can safely ignore this email.</p>
-            </div>
-            
-            <div class="link-text">
-                <p>If the button doesn't work, copy and paste this link into your browser:</p>
-                <p>{{ activate_url }}</p>
-            </div>
-        </div>
-        
-        <div class="footer">
-            <p>Thank you for choosing REMEZ!</p>
-            <p>If you have any questions, feel free to contact our support team.</p>
-        </div>
+  <div class="container">
+    <div class="header">
+      <div class="logo">REMEZ</div>
+      <p>Welcome to our platform!</p>
     </div>
+
+    <div class="content">
+      <div class="welcome-banner">Email Confirmation</div>
+      <h1 class="main-title">Hello, {{ user.username|default:user.email }}!</h1>
+
+      <div class="message">
+        <p>Thank you for signing up for REMEZ! We're excited to have you on board.</p>
+        <p>To complete your registration and start using our platform, please verify your email address by clicking the button below:</p>
+      </div>
+
+      <a href="{{ activate_url }}" class="verify-button">Verify Email Address</a>
+
+      <div class="message" style="margin-top:35px;">
+        <p><strong>Important:</strong> This verification link will expire in 24 hours for security reasons.</p>
+        <p>If you didn’t create an account with REMEZ, you can safely ignore this email.</p>
+      </div>
+
+      <div class="link-text">
+        <p>If the button doesn’t work, copy and paste this link into your browser:</p>
+        <p>{{ activate_url }}</p>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>Thank you for choosing REMEZ!</p>
+      <p>If you have any questions, feel free to contact our support team.</p>
+    </div>
+  </div>
 </body>
 </html>
