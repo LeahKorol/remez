@@ -9,13 +9,7 @@ import logging
 import os
 import pickle
 from glob import glob
-from typing import Dict, List, Optional, Union
-
-# TypeAlias is only available in Python 3.10+, use this for Python 3.9 compatibility
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias
+from typing import Dict, List, Optional, TypeAlias, Union
 import json
 
 import defopt

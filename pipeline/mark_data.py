@@ -112,8 +112,6 @@ def load_quarder_files(template, quarters, **kwargs) -> pd.DataFrame:
     logger.info(f"Processing quarters: {quarters_to_process}")
     
     for q in quarters_to_process:
-        # Use the correct file naming pattern directly
-        # Expecting q to be a Quarter object that can be converted to string via str(q)
         file_type = os.path.basename(template).split('Q')[0]  # Get 'drug' from 'drugQ.csv.zip'
         fn = os.path.join(os.path.dirname(template), f"{file_type}{q}.csv.zip")
         
@@ -135,15 +133,14 @@ def process_quarters(
     quarters, dir_in, dir_out, config_items, drug_names, reaction_types
 ):
     DEBUG = None
-    # Use the correct file name pattern that matches our actual files
-    template_drug = os.path.join(dir_in, "drugQ.csv.zip")  # This will be handled in load_quarder_files
+    template_drug = os.path.join(dir_in, "drugQ.csv.zip")
     usecols = ["primaryid", "caseid", "drugname"]
     df_drug = load_quarder_files(
         template_drug, quarters, usecols=usecols, nrows=DEBUG
     ).dropna()
     df_drug = mark_drug_data(df_drug, drug_names)
 
-    template_reac = os.path.join(dir_in, "reacQ.csv.zip")  # This will be handled in load_quarder_files
+    template_reac = os.path.join(dir_in, "reacQ.csv.zip")
     usecols = ["primaryid", "caseid", "pt"]
     df_reac = load_quarder_files(template_reac, quarters, usecols=usecols, nrows=DEBUG)
     df_reac = mark_reaction_data(df_reac, reaction_types)
@@ -182,12 +179,12 @@ def process_quarter_wrapper(
         logger.debug(f"Skipping {q} because {output_file} already exists")
         return
     # Process the single quarter
-    template_drug = os.path.join(dir_in, "drugQ.csv.zip")  # This will be handled in load_quarder_files
+    template_drug = os.path.join(dir_in, "drugQ.csv.zip")
     usecols = ["primaryid", "caseid", "drugname"]
     df_drug = load_quarder_files(template_drug, [q], usecols=usecols).dropna()
     df_drug = mark_drug_data(df_drug, drug_names)
 
-    template_reac = os.path.join(dir_in, "reacQ.csv.zip")  # This will be handled in load_quarder_files
+    template_reac = os.path.join(dir_in, "reacQ.csv.zip")
     usecols = ["primaryid", "caseid", "pt"]
     df_reac = load_quarder_files(template_reac, [q], usecols=usecols)
     df_reac = mark_reaction_data(df_reac, reaction_types)
