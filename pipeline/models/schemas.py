@@ -16,7 +16,6 @@ class PipelineRequest(BaseModel):
     year_end: int = Field(..., description="Ending year for analysis", ge=2000, le=2030)
     quarter_start: int = Field(..., ge=1, le=4, description="Starting quarter (1-4)")
     quarter_end: int = Field(..., ge=1, le=4, description="Ending quarter (1-4)")
-    query_id: Optional[int] = Field(None, description="Optional query ID")
 
     def model_post_init(self, __context) -> None:
         """Validate date ranges"""
