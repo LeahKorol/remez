@@ -13,6 +13,8 @@ import EmailVerify from './EmailVerify';
 import EmailVerificationSent from './EmailVerificationSent';
 import UserProfile from './UserProfile';
 import LoadingPage from './LoadingPage';
+import NotFoundPage from './NotFoundPage';
+import ServerErrorPage from './ServerErrorPage';
 
 
 function App() {
@@ -28,7 +30,8 @@ function App() {
         <Route path="/email-verification-sent" element={<EmailVerificationSent />} />
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/loading" element={<LoadingPage />} />
-        <Route path="*" element={<Navigate to="/" />} />
+        <Route path="*" element={<NotFoundPage />} />
+        <Route path="/500" element={<ServerErrorPage />} />
       </Routes>
 
       <ToastContainer
