@@ -89,7 +89,7 @@ class Quarter:
 
 
 def generate_quarters(start, end):
-    while start <= end:  # Include *end* in the list
+    while start < end:
         yield start
         start = start.increment()
 
