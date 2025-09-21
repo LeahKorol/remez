@@ -17,6 +17,8 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from django.shortcuts import render
+from django.views.generic import TemplateView
 
 from drf_spectacular.views import (
     SpectacularAPIView,
@@ -32,6 +34,14 @@ spectacular_settings = {
     ],
 }
 
+# functions for custom error pages
+def custom_page_not_found(request, exception):
+    return render(request, "errors/404.html", status=404)
+
+def custom_server_error(request):
+    return render(request, "errors/500.html", status=500)
+
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     # DRF Schema and Documentation
@@ -43,4 +53,8 @@ urlpatterns = [
     ),
     path("api/v1/auth/", include("users.urls")),
     path("api/v1/analysis/", include("analysis.urls")),
+    path("", TemplateView.as_view(template_name="index.html"), name="react-spa"),
 ]
+
+handler404 = "backend.urls.custom_page_not_found"
+handler500 = "backend.urls.custom_server_error"
