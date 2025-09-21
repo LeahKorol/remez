@@ -4,7 +4,6 @@ Configuration management with environment variables and defaults
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional
 
 from pydantic_settings import BaseSettings
 
@@ -30,8 +29,9 @@ class Settings(BaseSettings):
     DATA_OUTPUT_DIR: str = "pipeline_output"
     CONFIG_DIR: str = "config"
 
-    # Database settings (if needed)
-    DATABASE_URL: Optional[str] = None
+    # Database settings
+    SQLITE_FILE_NAME: str = "database.sqlite3"
+    DATABASE_URL: str = f"sqlite:///{SQLITE_FILE_NAME}"
 
     # File paths
     BASE_DIR: Path = Path(__file__).parent.parent

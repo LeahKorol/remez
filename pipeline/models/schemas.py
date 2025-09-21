@@ -23,40 +23,10 @@ class PipelineRequest(BaseModel):
         if self.year_start > self.year_end:
             raise ValueError("year_start cannot be greater than year_end")
 
-        if self.year_start == self.year_end and self.quarter_start > self.quarter_end:
+        if self.year_start == self.year_end and self.quarter_end <= self.quarter_start:
             raise ValueError(
-                "quarter_start cannot be greater than quarter_end for the same year"
+                "quarter_end must be greater than quarter_start for the same year"
             )
-
-
-class PipelineResponse(BaseModel):
-    """Response model for pipeline execution"""
-
-    task_id: str = Field(..., description="Unique ID for tracking the pipeline task")
-    status: str = Field(..., description="Current status of the pipeline")
-    started_at: str = Field(..., description="Timestamp when the pipeline started")
-
-
-class PipelineStatus(BaseModel):
-    """Model for pipeline status information"""
-
-    task_id: str = Field(..., description="Unique ID for tracking the pipeline task")
-    status: str = Field(..., description="Current status of the pipeline")
-    started_at: str = Field(..., description="Timestamp when the pipeline started")
-    completed_at: Optional[str] = Field(
-        None, description="Timestamp when the pipeline completed"
-    )
-    results_file: Optional[str] = Field(
-        None, description="Path to results file if available"
-    )
-    error: Optional[str] = Field(None, description="Error message if pipeline failed")
-
-
-class PipelineList(BaseModel):
-    """Model for listing all pipeline tasks"""
-
-    tasks: List[PipelineStatus] = Field(..., description="List of all pipeline tasks")
-    total_count: int = Field(..., description="Total number of tasks")
 
 
 class HealthResponse(BaseModel):
