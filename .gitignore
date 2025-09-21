@@ -2,9 +2,19 @@
 
 .github
 
-**/*.txt
+
+# Ignore all txt files except requirements.txt
+*.txt
+!requirements.txt
 
 **/.vscode
 
 **/*.log
+
 node_modules/
+
+__pycache__/
+
+**/config/**
+
+**/pipeline_output/**

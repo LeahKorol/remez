@@ -77,7 +77,7 @@ class Quarter:
             return self.quarter < other.quarter
         else:
             return self.year < other.year
-            
+
     def __le__(self, other):
         return self < other or self == other
 
@@ -382,10 +382,10 @@ def get_ror_fields(json_file: Union[str, Path]) -> Dict[str, Any]:
         # Access the ROR data structure
         if not file_content:
             raise KeyError("JSON file is empty")
-    
+
         # Get first key - the website enables submit one query only at the same time
         first_key = next(iter(file_content))
-    
+
         ror_data = file_content[first_key]["initial_data"]["ror_data"]
 
         return {
