@@ -5,12 +5,12 @@ Added an option to return the graph data points instead of generating them.
 """
 
 # We will use a class instead of a set of functions, mainly for figure management
+import json
 import logging
 import os
 import pickle
 from glob import glob
 from typing import Dict, List, Optional, TypeAlias, Union
-import json
 
 import defopt
 import numpy as np

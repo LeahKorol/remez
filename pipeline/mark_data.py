@@ -1,18 +1,16 @@
-import os
 import logging
-import shutil
-import warnings
+import os
 import pickle
-from multiprocessing import Pool
+import shutil
 from functools import partial
+from multiprocessing import Pool
 
-import pandas as pd
 import defopt
 import numpy as np
+import pandas as pd
 import tqdm
-
-from utils import Quarter, generate_quarters, QuestionConfig
 import utils
+from utils import Quarter, QuestionConfig, generate_quarters
 
 logger = logging.getLogger("FAERS")
 
@@ -65,7 +63,7 @@ def handle_duplicates(df):
     fixed = need_to_fix.groupby("caseid").apply(
         lambda d: handle_duplicates_within_case(d, cols_boolean, cols_rest)
     )
-    logger.info(f"Done fixing, combining the results")
+    logger.info("Done fixing, combining the results")
     ret = pd.concat([already_good, fixed], sort=False)
     uniqueness = utils.compute_df_uniqueness(ret, ["caseid"], do_print=False)
     assert uniqueness == 1.0
@@ -110,22 +108,26 @@ def load_quarder_files(template, quarters, **kwargs) -> pd.DataFrame:
 
     # Log the quarters we're processing
     logger.info(f"Processing quarters: {quarters_to_process}")
-    
+
     for q in quarters_to_process:
-        file_type = os.path.basename(template).split('Q')[0]  # Get 'drug' from 'drugQ.csv.zip'
+        file_type = os.path.basename(template).split("Q")[
+            0
+        ]  # Get 'drug' from 'drugQ.csv.zip'
         fn = os.path.join(os.path.dirname(template), f"{file_type}{q}.csv.zip")
-        
+
         if os.path.exists(fn):
             logger.info(f"Loading file: {fn}")
             tmp = pd.read_csv(fn, dtype=dtype, **kwargs)
             ret.append(tmp)
         else:
             logger.warning(f"File not found: {fn}")
-    
+
     if not ret:
-        logger.error(f"No files found for template {template} and quarters {quarters_to_process}")
+        logger.error(
+            f"No files found for template {template} and quarters {quarters_to_process}"
+        )
         raise ValueError(f"No files found for quarters {quarters_to_process}")
-        
+
     return pd.concat(ret)
 
 
@@ -215,7 +217,6 @@ def main(
     threads=1,
     clean_on_failure=True,
 ):
-
     # --skip-if-exists --year-q-from=$(QUARTER_FROM) --year-q-to=$(QUARTER_TO) --dir-in=$(DIR_FAERS_DEDUPLICATED) --config-dir=$(CONFIG_DIR) --dir-out=$(DIR_MARKED_FILES) -t $(N_THREADS) --no-clean-on-failure
     """
 
@@ -245,24 +246,24 @@ def main(
         logger.info(f"Input directory: {dir_in}")
         logger.info(f"Config directory: {config_dir}")
         logger.info(f"Output directory: {dir_out}")
-        
+
         q_from = Quarter(year_q_from)
         q_to = Quarter(year_q_to)
         logger.info(f"Quarter from: {q_from}, Quarter to: {q_to}")
-        
+
         # Check if data files exist for the specified quarters
         for q in [q_from, q_to]:
             demo_file = os.path.join(dir_in, f"demo{q}.csv.zip")
             drug_file = os.path.join(dir_in, f"drug{q}.csv.zip")
             reac_file = os.path.join(dir_in, f"reac{q}.csv.zip")
-            
+
             if not os.path.exists(demo_file):
                 logger.warning(f"Demo file not found: {demo_file}")
             if not os.path.exists(drug_file):
                 logger.warning(f"Drug file not found: {drug_file}")
             if not os.path.exists(reac_file):
                 logger.warning(f"Reaction file not found: {reac_file}")
-        
+
         config_items = QuestionConfig.load_config_items(config_dir)
         drug_names = set()
         reaction_types = set()
@@ -274,10 +275,10 @@ def main(
         print(
             f"Will analyze {len(drug_names)} drugs and {len(reaction_types)} reactions"
         )
-        
+
         quarters = list(generate_quarters(q_from, q_to))
         logger.info(f"Generated quarters: {quarters}")
-        
+
         process_quarters(
             quarters,
             dir_in=dir_in,

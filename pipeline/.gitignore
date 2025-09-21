@@ -1,0 +1,13 @@
+__pycache__/
+
+.env
+
+.venv
+
+**/config/**
+
+**/pipeline_output/**
+
+**/*.sqlite3
+
+logs/**
