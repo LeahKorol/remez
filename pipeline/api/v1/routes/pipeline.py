@@ -3,16 +3,14 @@ Pipeline API routes
 """
 
 import logging
-from datetime import datetime
 
+from database import SessionDep
 from fastapi import APIRouter, BackgroundTasks, HTTPException, status
+from models.models import TaskBase, TaskResults
 from models.schemas import (
     AvailableDataResponse,
     ErrorResponse,
-    PipelineList,
     PipelineRequest,
-    PipelineResponse,
-    PipelineStatus,
 )
 from services.pipeline_service import pipeline_service
 from starlette.status import HTTP_201_CREATED, HTTP_404_NOT_FOUND
@@ -23,27 +21,28 @@ router = APIRouter()
 
 @router.post(
     "/run",
-    response_model=PipelineResponse,
+    response_model=TaskBase,
     status_code=HTTP_201_CREATED,
     summary="Start a new pipeline execution",
     description="Trigger the FAERS analysis pipeline as a background task",
 )
-async def run_pipeline(request: PipelineRequest, backround_tasks: BackgroundTasks):
+async def run_pipeline(
+    request: PipelineRequest,
+    backround_tasks: BackgroundTasks,
+    session: SessionDep,
+) -> TaskBase:
     """Start a new pipeline execution"""
     try:
         logger.info(
             f"Pipeline run requested: {request.year_start}q{request.quarter_start} to {request.year_end}q{request.quarter_end}"
         )
+        task: TaskResults = TaskResults()
+        session.add(task)
+        session.commit()
+        session.refresh(task)
 
-        # This returns immediately with a task ID
-        task_id = pipeline_service.start_pipeline(request, backround_tasks)
-        started_at = datetime.utcnow().isoformat()
-
-        logger.info(f"Pipeline task {task_id} created successfully")
-
-        return PipelineResponse(
-            task_id=task_id, status="pending", started_at=started_at
-        )
+        pipeline_service.start_pipeline(request, backround_tasks, task)
+        return task
 
     except Exception as e:
         logger.error(
@@ -56,24 +55,24 @@ async def run_pipeline(request: PipelineRequest, backround_tasks: BackgroundTask
 
 
 @router.get(
-    "/status/{task_id}",
-    response_model=PipelineStatus,
-    summary="Get pipeline task status",
-    description="Get the current status of a pipeline task",
+    "/{task_id}",
+    response_model=TaskResults,
+    summary="Get pipeline task results",
+    description="Get the current state of a pipeline task",
     responses={404: {"model": ErrorResponse, "description": "Task not found"}},
 )
-async def get_pipeline_status(task_id: str):
-    """Get the status of a pipeline task"""
+async def get_pipeline_status(task_id: int, session: SessionDep) -> TaskResults:
+    """Get the current state of a pipeline task"""
     try:
-        task = pipeline_service.get_task_status(task_id)
+        task = session.get(TaskResults, task_id)
 
         if not task:
             logger.warning(f"Task not found: {task_id}")
             raise HTTPException(
                 status_code=HTTP_404_NOT_FOUND, detail=f"Task {task_id} not found"
             )
-
-        return PipelineStatus(task_id=task_id, **task)
+        logger.debug(f"Retrieved task {task_id} with status {task.status}")
+        return task
 
     except HTTPException:
         raise
@@ -82,30 +81,6 @@ async def get_pipeline_status(task_id: str):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve task status",
-        )
-
-
-@router.get(
-    "/list",
-    response_model=PipelineList,
-    summary="List all pipeline tasks",
-    description="Get a list of all pipeline tasks and their statuses",
-)
-async def list_pipelines():
-    """List all pipeline tasks"""
-    try:
-        tasks_data = pipeline_service.list_all_tasks()
-        tasks = [PipelineStatus(**task_data) for task_data in tasks_data]
-
-        logger.debug(f"Retrieved {len(tasks)} pipeline tasks")
-
-        return PipelineList(tasks=tasks, total_count=len(tasks))
-
-    except Exception as e:
-        logger.error(f"Error listing pipeline tasks: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve pipeline tasks",
         )
 
 

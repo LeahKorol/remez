@@ -5,13 +5,18 @@ Pipeline service for managing FAERS data processing - Simple Version
 import asyncio
 import functools
 import logging
-import uuid
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List
 
+from constants import RorFields, TaskStatus
 from core.config import get_settings
+from database import create_session
 from fastapi import BackgroundTasks
+from mark_data import main as mark_data_main
+from models.models import TaskResults
 from models.schemas import PipelineRequest
+from report import main as report_main
+from utils import get_ror_fields
 
 logger = logging.getLogger("faers-api.pipeline")
 
@@ -20,39 +25,27 @@ class PipelineService:
     """Service for managing pipeline execution and status"""
 
     def __init__(self):
-        self.tasks: Dict[str, Dict] = {}
+        self.tasks: Dict[int, TaskResults] = {}
         self.settings = get_settings()
 
     def start_pipeline(
-        self, request: PipelineRequest, background_tasks: BackgroundTasks
-    ) -> str:
+        self,
+        request: PipelineRequest,
+        background_tasks: BackgroundTasks,
+        task: TaskResults,
+    ) -> None:
         """Start a new pipeline task - returns immediately"""
-        task_id = str(uuid.uuid4())
-        started_at = datetime.utcnow().isoformat()
 
-        # Create task entry immediately
-        self.tasks[task_id] = {
-            "status": "pending",
-            "started_at": started_at,
-            "completed_at": None,
-            "results_file": None,
-            "error": None,
-        }
-
+        # Create task entry in-memory
+        self.tasks[task.id] = task
         logger.info(
-            f"Created pipeline task {task_id} for {request.year_start}q{request.quarter_start}-{request.year_end}q{request.quarter_end}"
+            f"Created pipeline task {task.id} for {request.year_start}q{request.quarter_start}-{request.year_end}q{request.quarter_end}"
         )
 
         # Wrap run_pipeline_task with asyncio.run because BackgroundTasks requires a synchronous callable
         background_tasks.add_task(
-            lambda: asyncio.run(self._run_pipeline_task(task_id, request))
+            lambda: asyncio.run(self._run_pipeline_task(task.id, request))
         )
-
-        return task_id
-
-    def get_task_status(self, task_id: str) -> Optional[Dict]:
-        """Get the status of a pipeline task"""
-        return self.tasks.get(task_id)
 
     def list_all_tasks(self) -> List[Dict]:
         """List all pipeline tasks"""
@@ -63,6 +56,7 @@ class PipelineService:
 
     def get_available_data(self) -> Dict:
         """Get information about available FAERS data quarters"""
+        # TODO: Use pydantyc model for return type
         try:
             external_dir = self.settings.get_external_data_path()
             available_data = {}
@@ -119,21 +113,14 @@ class PipelineService:
     async def _run_pipeline_task(self, task_id: str, request: PipelineRequest):
         """Background task to run the pipeline"""
         try:
-            # Update status to running
-            self.tasks[task_id]["status"] = "running"
-
-            # Import pipeline modules
-            from mark_data import main as mark_data_main
-            from report import main as report_main
-            from save_to_db import save_ror_values
+            self.update_task_status(task_id, TaskStatus.RUNNING)
 
             year_q_from = f"{request.year_start}q{request.quarter_start}"
             year_q_to = f"{request.year_end}q{request.quarter_end}"
-            query_id = request.query_id
 
             # Setup paths
             pipeline_output_dir = self.settings.get_output_path()
-            dir_internal = pipeline_output_dir / f"{query_id if query_id else 'temp'}"
+            dir_internal = pipeline_output_dir / f"{str(task_id)}"
             dir_interim = dir_internal / "interim"
             dir_processed = dir_internal / "processed"
             dir_reports = dir_processed / "reports"
@@ -150,32 +137,7 @@ class PipelineService:
             config_dir = self.settings.get_config_path()
 
             # Verify data files exist
-            available_quarters = []
-            file_types = ["demo", "drug", "outc", "reac", "ther"]
-
-            for q in range(request.quarter_start, request.quarter_end + 1):
-                quarter = f"{request.year_start}q{q}"
-                has_all_files = True
-
-                for file_type in file_types:
-                    expected_file = dir_external / f"{file_type}{quarter}.csv.zip"
-                    if not expected_file.exists():
-                        logger.warning(f"Missing file: {expected_file}")
-                        has_all_files = False
-
-                if has_all_files:
-                    available_quarters.append(quarter)
-                    logger.info(f"Found complete data for quarter: {quarter}")
-
-            if not available_quarters:
-                raise ValueError(
-                    f"No complete data found for requested quarters {year_q_from} to {year_q_to}"
-                )
-
-            # Log the data files being used
-            logger.info(f"Using FAERS data from: {dir_external}")
-            logger.info(f"Available quarters: {available_quarters}")
-            logger.info(f"Processing from {year_q_from} to {year_q_to}")
+            self.verify_data_files_exists(dir_external, request)
 
             # Step 1: Mark data
             logger.info("Starting Step 1: Mark data")
@@ -192,6 +154,7 @@ class PipelineService:
                     clean_on_failure=self.settings.PIPELINE_CLEAN_ON_FAILURE,
                 ),
             )
+            logger.info("Data marking step completed successfully")
 
             # Step 2: Generate reports
             logger.info("Starting Step 2: Generate reports")
@@ -207,28 +170,124 @@ class PipelineService:
                     return_plot_data_only=True,
                 ),
             )
-
-            # Step 3: Save to DB if needed
             results_file = dir_reports / "results.json"
-            if query_id:
-                logger.info(
-                    f"Starting Step 3: Save results to database for query ID {query_id}"
-                )
-                save_ror_values(results_file=results_file, query_id=query_id)
-
-            # Update task status
-            self.tasks[task_id]["status"] = "completed"
-            self.tasks[task_id]["completed_at"] = datetime.utcnow().isoformat()
-            self.tasks[task_id]["results_file"] = str(results_file)
             logger.info(
-                f"Pipeline completed successfully. Results saved to {results_file}"
+                f"Report step completed successfully. Results saved to {results_file}"
             )
+
+            # Step 3: Save to DB
+            logger.info(
+                f"Starting Step 3: Save results to database for task ID {task_id}"
+            )
+            self.save_task_results(task_id, results_file)
+            logger.info(f"Results for task ID {task_id} saved to database successfully")
+
+            logger.info(f"Pipeline task {task_id} completed successfully")
+
+            # TODO: Step 4: Send ROR values to Django endpoint
+
+            # TODO: Step 5: cleanup intermediate files if needed & remove task_id entry from self.tasks
 
         except Exception as e:
             logger.error(f"Error in pipeline: {str(e)}", exc_info=True)
-            self.tasks[task_id]["status"] = "failed"
-            self.tasks[task_id]["completed_at"] = datetime.utcnow().isoformat()
-            self.tasks[task_id]["error"] = str(e)
+            self.save_failed_task(task_id)
+            logger.info(f"Pipeline task {task_id} marked as failed")
+
+    def update_task_status(self, task_id: int, status: TaskStatus) -> None:
+        """Set task status both in memory and in database"""
+        if task_id not in self.tasks:
+            raise KeyError(f"Task ID {task_id} not found in memory")
+
+        # Update database first (fail fast if DB issue)
+        with create_session() as session:
+            task_db = session.get(TaskResults, task_id)
+            if not task_db:
+                raise ValueError(f"Task {task_id} not found in database")
+
+            task_db.status = status
+            session.add(task_db)
+            session.commit()
+            session.refresh(task_db)
+
+        # Only update memory after successful DB update
+        self.tasks[task_id].status = status
+
+    @staticmethod
+    def verify_data_files_exists(
+        dir_external: str, request: PipelineRequest
+    ) -> List[str]:
+        # Verify data files exist
+        available_quarters = []
+        file_types = ["demo", "drug", "outc", "reac", "ther"]
+
+        for q in range(request.quarter_start, request.quarter_end):
+            quarter = f"{request.year_start}q{q}"
+            has_all_files = True
+
+            for file_type in file_types:
+                expected_file = dir_external / f"{file_type}{quarter}.csv.zip"
+                if not expected_file.exists():
+                    logger.warning(f"Missing file: {expected_file}")
+                    has_all_files = False
+
+            if has_all_files:
+                available_quarters.append(quarter)
+                logger.info(f"Found complete data for quarter: {quarter}")
+
+        if not available_quarters:
+            year_q_from = f"{request.year_start}q{request.quarter_start}"
+            year_q_to = f"{request.year_end}q{request.quarter_end}"
+            raise ValueError(
+                f"No complete data found for requested quarters {year_q_from} to {year_q_to}"
+            )
+        return available_quarters
+
+    def save_task_results(self, task_id: int, results_file: str) -> None:
+        ror_fields = get_ror_fields(results_file)
+        task = self.tasks[task_id]
+
+        # Update task fields
+        task.status = TaskStatus.COMPLETED
+        task.completed_at = datetime.now()
+        task.ror_values = ror_fields[RorFields.ROR_VALUES]
+        task.ror_lower = ror_fields[RorFields.ROR_LOWER]
+        task.ror_upper = ror_fields[RorFields.ROR_UPPER]
+
+        with create_session() as session:
+            task_db = session.get(TaskResults, task_id)
+            if not task_db:
+                raise ValueError(f"Task {task_id} not found in database")
+
+            # Use model_dump(exclude_unset=True) to enable partial updates
+            # It ensures only the fields in task that were assigned will be saved (and not fields with None/default values)
+            task_data = task.model_dump(exclude_unset=True)
+            task_db.sqlmodel_update(task_data)
+            session.add(task_db)
+            session.commit()
+            session.refresh(task_db)
+
+            self.tasks[task_id] = task_db
+
+    def save_failed_task(self, task_id: int) -> None:
+        task = self.tasks[task_id]
+
+        # Update task status
+        task.status = TaskStatus.FAILED
+        task.completed_at = datetime.now()
+
+        with create_session() as session:
+            task_db = session.get(TaskResults, task_id)
+            if not task_db:
+                logger.error(f"Task {task_id} not found in database")
+                return
+
+            task_data = task.model_dump(exclude_unset=True)
+            task_db.sqlmodel_update(task_data)
+            session.add(task_db)
+            session.commit()
+            session.refresh(task_db)
+
+            self.tasks[task_id] = task_db
 
 
 # Global service instance
