@@ -8,8 +8,10 @@ import './UserProfile.css';
 
 
 import { Line } from 'react-chartjs-2';
+import zoomPlugin from 'chartjs-plugin-zoom';
 import {
     Chart as ChartJS,
+    LineController,
     CategoryScale,
     LinearScale,
     PointElement,
@@ -21,6 +23,7 @@ import {
 } from 'chart.js';
 
 ChartJS.register(
+    LineController,
     CategoryScale,
     LinearScale,
     PointElement,
@@ -29,6 +32,7 @@ ChartJS.register(
     Tooltip,
     Legend,
     Filler,
+    zoomPlugin,
 );
 
 
@@ -514,36 +518,11 @@ const UserProfile = () => {
                                     <div className="chart-controls">
                                         <div className="chart-info-header">
                                             <h4>ROR Analysis Results (Log₁₀ Scale)</h4>
-                                            {/* <div className="zoom-controls">
-                                                <button
-                                                    className="zoom-button"
-                                                    onClick={() => {
-                                                        const chartElement = document.querySelector('.chart-container canvas');
-                                                        if (chartElement) {
-                                                            chartElement.style.transform = chartElement.style.transform ? '' : 'scale(1.2)';
-                                                            chartElement.style.transformOrigin = 'center';
-                                                        }
-                                                    }}
-                                                >
-                                                    <FaSearchPlus style={{ marginRight: '6px' }} /> Zoom
-                                                </button>
-                                                <button
-                                                    className="reset-button"
-                                                    onClick={() => {
-                                                        const chartElement = document.querySelector('.chart-container canvas');
-                                                        if (chartElement) {
-                                                            chartElement.style.transform = '';
-                                                        }
-                                                    }}
-                                                >
-                                                    Reset
-                                                </button>
-                                            </div> */}
                                             <div className="zoom-controls">
                                                 <button
                                                     className="zoom-button"
                                                     onClick={() => {
-                                                        setZoomLevel(3); // קפוץ ישר לזום מקסימום
+                                                        setZoomLevel(3); 
                                                     }}
                                                     disabled={zoomLevel > 1}
                                                     style={{ opacity: zoomLevel > 1 ? 0.5 : 1 }}
