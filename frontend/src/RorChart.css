@@ -1,0 +1,55 @@
+.ror-chart-wrapper {
+    height: 420px;
+    position: relative;
+    padding: 8px;
+  }
+  
+  /* Container for Zoom and Reset buttons */
+  .zoom-controls {
+    margin-top: 12px;
+    display: flex;
+    gap: 10px;
+  }
+  
+  /* Base button style */
+  .zoom-btn {
+    padding: 6px 14px;
+    font-size: 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    min-width: 90px;
+  }
+  
+  .zoom-btn:hover {
+    transform: translateY(-1px);
+  }
+  
+  /* Primary style (Zoom) */
+  .zoom-btn.primary {
+    background-color: #7b61ff;
+    color: #fff;
+  }
+  
+  .zoom-btn.primary:hover {
+    background-color: #6b55e0;
+  }
+  
+  /* Secondary style (Reset) */
+  .zoom-btn.secondary {
+    background-color: #f3f3f3;
+    color: #333;
+  }
+  
+  .zoom-btn.secondary:hover {
+    background-color: #e5e5e5;
+  }
+  
+  /* Small hint under buttons */
+  .drag-hint {
+    font-size: 12px;
+    color: #666;
+    margin-top: 4px;
+  }
+  
