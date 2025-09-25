@@ -15,6 +15,7 @@ import UserProfile from './UserProfile';
 import LoadingPage from './LoadingPage';
 import NotFoundPage from './NotFoundPage';
 import ServerErrorPage from './ServerErrorPage';
+import MaintenancePage from './MaintenancePage';
 
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
         <Route path="/loading" element={<LoadingPage />} />
         <Route path="*" element={<NotFoundPage />} />
         <Route path="/500" element={<ServerErrorPage />} />
+        <Route path="/maintenance" element={<MaintenancePage />} />
       </Routes>
 
       <ToastContainer
