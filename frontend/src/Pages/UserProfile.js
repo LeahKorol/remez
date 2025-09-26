@@ -7,6 +7,7 @@ import CustomSelect from "../components/CustomSelect";
 import QueryDetailsView from "../components/QueryDetailsView";
 import { useUser } from "../utils/UserContext";
 import { validateQueryForm } from '../utils/formValidation';
+import SavedQueriesList from '../components/SavedQueriesList';
 import './UserProfile.css';
 
 
@@ -1114,46 +1115,12 @@ const UserProfile = () => {
 
                 <div className="saved-queries-section">
                     <h2 className="section-title">Your Queries</h2>
-                    {savedQueries.length === 0 ? (
-                        <p className="no-queries">No Queries</p>
-                    ) : (
-                        <div className="queries-list">
-                            {savedQueries.map((item) => (
-                                <div key={item.id} className="query-card">
-                                    <div className="query-item">
-                                        <span className="query-name">{item.name}</span>
-                                        <div className="query-actions">
-                                            <button
-                                                type="button"
-                                                className="action-button view-button"
-                                                onClick={() => handleViewQuery(item)}
-                                                title="View Details"
-                                            >
-                                                <FaEye />
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                className="action-button edit-button"
-                                                onClick={() => handleEditQuery(item)}
-                                                title="Edit Query"
-                                            >
-                                                <FaEdit />
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className="action-button delete-button"
-                                                onClick={() => handleDeleteQuery(item.id)}
-                                                title="Delete Query"
-                                            >
-                                                <FaTrash />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                    <SavedQueriesList
+                        savedQueries={savedQueries}
+                        onViewQuery={handleViewQuery}
+                        onEditQuery={handleEditQuery}
+                        onDeleteQuery={handleDeleteQuery}
+                    />
                 </div>
 
                 <div className="nav-buttons">
