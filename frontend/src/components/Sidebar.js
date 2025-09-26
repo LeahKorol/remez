@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { FaUser, FaSignOutAlt, FaArrowRight } from 'react-icons/fa';
 import SavedQueriesList from './SavedQueriesList';
 import '../Pages/UserProfile.css';
@@ -16,6 +16,7 @@ const Sidebar = ({
     handleLogout
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
+    const [visibleCount, setVisibleCount] = useState(10);
 
     // create a memoized filtered list of queries based on the search term
     const filteredQueries = useMemo(() => {
@@ -24,6 +25,13 @@ const Sidebar = ({
             q.name.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [searchTerm, savedQueries]);
+
+    const visibleQueries = filteredQueries.slice(0, visibleCount);
+
+    useEffect(() => {
+        setVisibleCount(10);
+    }, [searchTerm]);
+
 
     return (
         <div className="sidebar">
@@ -86,11 +94,20 @@ const Sidebar = ({
                 />
 
                 <SavedQueriesList
-                    savedQueries={filteredQueries}
+                    savedQueries={visibleQueries}
                     onViewQuery={onViewQuery}
                     onEditQuery={onEditQuery}
                     onDeleteQuery={onDeleteQuery}
                 />
+
+                {visibleCount < filteredQueries.length && (
+                    <button
+                        className="view-more-button"
+                        onClick={() => setVisibleCount(prev => prev + 10)}
+                    >
+                        View More
+                    </button>
+                )}
             </div>
 
             <div className="nav-buttons">
