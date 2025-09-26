@@ -1,3 +1,4 @@
+// formValidation.js
 export const validateQueryForm = ({
     drugs,
     reactions,
@@ -6,9 +7,8 @@ export const validateQueryForm = ({
     quarterStart,
     quarterEnd,
     queryName,
-    setSubmitError
 }) => {
-    setSubmitError('');
+    const errors = [];
 
     const validDrugs = drugs.filter(drug => drug.id !== null);
     const validReactions = reactions.filter(reaction => reaction.id !== null);
@@ -17,23 +17,19 @@ export const validateQueryForm = ({
     const partialReactions = reactions.filter(reaction => reaction.name.trim() && !reaction.id);
 
     if (partialDrugs.length > 0) {
-        setSubmitError("Please select drugs from the search results dropdown, don't just type them.");
-        return false;
+        errors.push("Please select drugs from the search results dropdown, don't just type them.");
     }
 
     if (partialReactions.length > 0) {
-        setSubmitError("Please select reactions from the search results dropdown, don't just type them.");
-        return false;
+        errors.push("Please select reactions from the search results dropdown, don't just type them.");
     }
 
     if (validDrugs.length === 0) {
-        setSubmitError("Please select at least one drug from the search results.");
-        return false;
+        errors.push("Please select at least one drug from the search results.");
     }
 
     if (validReactions.length === 0) {
-        setSubmitError("Please select at least one reaction from the search results.");
-        return false;
+        errors.push("Please select at least one reaction from the search results.");
     }
 
     const startYearInt = parseInt(yearStart);
@@ -42,26 +38,22 @@ export const validateQueryForm = ({
     const endQuarterInt = parseInt(quarterEnd);
 
     if (startYearInt === endYearInt && startQuarterInt === endQuarterInt) {
-        setSubmitError("Analysis requires at least 2 time periods. Please select a longer time range.");
-        return false;
+        errors.push("Analysis requires at least 2 time periods. Please select a longer time range.");
     }
 
     const totalPeriods = (endYearInt - startYearInt) * 4 + (endQuarterInt - startQuarterInt + 1);
     if (totalPeriods > 40) {
-        setSubmitError("Please select a shorter time period (maximum 10 years).");
-        return false;
+        errors.push("Please select a shorter time period (maximum 10 years).");
     }
 
-    if (parseInt(startYearInt) > parseInt(endYearInt) ||
-        (parseInt(startYearInt) === parseInt(endYearInt) && parseInt(startQuarterInt) > parseInt(endQuarterInt))) {
-        setSubmitError('Start period must be earlier than or equal to the end period.');
-        return false;
+    if (startYearInt > endYearInt ||
+        (startYearInt === endYearInt && startQuarterInt > endQuarterInt)) {
+        errors.push("Start period must be earlier than or equal to the end period.");
     }
 
     if (!queryName.trim() || queryName.trim().length < 3) {
-        setSubmitError("Please provide a meaningful name for your query (at least 3 characters).");
-        return false;
+        errors.push("Please provide a meaningful name for your query (at least 3 characters).");
     }
 
-    return true;
+    return errors;
 };

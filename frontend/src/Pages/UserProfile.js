@@ -125,7 +125,6 @@ const UserProfile = () => {
                     return;
                 }
 
-
                 const userResponse = await fetchWithRefresh('http://127.0.0.1:8000/api/v1/auth/user/', {
                     method: 'GET'
                 });
@@ -136,7 +135,6 @@ const UserProfile = () => {
                 }
 
                 console.log('User response status:', userResponse.status);
-
 
                 if (!userResponse.ok) {
                     throw new Error(`Failed to fetch user data: ${userResponse.status}`);
@@ -164,7 +162,6 @@ const UserProfile = () => {
             }
         };
 
-
         fetchUserData();
     }, []);
 
@@ -182,9 +179,7 @@ const UserProfile = () => {
                 method: 'GET'
             });
 
-            if (!response) {
-                return;
-            }
+            if (!response) return;
 
             console.log('Queries response status:', response.status);
 
@@ -399,7 +394,7 @@ const UserProfile = () => {
         setGlobalLoading(true);
         setSubmitError('');
 
-        const isValid = validateQueryForm({
+        const errors = validateQueryForm({
             drugs,
             reactions,
             yearStart,
@@ -407,10 +402,10 @@ const UserProfile = () => {
             quarterStart,
             quarterEnd,
             queryName,
-            setSubmitError
         });
 
-        if (!isValid) {
+        if (errors.length > 0) {
+            errors.forEach(err => showToastMessage(err));
             setIsSubmitting(false);
             setGlobalLoading(false);
             return;
@@ -746,97 +741,9 @@ const UserProfile = () => {
         resetForm();
     };
 
-    // const validateForm = () => {
-    //     // Reset any previous errors
-    //     setSubmitError('');
-
-    //     const validDrugs = drugs.filter(drug => drug.id !== null);
-    //     const validReactions = reactions.filter(reaction => reaction.id !== null);
-
-    //     // Check for partial entries (typed but not selected)
-    //     const partialDrugs = drugs.filter(drug => drug.name.trim() && !drug.id);
-    //     const partialReactions = reactions.filter(reaction => reaction.name.trim() && !reaction.id);
-
-    //     if (partialDrugs.length > 0) {
-    //         setSubmitError('Please select drugs from the search results dropdown, don\'t just type them.');
-    //         return false;
-    //     }
-
-    //     if (partialReactions.length > 0) {
-    //         setSubmitError('Please select reactions from the search results dropdown, don\'t just type them.');
-    //         return false;
-    //     }
-
-    //     if (validDrugs.length === 0) {
-    //         setSubmitError('Please select at least one drug from the search results.');
-    //         return false;
-    //     }
-
-    //     if (validReactions.length === 0) {
-    //         setSubmitError('Please select at least one reaction from the search results.');
-    //         return false;
-    //     }
-
-    //     // Enhanced time period validation
-    //     const startYear = parseInt(yearStart);
-    //     const endYear = parseInt(yearEnd);
-    //     const startQuarter = parseInt(quarterStart);
-    //     const endQuarter = parseInt(quarterEnd);
-
-    //     if (startYear === endYear && startQuarter === endQuarter) {
-    //         setSubmitError('Analysis requires at least 2 time periods. Please select a longer time range.');
-    //         return false;
-    //     }
-
-    //     const totalPeriods = (endYear - startYear) * 4 + (endQuarter - startQuarter + 1);
-    //     if (totalPeriods > 40) { // Limit to 10 years
-    //         setSubmitError('Please select a shorter time period (maximum 10 years).');
-    //         return false;
-    //     }
-
-    //     if (!queryName.trim() || queryName.trim().length < 3) {
-    //         setSubmitError('Please provide a meaningful name for your query (at least 3 characters).');
-    //         return false;
-    //     }
-
-    //     return true;
-    // };
-
     const handleLogoutClick = () => {
         setShowLogoutConfirm(true);
     };
-
-    // const handleLogout = async () => {
-    //     setShowLogoutPopup(true);
-
-    //     await new Promise(resolve => setTimeout(resolve, 750));
-
-    //     try {
-    //         const response = await fetch('http://127.0.0.1:8000/api/v1/auth/logout/', {
-    //             method: 'POST',
-    //             headers: {
-    //                 'Authorization': `Bearer ${localStorage.getItem('token')}`,
-    //                 'Content-Type': 'application/json'
-    //             }
-    //         });
-
-    //         if (response.ok) {
-    //             localStorage.removeItem('token');  // remove the token from local storage
-    //             setShowLogoutPopup(false);
-    //             navigate('/');  // go to home page
-    //         } else {
-    //             // if the request failed, show an error message
-    //             const data = await response.json();
-    //             console.error('Logout failed:', data.message || 'Something went wrong');
-    //             alert('An error occurred while logging out');
-    //         }
-    //     } catch (error) {
-    //         console.error('Network error during logout:', error);
-    //         alert('Network error during logout');
-    //         setShowLogoutPopup(false);
-    //     }
-    // };
-
 
     const handleLogout = async () => {
         setShowLogoutPopup(true);
@@ -914,7 +821,24 @@ const UserProfile = () => {
                                                 type="text"
                                                 name="queryName"
                                                 value={queryName}
-                                                onChange={handleInputChange}
+                                                onChange={(e) => {
+                                                    setQueryName(e.target.value);
+
+                                                    // validate on the fly
+                                                    const errors = validateQueryForm({
+                                                        drugs,
+                                                        reactions,
+                                                        yearStart,
+                                                        yearEnd,
+                                                        quarterStart,
+                                                        quarterEnd,
+                                                        queryName: e.target.value
+                                                    });
+
+                                                    if (errors.length > 0) {
+                                                        errors.forEach(err => showToastMessage(err));
+                                                    }
+                                                }}
                                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
                                                 placeholder="Enter query name"
                                             />
