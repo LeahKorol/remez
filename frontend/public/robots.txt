@@ -1,6 +1,16 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow: /
+# Block all internal routes
+Disallow: /login
+Disallow: /password-reset
+Disallow: /reset-password
+Disallow: /register
+Disallow: /email-verify
+Disallow: /email-verification-sent
+Disallow: /profile
+Disallow: /loading
+Disallow: /500
+Disallow: /maintenance
 
 # Allow only the homepage
-Allow: /$
+Allow: /
