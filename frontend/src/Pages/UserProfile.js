@@ -1105,6 +1105,11 @@ const UserProfile = () => {
                     <>
                         <div className="logout-popup-overlay"></div>
                         <div className="logout-popup">
+                            <img
+                                src="logout.png"
+                                alt="Logging out"
+                                style={{ width: '250px', height: 'auto' }}
+                            />
                             <h3>
                                 {showLogoutPopup
                                     ? "Logging out..."

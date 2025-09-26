@@ -63,7 +63,7 @@
 .logout-button:hover {
   background-color: #f8f8f8;
   border-color: #6a50e0;
-  color: #e74c3c;
+  color: #6a50e0;
 }
 
 .logout-button svg {
@@ -86,26 +86,28 @@
 
 .confirm-buttons {
   display: flex;
-  justify-content: space-around;
+  justify-content: center;
   margin-top: 15px;
+  gap: 20px;
 }
 
 .confirm-buttons button {
   padding: 8px 16px;
   border-radius: 6px;
-  border: none;
   cursor: pointer;
   font-weight: bold;
   transition: all 0.2s;
+  min-width: 90px;
 }
 
 .confirm-yes {
-  background-color: #e74c3c;
+  background-color: rgba(123, 97, 255, 0.5);
+  border: #7b42e0 solid 1px;
   color: white;
 }
 
 .confirm-yes:hover {
-  background-color: #c0392b;
+  background: linear-gradient(90deg, #7b42e0 0%, #5e68f1 100%);
 }
 
 .confirm-no {
