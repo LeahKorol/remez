@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { fetchWithRefresh } from './tokenService';
 import CustomSelect from "./CustomSelect";
+import QueryDetailsView from "./QueryDetailsView";
 import { useUser } from "./UserContext";
 import RorChart from './RorChart';
 import './UserProfile.css';
@@ -263,279 +264,6 @@ const UserProfile = () => {
         }
 
         return labels;
-    };
-
-
-    const QueryDetailsView = ({ query }) => {
-        const chartRef = useRef(null);
-
-        const [showCsvModal, setShowCsvModal] = useState(false);
-
-        console.log('Rendering QueryDetailsView for:', {
-            id: query.id,
-            name: query.name,
-            rorValuesExists: !!query.ror_values,
-            rorValuesLength: query.ror_values ? query.ror_values.length : 0,
-            rorLowerExists: !!query.ror_lower,
-            rorUpperExists: !!query.ror_upper,
-            fullQuery: query
-        });
-
-        const hasResults = query.ror_values && query.ror_values.length > 0 &&
-            query.ror_lower && query.ror_upper;
-
-        console.log('hasResults calculated as:', hasResults);
-
-        const csvHeaders = ['Time Period', 'ROR (Log10)', 'ROR (Original)', 'Lower CI', 'Upper CI'];
-        const csvRows = query.ror_values?.map((rorValue, index) => {
-            const logValue = Math.log10(rorValue || 0.1);
-            const lowerCI = query.ror_lower[index] || '';
-            const upperCI = query.ror_upper[index] || '';
-            let currentYear = query.year_start;
-            let currentQuarter = query.quarter_start + index;
-            while (currentQuarter > 4) {
-                currentQuarter -= 4;
-                currentYear++;
-            }
-            const timePeriod = `${currentYear} Q${currentQuarter}`;
-            return {
-                timePeriod,
-                logValue: logValue.toFixed(4),
-                rorValue: rorValue.toFixed(4),
-                lowerCI: lowerCI ? lowerCI.toFixed(4) : '',
-                upperCI: upperCI ? upperCI.toFixed(4) : ''
-            };
-        }) || [];
-
-        // function to download the chart as PNG
-        const downloadChart = () => {
-            const chart = chartRef.current;
-            if (chart) {
-                const url = chart.toBase64Image('image/png', 1.0);
-                const link = document.createElement('a');
-                link.download = `${query.name.replace(/[^a-z0-9]/gi, '_')}_analysis.png`;
-                link.href = url;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-
-                // show a success toast message
-                showToastMessage('Chart downloaded successfully!');
-            }
-        };
-
-        // function to download CSV
-        const downloadData = () => {
-            const headers = ['Time Period', 'ROR (Log10)', 'ROR (Original)', 'Lower CI', 'Upper CI'];
-            const csvData = [headers.join(',')];
-
-            // create labels
-            const labels = (() => {
-                const actualDataLength = query.ror_values ? query.ror_values.length : 0;
-                const labels = [];
-                let currentYear = query.year_start;
-                let currentQuarter = query.quarter_start;
-
-                for (let i = 0; i < actualDataLength; i++) {
-                    labels.push(`${currentYear} Q${currentQuarter}`);
-                    currentQuarter++;
-                    if (currentQuarter > 4) {
-                        currentQuarter = 1;
-                        currentYear++;
-                    }
-                }
-                return labels;
-            })();
-
-            // adding data
-            query.ror_values.forEach((rorValue, index) => {
-                const logValue = Math.log10(rorValue || 0.1);
-                const lowerCI = query.ror_lower[index] || '';
-                const upperCI = query.ror_upper[index] || '';
-                const timePeriod = labels[index] || `Period ${index + 1}`;
-
-                csvData.push([
-                    `"${timePeriod}"`,
-                    logValue.toFixed(4),
-                    rorValue.toFixed(4),
-                    lowerCI ? lowerCI.toFixed(4) : '',
-                    upperCI ? upperCI.toFixed(4) : ''
-                ].join(','));
-            });
-
-            // create CSV file and download it
-            const csvContent = csvData.join('\n');
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', `${query.name.replace(/[^a-z0-9]/gi, '_')}_data.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-
-            // show a success toast message
-            showToastMessage('Data downloaded as CSV successfully!');
-        };
-
-        return (
-            <div className="query-details-container">
-                <div className="form-header">
-                    <h2>{query.name}</h2>
-                    <div className="query-details-actions">
-                        {hasResults && (
-                            <span className="results-badge">✓ Results Ready</span>
-                        )}
-                        <button
-                            type="button"
-                            className="cancel-button"
-                            onClick={handleNewQuery}
-                        >
-                            <FaTimes /> Close
-                        </button>
-                    </div>
-                </div>
-
-                {/* Query Information Section */}
-                <div className="query-info-section">
-                    <h3>Query Information</h3>
-                    <div className="info-grid">
-                        <div className="info-item">
-                            <span className="info-label">Time Period:</span>
-                            <span className="info-value">
-                                {query.year_start} Q{query.quarter_start} - {query.year_end} Q{query.quarter_end}
-                            </span>
-                        </div>
-                        <div className="info-item">
-                            <span className="info-label">Created:</span>
-                            <span className="info-value">
-                                {new Date(query.created_at).toLocaleDateString()}
-                            </span>
-                        </div>
-                        <div className="info-item">
-                            <span className="info-label">Status:</span>
-                            <span className="info-value">
-                                {hasResults ? "Analysis Complete" : "Processing..."}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Drugs Section */}
-                <div className="query-section">
-                    <h3>Drugs ({query.drugs?.length || 0})</h3>
-                    <div className="items-list">
-                        {query.drugs && query.drugs.length > 0 ? (
-                            query.drugs.map((drug, index) => (
-                                <div key={index} className="item-tag drug-tag">
-                                    {drug.name}
-                                </div>
-                            ))
-                        ) : (
-                            <p className="no-items">No drugs specified</p>
-                        )}
-                    </div>
-                </div>
-
-                {/* Reactions Section */}
-                <div className="query-section">
-                    <h3>Reactions ({query.reactions?.length || 0})</h3>
-                    <div className="items-list">
-                        {query.reactions && query.reactions.length > 0 ? (
-                            query.reactions.map((reaction, index) => (
-                                <div key={index} className="item-tag reaction-tag">
-                                    {reaction.name}
-                                </div>
-                            ))
-                        ) : (
-                            <p className="no-items">No reactions specified</p>
-                        )}
-                    </div>
-                </div>
-
-                {/* Results Section */}
-                <div className="query-section">
-                    <div className="results-header">
-                        <h3>Statistical Analysis Results</h3>
-                        {hasResults && (
-                            <div className="chart-actions">
-                                <button className="download-button" onClick={downloadChart}>
-                                    <FaFileImage style={{ marginRight: '6px' }} /> Download Chart
-                                </button>
-                                <button className="download-button" onClick={downloadData}>
-                                    <FaFileCsv style={{ marginRight: '6px' }} /> Download CSV
-                                </button>
-                                <button
-                                    className="download-button"
-                                    onClick={() => setShowCsvModal(true)}
-                                    title="View CSV"
-                                >
-                                    <FaArrowDown style={{ marginRight: '6px' }} /> View CSV
-                                </button>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* CSV Modal */}
-                    {showCsvModal && (
-                        <div className="csv-modal-overlay">
-                            <div className="csv-modal">
-                                <div className="csv-modal-header">
-                                    <h3>CSV Preview - {query.name}</h3>
-                                    <button className="close-button" onClick={() => setShowCsvModal(false)}>
-                                        <FaTimes />
-                                    </button>
-                                </div>
-                                <div className="csv-modal-content">
-                                    <table className="csv-table">
-                                        <thead>
-                                            <tr>
-                                                {csvHeaders.map((header, i) => <th key={i}>{header}</th>)}
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {csvRows.map((row, i) => (
-                                                <tr key={i}>
-                                                    <td>{row.timePeriod}</td>
-                                                    <td>{row.logValue}</td>
-                                                    <td>{row.rorValue}</td>
-                                                    <td>{row.lowerCI}</td>
-                                                    <td>{row.upperCI}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="chart-placeholder">
-                        <div className="chart-container">
-                            {hasResults ? (
-                                <RorChart query={query} />
-                            ) : (
-                                <div className="placeholder-content">
-                                    <div className="placeholder-icon">⏳</div>
-                                    <h4>Analysis in Progress</h4>
-                                    <p>Your query is being processed. Results will appear here when ready.</p>
-                                    <div className="refresh-button">
-                                        <button
-                                            className="secondary-button"
-                                            onClick={() => window.location.reload()}
-                                        >
-                                            Refresh Status
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
     };
 
     // Search for drugs as the user types
@@ -892,18 +620,33 @@ const UserProfile = () => {
         }
     };
 
-    <CustomSelect
-        name="startQuarter"
-        value={quarterStart}
-        onChange={handleInputChange}
-        placeholder="Select Quarter"
-        options={[
-            { value: "1", label: "Quarter 1" },
-            { value: "2", label: "Quarter 2" },
-            { value: "3", label: "Quarter 3" },
-            { value: "4", label: "Quarter 4" }
-        ]}
-    />
+    <>
+        <CustomSelect
+            name="startQuarter"
+            value={quarterStart}
+            onChange={handleInputChange}
+            placeholder="Select Quarter"
+            options={[
+                { value: "1", label: "Quarter 1" },
+                { value: "2", label: "Quarter 2" },
+                { value: "3", label: "Quarter 3" },
+                { value: "4", label: "Quarter 4" }
+            ]}
+        />
+
+        <CustomSelect
+            name="endQuarter"
+            value={quarterEnd}
+            onChange={handleInputChange}
+            placeholder="Select Quarter"
+            options={[
+                { value: "1", label: "Quarter 1" },
+                { value: "2", label: "Quarter 2" },
+                { value: "3", label: "Quarter 3" },
+                { value: "4", label: "Quarter 4" }
+            ]}
+        />
+    </>
 
 
     // Add a new drug field
@@ -1018,83 +761,6 @@ const UserProfile = () => {
         resetForm();
     };
 
-    // const validateForm = () => {
-    //     const validDrugs = drugs.filter(drug => drug.id !== null);
-    //     const validReactions = reactions.filter(reaction => reaction.id !== null);
-
-    //     // Check for required fields
-    //     if (validDrugs.length === 0) {
-    //         alert('Please select at least one valid drug from the search results.');
-    //         return false;
-    //     }
-
-    //     if (validReactions.length === 0) {
-    //         alert('Please select at least one valid reaction from the search results.');
-    //         return false;
-    //     }
-
-    //     // Handle undefined or null inputs gracefully
-    //     const safeYearStart = yearStart || '';
-    //     const safeYearEnd = yearEnd || '';
-    //     const safeQuarterStart = quarterStart || '';
-    //     const safeQuarterEnd = quarterEnd || '';
-    //     const safeQueryName = queryName || '';
-
-    //     if (!safeYearStart.trim() || !safeYearEnd.trim() || !safeQuarterStart.trim() || !safeQuarterEnd.trim()) {
-    //         alert('Please fill all year and quarter fields.');
-    //         return false;
-    //     }
-
-    //     if (!safeQueryName.trim()) {
-    //         alert('Please provide a name for your query.');
-    //         return false;
-    //     }
-
-    //     // Enhanced year validation
-    //     const startYear = parseInt(safeYearStart);
-    //     const endYear = parseInt(safeYearEnd);
-    //     const currentYear = new Date().getFullYear();
-
-    //     if (isNaN(startYear) || isNaN(endYear)) {
-    //         alert('Please enter valid year values.');
-    //         return false;
-    //     }
-
-    //     if (startYear > endYear) {
-    //         alert('Start year cannot be greater than end year');
-    //         return false;
-    //     }
-
-    //     if (startYear < 1900 || endYear > currentYear + 10) {
-    //         alert('Please enter realistic year values');
-    //         return false;
-    //     }
-
-    //     // Quarter validation
-    //     const startQuarter = parseInt(safeQuarterStart);
-    //     const endQuarter = parseInt(safeQuarterEnd);
-
-    //     if (isNaN(startQuarter) || isNaN(endQuarter)) {
-    //         alert('Please enter valid quarter values.');
-    //         return false;
-    //     }
-
-    //     if (startQuarter < 1 || startQuarter > 4 || endQuarter < 1 || endQuarter > 4) {
-    //         alert('Quarters must be between 1 and 4.');
-    //         return false;
-    //     }
-
-    //     // Additional validation: if same year, start quarter should not be after end quarter
-    //     if (startYear === endYear && startQuarter > endQuarter) {
-    //         alert('Start quarter cannot be after end quarter in the same year');
-    //         return false;
-    //     }
-
-    //     return true;
-    // };
-
-
-
     const validateForm = () => {
         // Reset any previous errors
         setSubmitError('');
@@ -1202,7 +868,7 @@ const UserProfile = () => {
             <div className="main-content">
                 <div className="prompt-container">
                     {viewMode === 'view' && viewingQuery ? (
-                        <QueryDetailsView query={viewingQuery} />
+                        <QueryDetailsView query={viewingQuery} handleNewQuery={handleNewQuery} />
                     ) : (
                         <>
                             <div className="form-header">
