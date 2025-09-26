@@ -3,6 +3,7 @@ import { FaUser, FaArrowRight, FaPlus, FaTimes, FaEdit, FaTrash, FaSignOutAlt, F
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { fetchWithRefresh } from './tokenService';
+import CustomSelect from "./CustomSelect";
 import { useUser } from "./UserContext";
 import RorChart from './RorChart';
 import './UserProfile.css';
@@ -891,38 +892,19 @@ const UserProfile = () => {
         }
     };
 
+    <CustomSelect
+        name="startQuarter"
+        value={quarterStart}
+        onChange={handleInputChange}
+        placeholder="Select Quarter"
+        options={[
+            { value: "1", label: "Quarter 1" },
+            { value: "2", label: "Quarter 2" },
+            { value: "3", label: "Quarter 3" },
+            { value: "4", label: "Quarter 4" }
+        ]}
+    />
 
-    const CustomSelect = ({ value, onChange, options, placeholder, name }) => {
-        const [isOpen, setIsOpen] = useState(false);
-
-        return (
-            <div className="custom-select-container">
-                <div
-                    className="custom-select-header"
-                    onClick={() => setIsOpen(!isOpen)}
-                >
-                    {value ? `Quarter ${value}` : placeholder}
-                    <FaChevronDown className={`chevron ${isOpen ? 'open' : ''}`} />
-                </div>
-                {isOpen && (
-                    <div className="custom-select-options">
-                        {options.map(option => (
-                            <div
-                                key={option.value}
-                                className="custom-select-option"
-                                onClick={() => {
-                                    onChange({ target: { name, value: option.value } });
-                                    setIsOpen(false);
-                                }}
-                            >
-                                {option.label}
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-        );
-    };
 
     // Add a new drug field
     const addDrugField = () => {
