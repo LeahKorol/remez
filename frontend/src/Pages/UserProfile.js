@@ -67,6 +67,7 @@ const UserProfile = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [editingQueryId, setEditingQueryId] = useState(null);
     const [showLogoutPopup, setShowLogoutPopup] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState('');
     const [globalLoading, setGlobalLoading] = useState(false);
@@ -632,34 +633,6 @@ const UserProfile = () => {
         }
     };
 
-    <>
-        <CustomSelect
-            name="startQuarter"
-            value={quarterStart}
-            onChange={handleInputChange}
-            placeholder="Select Quarter"
-            options={[
-                { value: "1", label: "Quarter 1" },
-                { value: "2", label: "Quarter 2" },
-                { value: "3", label: "Quarter 3" },
-                { value: "4", label: "Quarter 4" }
-            ]}
-        />
-
-        <CustomSelect
-            name="endQuarter"
-            value={quarterEnd}
-            onChange={handleInputChange}
-            placeholder="Select Quarter"
-            options={[
-                { value: "1", label: "Quarter 1" },
-                { value: "2", label: "Quarter 2" },
-                { value: "3", label: "Quarter 3" },
-                { value: "4", label: "Quarter 4" }
-            ]}
-        />
-    </>
-
 
     // Add a new drug field
     const addDrugField = () => {
@@ -829,13 +802,45 @@ const UserProfile = () => {
     //     return true;
     // };
 
+    const handleLogoutClick = () => {
+        setShowLogoutConfirm(true);
+    };
+
+    // const handleLogout = async () => {
+    //     setShowLogoutPopup(true);
+
+    //     await new Promise(resolve => setTimeout(resolve, 750));
+
+    //     try {
+    //         const response = await fetch('http://127.0.0.1:8000/api/v1/auth/logout/', {
+    //             method: 'POST',
+    //             headers: {
+    //                 'Authorization': `Bearer ${localStorage.getItem('token')}`,
+    //                 'Content-Type': 'application/json'
+    //             }
+    //         });
+
+    //         if (response.ok) {
+    //             localStorage.removeItem('token');  // remove the token from local storage
+    //             setShowLogoutPopup(false);
+    //             navigate('/');  // go to home page
+    //         } else {
+    //             // if the request failed, show an error message
+    //             const data = await response.json();
+    //             console.error('Logout failed:', data.message || 'Something went wrong');
+    //             alert('An error occurred while logging out');
+    //         }
+    //     } catch (error) {
+    //         console.error('Network error during logout:', error);
+    //         alert('Network error during logout');
+    //         setShowLogoutPopup(false);
+    //     }
+    // };
 
 
     const handleLogout = async () => {
         setShowLogoutPopup(true);
-
         await new Promise(resolve => setTimeout(resolve, 750));
-
         try {
             const response = await fetch('http://127.0.0.1:8000/api/v1/auth/logout/', {
                 method: 'POST',
@@ -850,7 +855,6 @@ const UserProfile = () => {
                 setShowLogoutPopup(false);
                 navigate('/');  // go to home page
             } else {
-                // if the request failed, show an error message
                 const data = await response.json();
                 console.error('Logout failed:', data.message || 'Something went wrong');
                 alert('An error occurred while logging out');
@@ -861,7 +865,6 @@ const UserProfile = () => {
             setShowLogoutPopup(false);
         }
     };
-
 
     if (loading) {
         return <div className="loading">Loading...</div>;
@@ -1097,11 +1100,40 @@ const UserProfile = () => {
             </div>
 
             <div className="sidebar">
-                {showLogoutPopup && (
-                    <div className="logout-popup">Logging out... You are being redirected.</div>
+                {/* Confirmation Modal */}
+                {showLogoutConfirm && (
+                    <>
+                        <div className="logout-popup-overlay"></div>
+                        <div className="logout-popup">
+                            <h3>
+                                {showLogoutPopup
+                                    ? "Logging out..."
+                                    : "Are you sure you want to log out?"}
+                            </h3>
+                            <div className="confirm-buttons">
+                                <button
+                                    className="confirm-yes"
+                                    onClick={() => {
+                                        setShowLogoutPopup(true);
+                                        handleLogout();
+                                    }}
+                                >
+                                    Yes
+                                </button>
+                                <button
+                                    className="confirm-no"
+                                    onClick={() => setShowLogoutConfirm(false)}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </>
                 )}
+
+
                 <div className="logout-container">
-                    <button className="logout-button" onClick={handleLogout} title="Logout">
+                    <button className="logout-button" onClick={handleLogoutClick} title="Logout">
                         <FaSignOutAlt />
                     </button>
                 </div>
