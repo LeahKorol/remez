@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { FaUser, FaSignOutAlt, FaArrowRight } from 'react-icons/fa';
 import SavedQueriesList from './SavedQueriesList';
 import '../Pages/UserProfile.css';
@@ -15,6 +15,16 @@ const Sidebar = ({
     handleLogoutClick,
     handleLogout
 }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+
+    // create a memoized filtered list of queries based on the search term
+    const filteredQueries = useMemo(() => {
+        if (!searchTerm.trim()) return savedQueries;
+        return savedQueries.filter(q =>
+            q.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [searchTerm, savedQueries]);
+
     return (
         <div className="sidebar">
             {showLogoutConfirm && (
@@ -66,8 +76,17 @@ const Sidebar = ({
 
             <div className="saved-queries-section">
                 <h2 className="section-title">Your Queries</h2>
+
+                <input
+                    type="text"
+                    placeholder="Search queries..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="query-search-input"
+                />
+
                 <SavedQueriesList
-                    savedQueries={savedQueries}
+                    savedQueries={filteredQueries}
                     onViewQuery={onViewQuery}
                     onEditQuery={onEditQuery}
                     onDeleteQuery={onDeleteQuery}
