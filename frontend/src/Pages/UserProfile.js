@@ -7,6 +7,7 @@ import CustomSelect from "../components/CustomSelect";
 import QueryDetailsView from "../components/QueryDetailsView";
 import { useUser } from "../utils/UserContext";
 import { validateQueryForm } from '../utils/formValidation';
+import Sidebar from '../components/Sidebar';
 import SavedQueriesList from '../components/SavedQueriesList';
 import './UserProfile.css';
 
@@ -1023,74 +1024,18 @@ const UserProfile = () => {
                 </div>
             </div>
 
-            <div className="sidebar">
-                {/* Confirmation Modal */}
-                {showLogoutConfirm && (
-                    <>
-                        <div className="logout-popup-overlay"></div>
-                        <div className="logout-popup">
-                            <img
-                                src="logout.png"
-                                alt="Logging out"
-                                style={{ width: '250px', height: 'auto' }}
-                            />
-                            <h3>
-                                {showLogoutPopup
-                                    ? "Logging out..."
-                                    : "Are you sure you want to log out?"}
-                            </h3>
-                            <div className="confirm-buttons">
-                                <button
-                                    className="confirm-yes"
-                                    onClick={() => {
-                                        setShowLogoutPopup(true);
-                                        handleLogout();
-                                    }}
-                                >
-                                    Yes
-                                </button>
-                                <button
-                                    className="confirm-no"
-                                    onClick={() => setShowLogoutConfirm(false)}
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </div>
-                    </>
-                )}
-
-
-                <div className="logout-container">
-                    <button className="logout-button" onClick={handleLogoutClick} title="Logout">
-                        <FaSignOutAlt />
-                    </button>
-                </div>
-                <div className="user-info">
-                    <div className="avatar-circle">
-                        <FaUser className="user-icon" />
-                    </div>
-                    <h3 className="user-name">{user.name}</h3>
-                    <p className="user-email">{user.email}</p>
-                </div>
-
-                <div className="saved-queries-section">
-                    <h2 className="section-title">Your Queries</h2>
-                    <SavedQueriesList
-                        savedQueries={savedQueries}
-                        onViewQuery={handleViewQuery}
-                        onEditQuery={handleEditQuery}
-                        onDeleteQuery={handleDeleteQuery}
-                    />
-                </div>
-
-                <div className="nav-buttons">
-                    <button className="nav-button" onClick={handleNewQuery}>
-                        <span>New Query</span>
-                        <FaArrowRight />
-                    </button>
-                </div>
-            </div>
+            <Sidebar
+                user={user}
+                savedQueries={savedQueries}
+                onViewQuery={handleViewQuery}
+                onEditQuery={handleEditQuery}
+                onDeleteQuery={handleDeleteQuery}
+                onNewQuery={handleNewQuery}
+                showLogoutConfirm={showLogoutConfirm}
+                showLogoutPopup={showLogoutPopup}
+                handleLogoutClick={setShowLogoutConfirm}
+                handleLogout={handleLogout}
+            />
         </div>
     );
 };
