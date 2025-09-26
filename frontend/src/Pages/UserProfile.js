@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { FaUser, FaArrowRight, FaPlus, FaTimes, FaEdit, FaTrash, FaSignOutAlt, FaChevronDown, FaEye, FaFileCsv, FaFileImage, FaArrowDown, FaSearchPlus } from 'react-icons/fa';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { fetchWithRefresh } from './tokenService';
-import CustomSelect from "./CustomSelect";
-import QueryDetailsView from "./QueryDetailsView";
-import { useUser } from "./UserContext";
-import RorChart from './RorChart';
+import { fetchWithRefresh } from '../utils/tokenService';
+import CustomSelect from "../components/CustomSelect";
+import QueryDetailsView from "../components/QueryDetailsView";
+import { useUser } from "../utils/UserContext";
+import { validateQueryForm } from '../utils/formValidation';
 import './UserProfile.css';
 
 
@@ -397,7 +397,18 @@ const UserProfile = () => {
         setGlobalLoading(true);
         setSubmitError('');
 
-        if (!validateForm()) {
+        const isValid = validateQueryForm({
+            drugs,
+            reactions,
+            yearStart,
+            yearEnd,
+            quarterStart,
+            quarterEnd,
+            queryName,
+            setSubmitError
+        });
+
+        if (!isValid) {
             setIsSubmitting(false);
             setGlobalLoading(false);
             return;
@@ -761,61 +772,61 @@ const UserProfile = () => {
         resetForm();
     };
 
-    const validateForm = () => {
-        // Reset any previous errors
-        setSubmitError('');
+    // const validateForm = () => {
+    //     // Reset any previous errors
+    //     setSubmitError('');
 
-        const validDrugs = drugs.filter(drug => drug.id !== null);
-        const validReactions = reactions.filter(reaction => reaction.id !== null);
+    //     const validDrugs = drugs.filter(drug => drug.id !== null);
+    //     const validReactions = reactions.filter(reaction => reaction.id !== null);
 
-        // Check for partial entries (typed but not selected)
-        const partialDrugs = drugs.filter(drug => drug.name.trim() && !drug.id);
-        const partialReactions = reactions.filter(reaction => reaction.name.trim() && !reaction.id);
+    //     // Check for partial entries (typed but not selected)
+    //     const partialDrugs = drugs.filter(drug => drug.name.trim() && !drug.id);
+    //     const partialReactions = reactions.filter(reaction => reaction.name.trim() && !reaction.id);
 
-        if (partialDrugs.length > 0) {
-            setSubmitError('Please select drugs from the search results dropdown, don\'t just type them.');
-            return false;
-        }
+    //     if (partialDrugs.length > 0) {
+    //         setSubmitError('Please select drugs from the search results dropdown, don\'t just type them.');
+    //         return false;
+    //     }
 
-        if (partialReactions.length > 0) {
-            setSubmitError('Please select reactions from the search results dropdown, don\'t just type them.');
-            return false;
-        }
+    //     if (partialReactions.length > 0) {
+    //         setSubmitError('Please select reactions from the search results dropdown, don\'t just type them.');
+    //         return false;
+    //     }
 
-        if (validDrugs.length === 0) {
-            setSubmitError('Please select at least one drug from the search results.');
-            return false;
-        }
+    //     if (validDrugs.length === 0) {
+    //         setSubmitError('Please select at least one drug from the search results.');
+    //         return false;
+    //     }
 
-        if (validReactions.length === 0) {
-            setSubmitError('Please select at least one reaction from the search results.');
-            return false;
-        }
+    //     if (validReactions.length === 0) {
+    //         setSubmitError('Please select at least one reaction from the search results.');
+    //         return false;
+    //     }
 
-        // Enhanced time period validation
-        const startYear = parseInt(yearStart);
-        const endYear = parseInt(yearEnd);
-        const startQuarter = parseInt(quarterStart);
-        const endQuarter = parseInt(quarterEnd);
+    //     // Enhanced time period validation
+    //     const startYear = parseInt(yearStart);
+    //     const endYear = parseInt(yearEnd);
+    //     const startQuarter = parseInt(quarterStart);
+    //     const endQuarter = parseInt(quarterEnd);
 
-        if (startYear === endYear && startQuarter === endQuarter) {
-            setSubmitError('Analysis requires at least 2 time periods. Please select a longer time range.');
-            return false;
-        }
+    //     if (startYear === endYear && startQuarter === endQuarter) {
+    //         setSubmitError('Analysis requires at least 2 time periods. Please select a longer time range.');
+    //         return false;
+    //     }
 
-        const totalPeriods = (endYear - startYear) * 4 + (endQuarter - startQuarter + 1);
-        if (totalPeriods > 40) { // Limit to 10 years
-            setSubmitError('Please select a shorter time period (maximum 10 years).');
-            return false;
-        }
+    //     const totalPeriods = (endYear - startYear) * 4 + (endQuarter - startQuarter + 1);
+    //     if (totalPeriods > 40) { // Limit to 10 years
+    //         setSubmitError('Please select a shorter time period (maximum 10 years).');
+    //         return false;
+    //     }
 
-        if (!queryName.trim() || queryName.trim().length < 3) {
-            setSubmitError('Please provide a meaningful name for your query (at least 3 characters).');
-            return false;
-        }
+    //     if (!queryName.trim() || queryName.trim().length < 3) {
+    //         setSubmitError('Please provide a meaningful name for your query (at least 3 characters).');
+    //         return false;
+    //     }
 
-        return true;
-    };
+    //     return true;
+    // };
 
 
 

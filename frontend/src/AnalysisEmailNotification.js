@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import './Login.css'; // Using the same CSS file for consistent styling
+import './pages/Login.css';
 
 function AnalysisEmailNotification() {
   const navigate = useNavigate();

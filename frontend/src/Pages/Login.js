@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { GoogleAuthButton, GoogleOneTap } from './GoogleAuth'; 
-import { fetchWithRefresh } from './tokenService';
-import { useUser } from './UserContext';
+import { GoogleAuthButton, GoogleOneTap } from '../components/GoogleAuth'; 
+import { fetchWithRefresh } from '../utils/tokenService';
+import { useUser } from '../utils/UserContext';
 import './Login.css';
 
 // Handle backend errors

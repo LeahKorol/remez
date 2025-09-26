@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FaChevronDown } from 'react-icons/fa';
-import './UserProfile.css'; 
+import '../Pages/UserProfile.css'; 
 
 const CustomSelect = ({ value, onChange, options, placeholder, name }) => {
     const [isOpen, setIsOpen] = useState(false);

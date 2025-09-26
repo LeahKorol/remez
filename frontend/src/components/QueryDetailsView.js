@@ -1,8 +1,8 @@
 import React, { useRef, useState } from "react";
 import { FaTimes, FaFileImage, FaFileCsv, FaArrowDown } from "react-icons/fa";
 import RorChart from "./RorChart"; 
-import "./UserProfile.css"; 
-import { showToastMessage } from "./utils/toast"; 
+import "../Pages/UserProfile.css"; 
+import { showToastMessage } from "../utils/toast"; 
 
 const QueryDetailsView = ({ query, handleNewQuery }) => {
   const chartRef = useRef(null);

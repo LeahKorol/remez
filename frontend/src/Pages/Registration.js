@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { GoogleAuthButton } from './GoogleAuth';
-import { useUser } from './UserContext';
+import { GoogleAuthButton } from '../components/GoogleAuth';
+import { useUser } from '../utils/UserContext';
 import './Login.css';
 
 // handle backend errors and return an array of error messages
