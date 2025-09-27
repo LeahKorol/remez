@@ -1,0 +1,10 @@
+defopt
+luigi
+matplotlib
+numpy
+openpyxl
+pandas
+seaborn
+scikit-learn
+statsmodels
+tqdm
