@@ -1,24 +1,27 @@
-from django.test import TestCase
-from django.db.utils import IntegrityError
-from django.core.exceptions import ValidationError
-from django.db import transaction
-from django.contrib.auth import get_user_model
-from django.utils import timezone
 import time
 
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.db import transaction
+from django.db.utils import IntegrityError
+from django.test import TestCase
+from django.utils import timezone
+
 from analysis.models import (
-    DrugName,
-    ReactionName,
-    Query,
+    AgeCode,
     Case,
     Demo,
     Drug,
+    DrugName,
     Outcome,
+    OutcomeCode,
+    Query,
     Reaction,
-    AgeCode,
+    ReactionName,
+    Result,
+    ResultStatus,
     Sex,
     WeightCode,
-    OutcomeCode,
 )
 
 
@@ -184,6 +187,52 @@ class QueryTests(TestCase):
         )
         with self.assertRaises(ValidationError):
             query.full_clean()
+
+
+class ResultModetests(TestCase):
+    def setUp(self):
+        super().setUp()
+        self.user = get_user_model().objects.create_user(
+            email="testanalysis@example.com", password="t1234567"
+        )
+        self.query = Query.objects.create(
+            user=self.user,
+            quarter_start=1,
+            quarter_end=2,
+            year_start=2020,
+            year_end=2020,
+        )
+
+    def test_result_default_status(self):
+        """New Result should have default status = PENDING."""
+        result = Result.objects.create(query=self.query)
+        assert result.status == ResultStatus.PENDING
+
+    def test_result_str_representation(self):
+        result = Result.objects.create(
+            query=self.query, status=ResultStatus.COMPLETED
+        )
+        assert str(result) == f"Result #{result.id} for Query #{self.query.id}"
+
+    def test_update_result_status(self):
+        result = Result.objects.create(query=self.query)
+        result.status = ResultStatus.FAILED
+        result.save()
+        refreshed = Result.objects.get(id=result.id)
+        assert refreshed.status == ResultStatus.FAILED
+
+    def test_status_choices_validation(self):
+        """Invalid status should raise ValidationError on full_clean."""
+        result = Result(query=self.query, status="invalid")
+        with self.assertRaises(ValidationError) as exc:
+            result.full_clean()
+        assert "status" in exc.exception.message_dict
+
+    def test_cascade_on_query_delete(self):
+        result = Result.objects.create(query=self.query)
+
+        self.query.delete()
+        self.assertFalse(Result.objects.filter(id=result.id).exists())
 
 
 class CaseTests(TestCase):
