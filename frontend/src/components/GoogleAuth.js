@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import axios from '../axiosConfig';
 
 // Google OAuth Configuration
 const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
@@ -33,7 +34,7 @@ class GoogleAuthService {
     });
   }
 
-  // Initialize Google One Tap (שם מתוקן)
+  // Initialize Google One Tap 
   async initializeOneTap(callback) {
     try {
       await this.loadGoogleAPI();
@@ -84,8 +85,10 @@ class GoogleAuthService {
   // Get user profile from Google
   async getUserProfile(accessToken) {
     try {
-      const response = await fetch(`https://www.googleapis.com/oauth2/v2/userinfo?access_token=${accessToken}`);
-      if (!response.ok) throw new Error('Failed to fetch user profile');
+      const response = await axios.get(
+        `https://www.googleapis.com/oauth2/v2/userinfo?access_token=${accessToken}`
+      );
+      // if (!response.ok) throw new Error('Failed to fetch user profile');
       return await response.json();
     } catch (error) {
       throw new Error(`Failed to get user profile: ${error.message}`);
@@ -99,27 +102,32 @@ class GoogleAuthService {
         ? 'http://127.0.0.1:8000/api/v1/auth/google/register/'
         : 'http://127.0.0.1:8000/api/v1/auth/google/login/';
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          google_id: googleUser.id,
-          email: googleUser.email,
-          name: googleUser.name,
-          picture: googleUser.picture,
-          verified_email: googleUser.verified_email,
-        }),
+      const response = await axios.post(endpoint, {
+        google_id: googleUser.id,
+        email: googleUser.email,
+        name: googleUser.name,
+        picture: googleUser.picture,
+        verified_email: googleUser.verified_email,
       });
 
-      const data = await response.json();
-      if (response.ok) return data;
+      // const data = await response.json();
+      // if (response.ok) return data;
 
-      if (response.status === 404) throw new Error('User not found. Please register first.');
-      if (response.status === 409) throw new Error('Account already exists. Please try logging in instead.');
-      throw new Error(data.error || data.detail || data.message || 'Authentication failed');
+      // if (response.status === 404) throw new Error('User not found. Please register first.');
+      // if (response.status === 409) throw new Error('Account already exists. Please try logging in instead.');
+      // throw new Error(data.error || data.detail || data.message || 'Authentication failed');
+
+      return response.data;
+
     } catch (error) {
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        throw new Error('Network error. Please check your connection.');
+      if (error.response?.status === 404) {
+        throw new Error("User not found. Please register first.");
+      }
+      if (error.response?.status === 409) {
+        throw new Error("Account already exists. Please try logging in instead.");
+      }
+      if (error.message.includes("Network Error")) {
+        throw new Error("Network error. Please check your connection.");
       }
       throw error;
     }
