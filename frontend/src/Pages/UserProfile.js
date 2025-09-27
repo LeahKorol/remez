@@ -8,7 +8,7 @@ import QueryDetailsView from "../components/QueryDetailsView";
 import { useUser } from "../utils/UserContext";
 import { validateQueryForm } from '../utils/formValidation';
 import Sidebar from '../components/Sidebar';
-import SavedQueriesList from '../components/SavedQueriesList';
+import ToastNotification from '../components/ToastNotification';
 import './UserProfile.css';
 
 
@@ -38,7 +38,6 @@ ChartJS.register(
     Filler,
     zoomPlugin,
 );
-
 
 const UserProfile = () => {
     // form state
@@ -806,11 +805,8 @@ const UserProfile = () => {
                                     </button>
                                 )}
 
-                                {showToast && (
-                                    <div className="toast-notification">
-                                        {toastMessage}
-                                    </div>
-                                )}
+                                <ToastNotification message={toastMessage} type="error" />
+
                             </div>
 
                             <form onSubmit={handleSubmitQuery}>
