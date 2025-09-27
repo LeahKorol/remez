@@ -1,15 +1,14 @@
-from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.validators import (
-    MinValueValidator,
-    MaxValueValidator,
     MaxLengthValidator,
+    MaxValueValidator,
+    MinValueValidator,
 )
-from django.db.models import Q, CheckConstraint
+from django.db import models
+from django.db.models import CheckConstraint, Q
 
+from analysis.faers_analysis.constants import YEAR_END, YEAR_START
 from analysis.managers import CaseAwareManager
-
-from analysis.faers_analysis.constants import YEAR_START, YEAR_END
 
 # Use TextField and not CharField as recommended in Postgres documentation (copy the url, not click):
 # https://wiki.postgresql.org/wiki/Don't_Do_This#Don.27t_use_varchar.28n.29_by_default
@@ -72,10 +71,12 @@ class Query(models.Model):
     )
 
     # Result parameters - ROR values, lower and upper confidence intervals
+    # Once Result model is fully implemented these fields should be removed
+    # and accessed via query.result.
     ror_values = models.JSONField(default=list)
     ror_lower = models.JSONField(default=list)
     ror_upper = models.JSONField(default=list)
- 
+
     class Meta:
         ordering = ["-updated_at"]
 
@@ -88,6 +89,35 @@ class Query(models.Model):
 
     def __str__(self):
         return self.name if self.name else f"Query #{self.id}"
+
+# status chiches are same as the pipeline sevice uses
+class ResultStatus(models.TextChoices):
+    PENDING = "pending", "Pending"
+    RUNNING = "running", "Running"
+    COMPLETED = "completed", "Completed"
+    FAILED = "failed", "Failed"
+
+
+class Result(models.Model):
+    """Stores the results of a query for a specific drug-reaction pair"""
+
+    query = models.OneToOneField(
+        Query,
+        on_delete=models.CASCADE,  # delete Result if Query is deleted
+        related_name="result",  # access: query.result
+    )
+    # The status of running the query in the pipeline
+    status = models.TextField(
+        choices=ResultStatus.choices, default=ResultStatus.PENDING
+    )
+
+    # Result parameters - ROR values, lower and upper confidence intervals
+    ror_values = models.JSONField(default=list)
+    ror_lower = models.JSONField(default=list)
+    ror_upper = models.JSONField(default=list)
+
+    def __str__(self):
+        return f"Result #{self.id} for Query #{self.query.id}"
 
 
 # FAERS data models
