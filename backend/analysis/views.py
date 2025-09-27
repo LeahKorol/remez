@@ -9,12 +9,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from analysis.constants import PIPELINE_DEMO_DATA
-from analysis.models import DrugName, Query, ReactionName
+from analysis.models import DrugName, Query, ReactionName, Result
+from analysis.permissions import IsPipelineService
 from analysis.pipeline.trigger_pipeline import run_luigi_pipeline
 from analysis.serializers import (
     DrugNameSerializer,
     QuerySerializer,
     ReactionNameSerializer,
+    ResultSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -135,6 +137,77 @@ class QueryViewSet(viewsets.ModelViewSet):
             "ror_upper": demo_data["ror_upper"],
         }
         return demo_data_kwargs
+
+
+@extend_schema_view(
+    retrieve=extend_schema(
+        tags=["Result"],
+        parameters=[
+            OpenApiParameter(name="id", type=int, location=OpenApiParameter.PATH)
+        ],
+    ),
+    list=extend_schema(tags=["Result"]),
+    update_by_task_id=extend_schema(
+        tags=["Result"],
+        parameters=[
+            OpenApiParameter(name="task_id", type=str, location=OpenApiParameter.PATH)
+        ],
+        description="Update result by task_id. Used by external pipeline service.",
+    ),
+)
+class ResultViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for Result model with the following access rules:
+    - Regular users: read-only access to their own results via query__user
+    - Pipeline service: can update results using task_id (currently same as pk)
+    - No one can create or delete results through this API
+    """
+
+    serializer_class = ResultSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = "id"  # Force DRF to use "id" instead of "pk"
+
+    def get_queryset(self):
+        """
+        Filter results to only show those belonging to the authenticated user.
+        Use select_related to optimize queryset by joining the related Query in one DB hit.
+        It Prevents N+1 queries when accessing query fields in results (as query__user).
+        The user still only sees the fields defined in the serializer, not all query data.
+        """
+        return Result.objects.filter(query__user=self.request.user).select_related(
+            "query"
+        )
+
+    @action(
+        detail=False,
+        methods=["put"],
+        url_path="update-by-task/(?P<task_id>[^/.]+)",
+        permission_classes=[IsPipelineService],
+    )
+    def update_by_task_id(self, request, task_id=None):
+        """
+        Custom endpoint for external service to update results using task_id.
+        The task_id is currently the same as the Result's pk.
+        We use custom endpoint and not default update to decouple external usage from internal URLs.
+        In addition, it allows flexibility to use different task_id than pk without affecting the integration.
+        URL: /results/update-by-task/{task_id}/
+        Method: PUT (full update is required)
+
+        Protected by IsPipelineService permission (IP whitelist).
+        """
+        try:
+            result = Result.objects.get(id=task_id)
+        except Result.DoesNotExist:
+            return Response(
+                {"error": "Result not found for this task_id"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = self.get_serializer(result, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.data)
 
 
 class TermNameSearchViewSet(viewsets.GenericViewSet):

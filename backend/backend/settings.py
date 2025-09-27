@@ -15,6 +15,7 @@ import os
 import sys
 from datetime import timedelta
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -203,7 +204,7 @@ SITE_ID = 1
 ACCOUNT_LOGIN_METHODS = {"email"}
 # ACCOUNT_USERNAME_REQUIRED = False
 # ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
+ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 
@@ -334,17 +335,28 @@ REST_AUTH_REGISTER_SERIALIZERS = {
 
 
 # Email verification settings
-ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_CONFIRM_EMAIL_ON_GET = True
-ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 0.0005   # 1
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 0.0005  # 1
 
 # Custom adapter
-ACCOUNT_ADAPTER = 'users.adapters.CustomAccountAdapter'
+ACCOUNT_ADAPTER = "users.adapters.CustomAccountAdapter"
 
 # Email confirmation redirect URLs
-ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/verify-email/"
-ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/login/"
+ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = (
+    f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/verify-email/"
+)
+ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = (
+    f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/login/"
+)
 
 REST_AUTH_REGISTER_SERIALIZERS = {
     "REGISTER_SERIALIZER": "users.serializers.CustomRegisterSerializer",
 }
+
+# IP address of the pipeline service allowed to access certain endpoints
+# Can be a comma-separated list of IPs for multiple allowed services
+# If the variable is empty or not set, no IP restriction is applied
+PIPELINE_SERVICE_IPS = [
+    ip.strip() for ip in os.getenv("PIPELINE_SERVICE_IPS", "").split(",") if ip.strip()
+]

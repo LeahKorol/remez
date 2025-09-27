@@ -1,7 +1,7 @@
 from django.db import transaction
 from rest_framework import serializers
 
-from analysis.models import DrugName, Query, ReactionName
+from analysis.models import DrugName, Query, ReactionName, Result
 
 
 class QuerySerializer(serializers.ModelSerializer):
@@ -131,6 +131,13 @@ class QuerySerializer(serializers.ModelSerializer):
                 setattr(instance, field, validated_data.pop(field))
 
         return super().update(instance, validated_data)
+
+
+class ResultSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Result
+        fields = "__all__"
+        read_only_fields = ("id", "query")
 
 
 class DrugNameSerializer(serializers.ModelSerializer):
