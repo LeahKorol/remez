@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import axios from '../axiosConfig';
 import './PasswordReset.css';
 
 // Function to handle backend error formatting
@@ -65,24 +66,23 @@ function PasswordReset() {
     }
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/v1/auth/password/reset/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
+      const { data } = await axios.post('/auth/password/reset/', { email });
 
-      if (response.ok) {
-        setIsSuccess(true);
-        setErrors([]);
-        toast.success('If an account with this email exists, a reset link has been sent to your email address.');
-      } else {
-        const data = await response.json();
-        const backendErrors = handleBackendErrors(data);
-        setErrors(backendErrors);
-      }
+      setIsSuccess(true);
+      setErrors([]);
+      toast.success('If an account with this email exists, a reset link has been sent to your email address.');
     } catch (err) {
       console.error('Password reset error:', err);
-      setErrors(['Network error. Please check your connection and try again.']);
+
+      if (err.response?.status === 500) {
+        setErrors(['Internal server error. Please try again later.']);
+        setIsLoading(false);
+        navigate('/500');
+        return;
+      }
+
+      const backendErrors = handleBackendErrors(err.response?.data || []);
+      setErrors(backendErrors.length ? backendErrors : ['Unknown error occurred.']);
     } finally {
       setIsLoading(false);
     }
