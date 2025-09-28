@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import axiosConfig from '../axiosConfig';
 import './Login.css';
 
 function EmailVerify() {
@@ -23,7 +24,7 @@ function EmailVerify() {
 
     if (verified !== null) {
       setIsVerifying(false);
-      
+
       if (verified === 'true') {
         setIsSuccess(true);
         toast.success('Email verified successfully! You can now log in.');
@@ -64,64 +65,99 @@ function EmailVerify() {
     }
   };
 
+  // const verifyEmail = async (verificationKey) => {
+  //   try {
+  //     const response = await axiosConfig.get(`/auth/email-verify/${verificationKey}/`);
+
+  //     if (response.ok) {
+  //       setIsSuccess(true);
+  //       toast.success('Email verified successfully! You can now log in.');
+  //       setTimeout(() => {
+  //         navigate('/login');
+  //       }, 3000);
+  //     } else {
+  //       const data = await response.json();
+  //       setError(data.detail || 'Email verification failed');
+  //       setErrorType('api_error');
+  //       toast.error('Email verification failed');
+  //     }
+  //   } catch (err) {
+  //     console.error('Verification error:', err);
+  //     setError('Network error during verification');
+  //     setErrorType('network');
+  //     toast.error('Network error during verification');
+  //   } finally {
+  //     setIsVerifying(false);
+  //   }
+  // };
+
+
   const verifyEmail = async (verificationKey) => {
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/v1/auth/email-verify/${verificationKey}/`);
-
-      if (response.ok) {
-        setIsSuccess(true);
-        toast.success('Email verified successfully! You can now log in.');
-        setTimeout(() => {
-          navigate('/login');
-        }, 3000);
-      } else {
-        const data = await response.json();
-        setError(data.detail || 'Email verification failed');
-        setErrorType('api_error');
-        toast.error('Email verification failed');
-      }
+      const response = await axiosConfig.get(`/auth/email-verify/${verificationKey}/`);
+      setIsSuccess(true);
+      toast.success('Email verified successfully! You can now log in.');
+      setTimeout(() => navigate('/login'), 3000);
     } catch (err) {
       console.error('Verification error:', err);
-      setError('Network error during verification');
-      setErrorType('network');
-      toast.error('Network error during verification');
+      setError(err.response?.data?.detail || 'Email verification failed');
+      setErrorType('api_error');
+      toast.error('Email verification failed');
     } finally {
       setIsVerifying(false);
     }
   };
 
+  // const handleResendVerification = async () => {
+  //   if (!emailForResend) {
+  //     toast.error('Please enter your email address');
+  //     return;
+  //   }
+
+  //   setIsResending(true);
+  //   try {
+  //     const response = await fetch('http://127.0.0.1:8000/api/v1/auth/resend-verification/', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify({
+  //         email: emailForResend
+  //       })
+  //     });
+
+  //     const data = await response.json();
+
+  //     if (response.ok) {
+  //       toast.success('A new verification link has been sent to your email. Check your mailbox.');
+  //       setShowResendButton(false);
+  //       setShowEmailModal(false);
+  //       setEmailForResend('');
+  //       navigate('/login?message=verification_sent');
+  //     } else {
+  //       toast.error(data.error || 'Error sending new verification link');
+  //     }
+  //   } catch (err) {
+  //     console.error('Resend error:', err);
+  //     toast.error('Error connecting to server');
+  //   } finally {
+  //     setIsResending(false);
+  //   }
+  // };
+
   const handleResendVerification = async () => {
-    if (!emailForResend) {
-      toast.error('Please enter your email address');
-      return;
-    }
-
-    setIsResending(true);
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/v1/auth/resend-verification/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: emailForResend
-        })
+      const response = await axiosConfig.post('/auth/resend-verification/', {
+        email: emailForResend
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toast.success('A new verification link has been sent to your email. Check your mailbox.');
-        setShowResendButton(false);
-        setShowEmailModal(false);
-        setEmailForResend('');
-        navigate('/login?message=verification_sent');
-      } else {
-        toast.error(data.error || 'Error sending new verification link');
-      }
+      toast.success('A new verification link has been sent to your email.');
+      setShowResendButton(false);
+      setShowEmailModal(false);
+      setEmailForResend('');
+      navigate('/login?message=verification_sent');
     } catch (err) {
       console.error('Resend error:', err);
-      toast.error('Error connecting to server');
+      toast.error(err.response?.data?.error || 'Error connecting to server');
     } finally {
       setIsResending(false);
     }
@@ -171,7 +207,7 @@ function EmailVerify() {
         <div className="login-header">
           <div className="logo">REMEZ</div>
         </div>
-        
+
         <div className="login-form-container">
           <div className="login-form">
             <div className="loading-icon">⏳</div>
@@ -189,15 +225,15 @@ function EmailVerify() {
         <div className="login-header">
           <div className="logo">REMEZ</div>
         </div>
-        
+
         <div className="login-form-container">
           <div className="login-form">
             <div className="success-icon">✅</div>
             <h1>Email Verified Successfully!</h1>
             <p className="verification-message">Your email has been verified. You can now log in to your account.</p>
             <p className="redirect-info">You will be redirected to the login page in a few seconds.</p>
-            
-            <button 
+
+            <button
               className="login-button primary"
               onClick={handleBackToLogin}
               type="button"
@@ -215,32 +251,32 @@ function EmailVerify() {
       <div className="login-header">
         <div className="logo">REMEZ</div>
       </div>
-      
+
       <div className="login-form-container">
         <div className="login-form">
           <div className="error-icon">{getErrorIcon()}</div>
           <h1>{getErrorTitle()}</h1>
           <p className="error-message">{error}</p>
-          
+
           {errorType === 'expired' && (
             <p>Verification links expire after 24 hours for security reasons.</p>
           )}
-          
+
           {errorType === 'notfound' && (
             <p>The verification link may have been used already or doesn't exist.</p>
           )}
-          
+
           {errorType === 'invalid' && (
             <p>The verification link appears to be corrupted or malformed.</p>
           )}
-          
+
           {errorType === 'network' && (
             <p>Please check your internet connection and try again.</p>
           )}
-          
+
           <div className="button-group">
             {showResendButton && (
-              <button 
+              <button
                 className="login-button resend-button"
                 onClick={openResendModal}
                 disabled={isResending}
@@ -249,8 +285,8 @@ function EmailVerify() {
                 {isResending ? 'Sending...' : 'Send New Verification Link'}
               </button>
             )}
-            
-            <button 
+
+            <button
               className="login-button secondary"
               onClick={handleBackToLogin}
               type="button"
@@ -276,14 +312,14 @@ function EmailVerify() {
               autoFocus
             />
             <div className="modal-buttons">
-              <button 
+              <button
                 onClick={handleResendVerification}
                 disabled={isResending || !emailForResend}
                 className="modal-button primary"
               >
                 {isResending ? 'Sending...' : 'Send'}
               </button>
-              <button 
+              <button
                 onClick={() => setShowEmailModal(false)}
                 className="modal-button secondary"
               >
