@@ -89,7 +89,8 @@ class GoogleAuthService {
         `https://www.googleapis.com/oauth2/v2/userinfo?access_token=${accessToken}`
       );
       // if (!response.ok) throw new Error('Failed to fetch user profile');
-      return await response.json();
+      // return await response.json();
+      return response.data;
     } catch (error) {
       throw new Error(`Failed to get user profile: ${error.message}`);
     }
@@ -144,11 +145,41 @@ export const useGoogleAuth = () => {
   const signInWithGoogle = async (isRegistration = false) => {
     setIsLoading(true);
     setError(null);
+    // try {
+    //   const loadingToast = toast.loading('Login with Google...');
+    //   const googleUser = await googleAuthService.signInWithPopup();
+
+    //   toast.update(loadingToast, { render: 'Data Validator...', type: 'loading' });
+    //   const authResult = await googleAuthService.authenticateWithBackend(googleUser, isRegistration);
+
+    //   if (authResult.access) localStorage.setItem('token', authResult.access);
+
+    //   toast.update(loadingToast, {
+    //     render: isRegistration ? 'You have successfully registered!' : 'You have successfully logged in!',
+    //     type: 'success',
+    //     isLoading: false,
+    //     autoClose: 2000
+    //   });
+
+    //   setTimeout(() => navigate('/profile'), 1000);
+    // } catch (err) {
+    //   console.error('Google auth error:', err);
+    //   setError(err.message);
+    //   let msg = 'Error login to Google';
+    //   if (err.message.includes('User not found')) msg = 'User not found. Please register first.';
+    //   else if (err.message.includes('already exists')) msg = 'The account already exists. Try logging in instead of signing up.';
+    //   else if (err.message.includes('Network error')) msg = 'Network problem. Check your internet connection.';
+    //   toast.error(msg, { autoClose: 5000 });
+    // } finally {
+    //   setIsLoading(false);
+    // }
+
     try {
       const loadingToast = toast.loading('Login with Google...');
       const googleUser = await googleAuthService.signInWithPopup();
 
       toast.update(loadingToast, { render: 'Data Validator...', type: 'loading' });
+
       const authResult = await googleAuthService.authenticateWithBackend(googleUser, isRegistration);
 
       if (authResult.access) localStorage.setItem('token', authResult.access);
@@ -161,17 +192,23 @@ export const useGoogleAuth = () => {
       });
 
       setTimeout(() => navigate('/profile'), 1000);
+
     } catch (err) {
       console.error('Google auth error:', err);
       setError(err.message);
+
+      toast.dismiss(); 
+
       let msg = 'Error login to Google';
       if (err.message.includes('User not found')) msg = 'User not found. Please register first.';
       else if (err.message.includes('already exists')) msg = 'The account already exists. Try logging in instead of signing up.';
       else if (err.message.includes('Network error')) msg = 'Network problem. Check your internet connection.';
+
       toast.error(msg, { autoClose: 5000 });
     } finally {
       setIsLoading(false);
     }
+
   };
 
   const handleOneTapCallback = async (response) => {
