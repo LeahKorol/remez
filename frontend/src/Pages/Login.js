@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { GoogleAuthButton, GoogleOneTap } from '../components/GoogleAuth'; 
+import { GoogleAuthButton, GoogleOneTap } from '../components/GoogleAuth';
 import { fetchWithRefresh } from '../utils/tokenService';
 import { useUser } from '../utils/UserContext';
+import axios from "../axiosConfig";
 import './Login.css';
 
 // Handle backend errors
@@ -65,7 +66,7 @@ function Login() {
   const [dynamicButtonType, setDynamicButtonType] = useState(null);
 
   const navigate = useNavigate();
-  const { login } = useUser(); 
+  const { login } = useUser();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -92,35 +93,37 @@ function Login() {
     }
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/v1/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await response.json();
+      const { data } = await axios.post('/auth/login', { email, password });
 
-      if (response.ok) {
-        toast.success('Login successful!');
-        localStorage.setItem('token', data.access);
-        if (data.refresh) {
-          localStorage.setItem('refreshToken', data.refresh);
-        }
+      toast.success('Login successful!');
+      localStorage.setItem('token', data.access);
+      if (data.refresh) {
+        localStorage.setItem('refreshToken', data.refresh);
+      }
 
-        if (data.user_id) {
-          console.log("!!!!!!!!!!!!!!!!!! user_id:", data.user_id);
-          login(data.user_id);
-        }
-        
-        navigate('/profile');
+      if (data.user_id) {
+        login(data.user_id);
+      }
+
+      navigate('/profile');
+      return;
+    }
+
+    catch (error) {
+      console.error("Login error:", error);
+
+      const backendErrors = handleBackendErrors(error.response?.data || []);
+
+      if (error.response?.status === 500) {
+        setErrors(['Internal server error. Please try again later.']);
+        navigate('/500');
         return;
       }
 
-      const backendErrors = handleBackendErrors(data);
-
-      // Email not verified
       const isEmailNotVerified = backendErrors.some((err) =>
         /not verified/i.test(err)
       );
+
       if (isEmailNotVerified) {
         setShowEmailNotVerified(true);
         setUnverifiedEmail(email);
@@ -129,16 +132,14 @@ function Login() {
         return;
       }
 
-      // 401: wrong password
-      if (response.status === 401) {
+      if (error.response?.status === 401) {
         setErrors(backendErrors.length ? backendErrors : ['Incorrect email or password.']);
         setShowForgotPassword(true);
         setDynamicButtonType('reset');
         return;
       }
 
-      // 400: possibly email not registered
-      if (response.status === 400) {
+      if (error.response?.status === 400) {
         const emailExists = await checkEmailExists(email);
         if (!emailExists) {
           toast.info('Email not registered. Redirecting to registration...');
@@ -151,31 +152,19 @@ function Login() {
         }
       }
 
-      // 500+
-      if (response.status >= 500) {
-        setErrors(['Internal server error. Please try again later.']);
-      } else {
-        setErrors(backendErrors);
-      }
-    } catch (err) {
-      console.error('Login error:', err);
-      setErrors(['Network error. Please check your connection and try again.']);
-    } finally {
-      setIsLoading(false);
-    }
+      setErrors(backendErrors);
+    } 
   };
 
   const handleResendVerification = async () => {
     setIsResending(true);
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/v1/auth/resend-verification/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: unverifiedEmail }),
-      });
-      const data = await response.json();
-      if (response.ok) toast.success('Verification email resent!');
-      else toast.error(data.error || 'Failed to resend verification email.');
+      try {
+        await axios.post('/auth/resend-verification/', { email: unverifiedEmail });
+        toast.success('Verification email resent!');
+      } catch (err) {
+        toast.error(err.response?.data?.error || 'Failed to resend verification email.');
+      }
       setShowEmailNotVerified(false);
       setDynamicButtonType(null);
     } catch (err) {
@@ -214,7 +203,7 @@ function Login() {
 
   return (
     <div className="login-container">
-      <GoogleOneTap /> 
+      <GoogleOneTap />
 
       <div className="login-header"><div className="logo">REMEZ</div></div>
 
