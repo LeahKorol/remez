@@ -184,7 +184,7 @@ class ResultViewSet(viewsets.ReadOnlyModelViewSet):
         url_path="update-by-task/(?P<task_id>[^/.]+)",
         permission_classes=[IsPipelineService],
     )
-    def update_by_task_id(self, request, task_id=None):
+    def update_by_task_id(self, request, task_id):
         """
         Custom endpoint for external service to update results using task_id.
         The task_id is currently the same as the Result's pk.
@@ -195,6 +195,12 @@ class ResultViewSet(viewsets.ReadOnlyModelViewSet):
 
         Protected by IsPipelineService permission (IP whitelist).
         """
+        # check if task_id is a valid django model id
+        if not task_id.isdigit():
+            return Response(
+                {"error": "Invalid task_id"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
         try:
             result = Result.objects.get(id=task_id)
         except Result.DoesNotExist:

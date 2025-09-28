@@ -526,3 +526,16 @@ class TestResultViewSetUpdateByTaskId:
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
         assert "not found" in response.data["error"].lower()
+
+    def update_by_task_id_invalid_id(self, settings, api_client, result_data):
+        """Test update with invalid task_id format"""
+        settings.PIPELINE_SERVICE_IPS = ["192.168.1.100"]
+
+        update_url = reverse("result-update-by-task-id", kwargs={"task_id": "invalid"})
+
+        response = api_client.put(
+            update_url, result_data, REMOTE_ADDR="192.168.1.100", format="json"
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "invalid task_id" in response.data["error"].lower()
