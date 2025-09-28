@@ -8,8 +8,20 @@ from sqlmodel import JSON, Column, Field, SQLModel
 class TaskBase(SQLModel):
     """Base model for pipeline tasks - returned when creating a new task"""
 
-    id: int | None = Field(default=None, primary_key=True)
-    status: TaskStatus = Field(default=TaskStatus.PENDING, index=True)
+    id: int | None = Field(
+        default=None, primary_key=True, description="Primary key for the task"
+    )
+    # Unique identifier from an external system, used for integration.
+    # Ensures cross-system uniqueness and allows updating external services with results.
+    external_id: str = Field(
+        index=True,
+        description="ID for correlating with an external system (e.g., Django Result ID)",
+    )
+    status: TaskStatus = Field(
+        default=TaskStatus.PENDING,
+        index=True,
+        description="Current state of the task. Defaults to PENDING.",
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(),
         nullable=False,

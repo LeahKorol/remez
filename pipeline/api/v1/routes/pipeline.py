@@ -36,7 +36,7 @@ async def run_pipeline(
         logger.info(
             f"Pipeline run requested: {request.year_start}q{request.quarter_start} to {request.year_end}q{request.quarter_end}"
         )
-        task: TaskResults = TaskResults()
+        task: TaskResults = TaskResults(external_id=request.external_id)
         session.add(task)
         session.commit()
         session.refresh(task)
