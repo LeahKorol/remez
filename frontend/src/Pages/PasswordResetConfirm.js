@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import axios from '../axiosConfig';
 import './PasswordResetConfirm.css';
 
 // Function to handle backend error formatting
@@ -48,6 +49,14 @@ function PasswordResetConfirm() {
 
   const navigate = useNavigate();
   const { uidb64, token } = useParams();
+
+  useEffect(() => {
+    if (!uidb64 || !token) {
+      setErrors(['Invalid password reset link. Please request a new one.']);
+      setIsTokenExpired(true);
+    }
+    setIsTokenExpired(false);
+  }, [uidb64, token]);
 
   // Function to validate token on page load 
   const validateToken = async () => {
