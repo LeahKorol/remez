@@ -40,12 +40,7 @@ const handleBackendErrors = (data) => {
 // API check if email exists
 const checkEmailExists = async (email) => {
   try {
-    const res = await fetch('http://127.0.0.1:8000/api/v1/auth/check-email/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    });
-    const data = await res.json();
+    const { data } = await axios.post('/check-email/', { email });
     return data.exists;
   } catch (err) {
     console.error('Email check failed:', err);
@@ -93,7 +88,7 @@ function Login() {
     }
 
     try {
-      const { data } = await axios.post('/auth/login', { email, password });
+      const { data } = await axios.post('/login/', { email, password });
 
       toast.success('Login successful!');
       localStorage.setItem('token', data.access);
@@ -136,6 +131,8 @@ function Login() {
         setErrors(backendErrors.length ? backendErrors : ['Incorrect email or password.']);
         setShowForgotPassword(true);
         setDynamicButtonType('reset');
+        toast.error('Invalid credentials or session expired. Please log in again.');
+        navigate('/session-expired');
         return;
       }
 
@@ -153,27 +150,53 @@ function Login() {
       }
 
       setErrors(backendErrors);
-    } 
+    }
+    finally {
+      setIsLoading(false);
+    }
   };
 
   const handleResendVerification = async () => {
     setIsResending(true);
     try {
-      try {
-        await axios.post('/auth/resend-verification/', { email: unverifiedEmail });
-        toast.success('Verification email resent!');
-      } catch (err) {
-        toast.error(err.response?.data?.error || 'Failed to resend verification email.');
-      }
+      await axios.post('/resend-verification/', { email: unverifiedEmail }); // 🔹 endpoint מה-backend
+      toast.success('Verification email resent!');
       setShowEmailNotVerified(false);
       setDynamicButtonType(null);
     } catch (err) {
       console.error(err);
-      toast.error('Network error. Please try again later.');
+      toast.error(err.response?.data?.error || 'Failed to resend verification email.');
     } finally {
       setIsResending(false);
     }
   };
+
+  // const handleForgotPassword = async () => {
+  //   if (!email.trim()) return setErrors(['Please enter your email to reset password.']);
+  //   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setErrors(['Please enter a valid email address.']);
+  //   setIsResetLoading(true);
+  //   setErrors([]);
+  //   try {
+  //     const res = await fetch('http://127.0.0.1:8000/api/v1/auth/password/reset/', {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({ email }),
+  //     });
+  //     if (res.ok) {
+  //       toast.success('If an account exists, a reset link has been sent.');
+  //       setShowForgotPassword(false);
+  //       setDynamicButtonType(null);
+  //     } else {
+  //       const data = await res.json();
+  //       setErrors(handleBackendErrors(data));
+  //     }
+  //   } catch {
+  //     setErrors(['Network error. Please try again.']);
+  //   } finally {
+  //     setIsResetLoading(false);
+  //   }
+  // };
+
 
   const handleForgotPassword = async () => {
     if (!email.trim()) return setErrors(['Please enter your email to reset password.']);
@@ -181,21 +204,13 @@ function Login() {
     setIsResetLoading(true);
     setErrors([]);
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/v1/auth/password/reset/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      if (res.ok) {
-        toast.success('If an account exists, a reset link has been sent.');
-        setShowForgotPassword(false);
-        setDynamicButtonType(null);
-      } else {
-        const data = await res.json();
-        setErrors(handleBackendErrors(data));
-      }
-    } catch {
-      setErrors(['Network error. Please try again.']);
+      const res = await axios.post('/password/reset/', { email }); 
+      toast.success('If an account exists, a reset link has been sent.');
+      setShowForgotPassword(false);
+      setDynamicButtonType(null);
+    } catch (err) {
+      console.error(err);
+      setErrors(handleBackendErrors(err.response?.data || []));
     } finally {
       setIsResetLoading(false);
     }

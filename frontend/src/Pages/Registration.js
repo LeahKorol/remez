@@ -34,18 +34,17 @@ const handleBackendErrors = (data) => {
 };
 
 // check if email already exists
-// check if email already exists
 const checkEmailExists = async (email) => {
   try {
-    const res = await axios.post("/auth/check-email/", { email });
+    const res = await axios.post("/check-email/", { email });
     return res.data.exists;
   } catch (err) {
     console.error("Email check failed:", err);
 
-    if (err.response?.status === 500) {
+    if (err.res?.status === 500) {
       window.location.href = "/500";
     }
-    if (err.response?.status === 404) {
+    if (err.res?.status === 404) {
       window.location.href = "/404";
     }
 
@@ -84,7 +83,7 @@ function Register() {
     if (token) {
       const verifyToken = async () => {
         try {
-          await axios.get("/auth/user/"); 
+          await axios.get("/user/");
           navigate("/profile");
         } catch (err) {
           console.error("Token invalid or server down:", err);
@@ -146,16 +145,24 @@ function Register() {
     } catch (err) {
       console.error("Network error:", err);
 
-      if (err.response?.status === 500) {
+      if (err.res?.status === 500) {
         navigate("/500");
         return;
       }
-      if (err.response?.status === 404) {
+
+      if (err.res?.status === 404) {
         navigate("/404");
         return;
       }
-      if (err.response?.data) {
-        const backendErrors = handleBackendErrors(err.response.data);
+
+      if (err.res?.status === 401) {
+        toast.error('Session expired. Please log in again.');
+        navigate('/session-expired');
+        return;
+      }
+
+      if (err.res?.data) {
+        const backendErrors = handleBackendErrors(err.res.data);
         backendErrors.forEach((msg) => toast.error(msg));
       } else {
         toast.error("Network error. Please check your connection and try again.");
