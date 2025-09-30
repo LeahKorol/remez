@@ -79,8 +79,20 @@ function Register() {
   }, [password]);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) navigate('/profile');
+    const token = localStorage.getItem("token");
+
+    if (token) {
+      const verifyToken = async () => {
+        try {
+          await axios.get("/auth/user/"); 
+          navigate("/profile");
+        } catch (err) {
+          console.error("Token invalid or server down:", err);
+          localStorage.removeItem("token"); // delete an old token
+        }
+      };
+      verifyToken();
+    }
   }, [navigate]);
 
   const handleNameChange = (e) => {
