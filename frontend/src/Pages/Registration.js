@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { GoogleAuthButton } from '../components/GoogleAuth';
 import { useUser } from '../utils/UserContext';
+import axios from "../axiosConfig";
 import './Login.css';
 
 // handle backend errors and return an array of error messages
@@ -14,7 +15,10 @@ const handleBackendErrors = (data) => {
     else if (typeof data.errors === 'object') {
       Object.keys(data.errors).forEach((field) => {
         const fieldErrors = data.errors[field];
-        if (Array.isArray(fieldErrors)) fieldErrors.forEach((error) => errorMessages.push(`${field}: ${error}`));
+        if (Array.isArray(fieldErrors))
+          fieldErrors.forEach((error) =>
+            errorMessages.push(`${field}: ${error}`)
+          );
         else errorMessages.push(`${field}: ${fieldErrors}`);
       });
     }
@@ -24,21 +28,27 @@ const handleBackendErrors = (data) => {
     if (Array.isArray(data.non_field_errors)) errorMessages = [...errorMessages, ...data.non_field_errors];
   }
 
-  return errorMessages.length > 0 ? errorMessages : ['Unknown error occurred.'];
+  return errorMessages.length > 0 ?
+    errorMessages :
+    ['Unknown error occurred.'];
 };
 
 // check if email already exists
+// check if email already exists
 const checkEmailExists = async (email) => {
   try {
-    const res = await fetch('http://127.0.0.1:8000/api/v1/auth/check-email/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    });
-    const data = await res.json();
-    return data.exists;
+    const res = await axios.post("/auth/check-email/", { email });
+    return res.data.exists;
   } catch (err) {
-    console.error('Email check failed:', err);
+    console.error("Email check failed:", err);
+
+    if (err.response?.status === 500) {
+      window.location.href = "/500";
+    }
+    if (err.response?.status === 404) {
+      window.location.href = "/404";
+    }
+
     return false;
   }
 };
@@ -56,12 +66,12 @@ function Register() {
   const [notCommon, setNotCommon] = useState(true);
 
   const commonPasswords = [
-    '123456','password','123456789','12345678','12345','qwerty','abc123',
-    'football','monkey','letmein','111111','123123','welcome','admin','passw0rd'
+    '123456', 'password', '123456789', '12345678', '12345', 'qwerty', 'abc123',
+    'football', 'monkey', 'letmein', '111111', '123123', 'welcome', 'admin', 'passw0rd'
   ];
 
   const { login } = useUser();
-  
+
   useEffect(() => {
     setIsLongEnough(password.length >= 8);
     setHasLetter(/[A-Za-z]/.test(password));
@@ -86,8 +96,8 @@ function Register() {
     // check if email already exists
     const emailExists = await checkEmailExists(email);
     if (emailExists) {
-      toast.error('This email is already registered. Redirecting to login...');
-      navigate('/login', { state: { email } });
+      toast.error("This email is already registered. Redirecting to login...");
+      navigate("/login", { state: { email } });
       setIsLoading(false);
       return;
     }
@@ -109,29 +119,35 @@ function Register() {
       return;
     }
 
-    const requestBody = { email, password1: password, password2: confirmPassword, name };
+    const requestBody = {
+      email,
+      password1: password,
+      password2: confirmPassword,
+      name
+    };
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/v1/auth/registration/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-      });
-      const data = await response.json();
+      const res = await axios.post("/auth/registration/", requestBody);
+      if (res.data.user_id) login(res.data.user_id);
+      toast.success('Registration successful! Please check your email to verify your account.');
+      navigate('/email-verification-sent');
+    } catch (err) {
+      console.error("Network error:", err);
 
-      if (response.ok) {
-        if (data.user_id) login(data.user_id);
-        
-        toast.success('Registration successful! Please check your email to verify your account.');
-        navigate('/email-verification-sent');
+      if (err.response?.status === 500) {
+        navigate("/500");
         return;
       }
-
-      const backendErrors = handleBackendErrors(data);
-      backendErrors.forEach((err) => toast.error(err));
-    } catch (err) {
-      console.error('Network error:', err);
-      toast.error('Network error. Please check your connection and try again.');
+      if (err.response?.status === 404) {
+        navigate("/404");
+        return;
+      }
+      if (err.response?.data) {
+        const backendErrors = handleBackendErrors(err.response.data);
+        backendErrors.forEach((msg) => toast.error(msg));
+      } else {
+        toast.error("Network error. Please check your connection and try again.");
+      }
     } finally {
       setIsLoading(false);
     }
