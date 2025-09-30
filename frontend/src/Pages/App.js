@@ -16,7 +16,7 @@ import LoadingPage from './LoadingPage';
 import NotFoundPage from './NotFoundPage';
 import ServerErrorPage from './ServerErrorPage';
 import MaintenancePage from './MaintenancePage';
-
+import SessionExpiredPage from './SessionExpiredPage';
 
 function App() {
   return (
@@ -34,6 +34,7 @@ function App() {
         <Route path="*" element={<NotFoundPage />} />
         <Route path="/500" element={<ServerErrorPage />} />
         <Route path="/maintenance" element={<MaintenancePage />} />
+        <Route path="/session-expired" element={<SessionExpiredPage />} />
       </Routes>
 
       <ToastContainer
