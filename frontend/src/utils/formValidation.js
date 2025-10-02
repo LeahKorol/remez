@@ -1,4 +1,3 @@
-// formValidation.js
 export const validateQueryForm = ({
     drugs,
     reactions,
@@ -46,9 +45,12 @@ export const validateQueryForm = ({
         errors.push("Please select a shorter time period (maximum 10 years).");
     }
 
-    if (startYearInt > endYearInt ||
-        (startYearInt === endYearInt && startQuarterInt > endQuarterInt)) {
-        errors.push("Start period must be earlier than or equal to the end period.");
+    if (startYearInt > endYearInt) {
+        errors.push("Start year cannot be later than end year.");
+    }
+
+    if (startYearInt === endYearInt && startQuarterInt > endQuarterInt) {
+        errors.push("When the years are the same, the start quarter cannot be greater than the end quarter.");
     }
 
     if (!queryName.trim() || queryName.trim().length < 3) {
