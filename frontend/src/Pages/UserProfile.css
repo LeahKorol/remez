@@ -665,7 +665,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100vh;
+  height: 5vh;
   font-size: 18px;
   color: #666;
 }

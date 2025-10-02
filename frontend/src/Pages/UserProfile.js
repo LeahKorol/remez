@@ -111,67 +111,68 @@ const UserProfile = () => {
         }
     };
 
-    // fetch user data on component mount
     useEffect(() => {
         const fetchUserData = async () => {
+            setLoading(true);
+            setError(null);
+    
+            const token = localStorage.getItem('token');
+            if (!token) {
+                navigate('/session-expired'); // session expired
+                return;
+            }
+    
             try {
-                setLoading(true);
-                const token = localStorage.getItem('token');
-                console.log('token:', token);
-
-                if (!token) {
-                    console.log('No token found, redirecting to login');
-                    navigate('/');
-                    return;
-                }
-
                 const userResponse = await fetchWithRefresh('http://127.0.0.1:8000/api/v1/auth/user/', {
                     method: 'GET'
                 });
-
+    
                 if (!userResponse) {
-                    // fetchWithRefresh handles redirect to login on auth failure
+                    setError('Unable to connect to server. Please try again later.');
                     return;
                 }
-
-                console.log('User response status:', userResponse.status);
-
-                if (!userResponse.ok) {
-                    throw new Error(`Failed to fetch user data: ${userResponse.status}`);
+    
+                if (userResponse.status === 401) {
+                    localStorage.removeItem('token');
+                    navigate('/session-expired'); // session expired
+                    return;
                 }
-
+    
+                if (userResponse.status >= 500) {
+                    setError('Server error. Please try again later.');
+                    navigate('/500');
+                    return;
+                }
+    
+                if (!userResponse.ok) {
+                    setError(`Failed to load user data: ${userResponse.status}`);
+                    navigate('/not-found');
+                    return;
+                }
+    
                 const userData = await userResponse.json();
-                console.log('User data received:', userData);
-
                 const userName = userData.name || userData.email?.split('@')[0] || 'User';
                 setUser({ ...userData, name: userName });
-
-                // Fetch queries after user data is successfully loaded
-                await fetchQueries();
-
-            } catch (error) {
-                console.error('Error fetching user data:', error);
-                setError('An error occurred while loading user data');
-                // Don't redirect on network errors, only on auth errors
-                if (error.message.includes('401') || error.message.includes('unauthorized')) {
-                    localStorage.removeItem('token');
-                    navigate('/');
-                }
+    
+                await fetchQueries(); // fetch queries after user loaded
+            } catch (err) {
+                console.error('Unexpected error fetching user data:', err);
+                setError('Unexpected error occurred. Please check your connection.');
             } finally {
                 setLoading(false);
             }
         };
-
+    
         fetchUserData();
     }, []);
-
+    
 
     const fetchQueries = async () => {
         try {
             const token = localStorage.getItem('token');
-
             if (!token) {
                 console.log('No token for queries');
+                navigate('/session-expired'); // session expired
                 return;
             }
 
@@ -179,45 +180,49 @@ const UserProfile = () => {
                 method: 'GET'
             });
 
-            if (!response) return;
-
-            console.log('Queries response status:', response.status);
-
-            if (response.ok) {
-                const data = await response.json();
-                console.log('Queries loaded:', data.length);
-
-                console.log('📊 Raw data from server:', data);
-                data.forEach((query, index) => {
-                    console.log(`Query ${index + 1}:`, {
-                        id: query.id,
-                        name: query.name,
-                        created: query.created_at,
-                        hasRorValues: query.ror_values ? query.ror_values.length : 'NONE',
-                        rorValues: query.ror_values,
-                        hasRorLower: !!query.ror_lower,
-                        hasRorUpper: !!query.ror_upper
-                    });
-                });
-
-                // Sort queries: those with results first, then by creation date descending
-                const sortedQueries = data.sort((a, b) => {
-                    const aHasResults = a.ror_values && a.ror_values.length > 0;
-                    const bHasResults = b.ror_values && b.ror_values.length > 0;
-
-                    if (aHasResults && !bHasResults) return -1;
-                    if (!aHasResults && bHasResults) return 1;
-
-                    // if both have or both don't have results, sort by creation date descending
-                    return new Date(b.created_at) - new Date(a.created_at);
-                });
-
-                setSavedQueries(sortedQueries);
-            } else {
-                console.error('Failed to fetch queries:', response.status);
+            if (!response) {
+                setError('Unable to connect to server. Please try again later.');
+                return;
             }
-        } catch (error) {
-            console.error('Error fetching queries:', error);
+
+            if (response.status === 401) {
+                localStorage.removeItem('token');
+                navigate('/session-expired'); // session expired
+                return;
+            }
+
+            if (response.status >= 500) {
+                navigate('/500');
+                return;
+            }
+
+            if (response.status === 404) {
+                navigate('/not-found');
+                return;
+            }
+
+            if (!response.ok) {
+                setError(`Failed to load queries: ${response.status}`);
+                return;
+            }
+
+            const data = await response.json();
+
+            // Sort queries: results first, then by creation date descending
+            const sortedQueries = data.sort((a, b) => {
+                const aHasResults = a.ror_values && a.ror_values.length > 0;
+                const bHasResults = b.ror_values && b.ror_values.length > 0;
+
+                if (aHasResults && !bHasResults) return -1;
+                if (!aHasResults && bHasResults) return 1;
+
+                return new Date(b.created_at) - new Date(a.created_at);
+            });
+
+            setSavedQueries(sortedQueries);
+        } catch (err) {
+            console.error('Unexpected error fetching queries:', err);
+            setError('Unexpected error occurred. Please check your connection.');
         }
     };
 
@@ -386,8 +391,6 @@ const UserProfile = () => {
         setTimeout(() => setShowToast(false), 3000);
     };
 
-
-    // Handle form submission for saving or updating queries
     const handleSubmitQuery = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -413,10 +416,8 @@ const UserProfile = () => {
 
         try {
             const token = localStorage.getItem('token');
-
             if (!token) {
-                alert('You are not logged in. Please log in first.');
-                navigate('/');
+                navigate('/session-expired'); // session expired
                 return;
             }
 
@@ -431,39 +432,22 @@ const UserProfile = () => {
                 user_id: userId
             };
 
-            console.log('Submitting payload:', payload);
-
-            const submitButton = e.target.querySelector('button[type="submit"]');
-            submitButton.innerHTML = '<div class="spinner-small"></div> Processing...';
-
-            const config = {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            };
-
-            console.log("config: ", config);
-
             let response;
             if (editingQueryId) {
                 response = await axios.put(
                     `http://127.0.0.1:8000/api/v1/analysis/queries/${editingQueryId}/`,
                     payload,
-                    config
+                    { headers: { Authorization: `Bearer ${token}` } }
                 );
             } else {
                 response = await axios.post(
                     'http://127.0.0.1:8000/api/v1/analysis/queries/',
                     payload,
-                    config
+                    { headers: { Authorization: `Bearer ${token}` } }
                 );
             }
 
-            console.log('Submit query response status:', response.status);
-
             const newQuery = response.data;
-            console.log('Received query with ID:', newQuery.id);
 
             if (editingQueryId) {
                 setSavedQueries(savedQueries.map(q => q.id === newQuery.id ? newQuery : q));
@@ -475,41 +459,39 @@ const UserProfile = () => {
 
             resetForm();
 
-            // redirect to loading page with query data
             navigate('/loading', {
-                state: {
-                    queryData: {
-                        ...newQuery,
-                        userId: userId,
-                        userEmail: user?.email,
-                        // Include the actual drug and reaction names for display
-                        displayDrugs: drugs.filter(d => d.id).map(d => ({ name: d.name })),
-                        displayReactions: reactions.filter(r => r.id).map(r => ({ name: r.name }))
-                    },
-                    isUpdate: !!editingQueryId
-                }
+                state: { queryData: newQuery, isUpdate: !!editingQueryId }
             });
 
         } catch (error) {
-            console.error('Error saving query:', error.response?.data || error);
+            console.error('Error saving query:', error);
 
-            if (error.response?.status === 401) {
-                alert('Your session has expired. Please log in again.');
-                localStorage.removeItem('token');
-                navigate('/');
+            if (error.response) {
+                if (error.response.status === 401) {
+                    localStorage.removeItem('token');
+                    navigate('/session-expired'); // session expired
+                    return;
+                }
+
+                if (error.response.status >= 500) {
+                    navigate('/500');
+                    return;
+                }
+
+                if (error.response.status === 404) {
+                    navigate('/not-found');
+                    return;
+                }
+
+                setSubmitError(error.response.data?.detail || 'Failed to save query');
             } else {
-                const errorMessage = error.response?.data?.detail ||
-                    error.response?.data?.message ||
-                    'Failed to save query';
-                alert(`Error: ${errorMessage}`);
-                setSubmitError(errorMessage);
+                setSubmitError('Network error: Unable to connect to server.');
             }
         } finally {
             setIsSubmitting(false);
             setGlobalLoading(false);
         }
     };
-
 
     // Add useEffect to handle success messages and updated queries from loading page
     useEffect(() => {
@@ -567,7 +549,7 @@ const UserProfile = () => {
 
             if (!token) {
                 alert('You are not logged in. Please log in first.');
-                navigate('/');
+                navigate('/session-expired');
                 return;
             }
 
@@ -681,7 +663,7 @@ const UserProfile = () => {
             const token = localStorage.getItem('token');
             if (!token) {
                 alert('You are not logged in. Please log in first.');
-                navigate('/');
+                navigate('/session-expired');
                 return;
             }
 
