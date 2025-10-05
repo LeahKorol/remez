@@ -374,6 +374,18 @@ const UserProfile = () => {
     //     return csrfCookie ? csrfCookie.split('=')[1] : null;
     // };
 
+    const resetForm = () => {
+        setDrugs([{ name: '', id: null }]);
+        setReactions([{ name: '', id: null }]);
+        setYearStart('');
+        setYearEnd('');
+        setQuarterStart('');
+        setQuarterEnd('');
+        setQueryName('New Query');
+        setIsEditing(false);
+        setEditingQueryId(null);
+    };
+
     const showToastMessage = (message) => {
         setToastMessage(message);
         setShowToast(true);
