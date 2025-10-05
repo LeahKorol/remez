@@ -36,6 +36,7 @@ function App() {
         <Route path="/loading" element={<LoadingPage />} />
         <Route path="/queries/:id" element={<QueryResultPage />} />
         <Route path="*" element={<NotFoundPage />} />
+        <Route path="/404" element={<NotFoundPage />} />
         <Route path="/500" element={<ServerErrorPage />} />
         <Route path="/maintenance" element={<MaintenancePage />} />
         <Route path="/session-expired" element={<SessionExpiredPage />} />
