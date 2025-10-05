@@ -82,6 +82,7 @@ const UserProfile = () => {
     const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+    const [resetFormTrigger, setResetFormTrigger] = useState(0);
 
     const navigate = useNavigate();
     const location = useLocation();
@@ -372,18 +373,6 @@ const UserProfile = () => {
     //     const csrfCookie = cookies.find(cookie => cookie.startsWith('csrftoken='));
     //     return csrfCookie ? csrfCookie.split('=')[1] : null;
     // };
-
-    const resetForm = () => {
-        setDrugs([{ name: '', id: null }]);
-        setReactions([{ name: '', id: null }]);
-        setYearStart('');
-        setYearEnd('');
-        setQuarterStart('');
-        setQuarterEnd('');
-        setQueryName('New Query');
-        setIsEditing(false);
-        setEditingQueryId(null);
-    };
 
     const showToastMessage = (message) => {
         setToastMessage(message);
@@ -703,6 +692,7 @@ const UserProfile = () => {
     };
 
     const handleNewQuery = () => {
+        setResetFormTrigger(prev => prev + 1);
         setViewMode('new');
         setViewingQuery(null);
         resetForm();
@@ -799,6 +789,7 @@ const UserProfile = () => {
                                 activeReactionSearchIndex={activeReactionSearchIndex}
                                 drugSearchResults={drugSearchResults}
                                 reactionSearchResults={reactionSearchResults}
+                                resetTrigger={resetFormTrigger}
                             />
 
                         </>

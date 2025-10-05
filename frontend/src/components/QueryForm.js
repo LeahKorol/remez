@@ -1,11 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { FaPlus, FaTimes } from 'react-icons/fa';
 import CustomSelect from './CustomSelect';
 import ToastNotification from './ToastNotification';
 import { fetchWithRefresh } from '../utils/tokenService';
 import '../Pages/UserProfile.css';
 
-export default function QueryForm({ onSubmit, onCancel, showToastMessage, isEditing, isSubmitting }) {
+export default function QueryForm({ onSubmit, onCancel, showToastMessage, isEditing, isSubmitting, resetTrigger }) {
     // Form state
     const [queryName, setQueryName] = useState('New Query');
     const [yearStart, setYearStart] = useState('');
@@ -14,6 +14,18 @@ export default function QueryForm({ onSubmit, onCancel, showToastMessage, isEdit
     const [quarterEnd, setQuarterEnd] = useState('');
     const [drugs, setDrugs] = useState([{ name: '', id: null }]);
     const [reactions, setReactions] = useState([{ name: '', id: null }]);
+
+    useEffect(() => {
+        if (resetTrigger > 0) {
+            setQueryName('New Query');
+            setYearStart('');
+            setYearEnd('');
+            setQuarterStart('');
+            setQuarterEnd('');
+            setDrugs([{ name: '', id: null }]);
+            setReactions([{ name: '', id: null }]);
+        }
+    }, [resetTrigger]);
 
     // Search state
     const [drugSearchResults, setDrugSearchResults] = useState([]);
