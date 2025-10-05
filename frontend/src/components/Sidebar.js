@@ -16,7 +16,7 @@ const Sidebar = ({
     handleLogout
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
-    const [visibleCount, setVisibleCount] = useState(10);
+    const [visibleCount, setVisibleCount] = useState(7);
 
     // create a memoized filtered list of queries based on the search term
     const filteredQueries = useMemo(() => {
@@ -29,7 +29,7 @@ const Sidebar = ({
     const visibleQueries = filteredQueries.slice(0, visibleCount);
 
     useEffect(() => {
-        setVisibleCount(10);
+        setVisibleCount(7);
     }, [searchTerm]);
 
 
@@ -103,7 +103,7 @@ const Sidebar = ({
                 {visibleCount < filteredQueries.length && (
                     <button
                         className="view-more-button"
-                        onClick={() => setVisibleCount(prev => prev + 10)}
+                        onClick={() => setVisibleCount(prev => prev + 7)}
                     >
                         View More
                     </button>

@@ -135,7 +135,7 @@ export default function QueryResultPage() {
                     <div><strong>Created:</strong> {new Date(queryData.created_at).toLocaleDateString()}</div>
                 </div>
 
-                <div className="chart-container">
+                <div className="chart-container-query-result">
                     <RorChart query={queryData} />
                 </div>
             </main>
