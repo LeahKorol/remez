@@ -3,12 +3,12 @@ import { FaUser, FaArrowRight, FaPlus, FaTimes, FaEdit, FaTrash, FaSignOutAlt, F
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { fetchWithRefresh } from '../utils/tokenService';
-import CustomSelect from "../components/CustomSelect";
 import QueryDetailsView from "../components/QueryDetailsView";
 import { useUser } from "../utils/UserContext";
 import { validateQueryForm } from '../utils/formValidation';
 import Sidebar from '../components/Sidebar';
 import ToastNotification from '../components/ToastNotification';
+import QueryForm from '../components/QueryForm';
 import './UserProfile.css';
 
 
@@ -115,45 +115,45 @@ const UserProfile = () => {
         const fetchUserData = async () => {
             setLoading(true);
             setError(null);
-    
+
             const token = localStorage.getItem('token');
             if (!token) {
                 navigate('/session-expired'); // session expired
                 return;
             }
-    
+
             try {
                 const userResponse = await fetchWithRefresh('http://127.0.0.1:8000/api/v1/auth/user/', {
                     method: 'GET'
                 });
-    
+
                 if (!userResponse) {
                     setError('Unable to connect to server. Please try again later.');
                     return;
                 }
-    
+
                 if (userResponse.status === 401) {
                     localStorage.removeItem('token');
                     navigate('/session-expired'); // session expired
                     return;
                 }
-    
+
                 if (userResponse.status >= 500) {
                     setError('Server error. Please try again later.');
                     navigate('/500');
                     return;
                 }
-    
+
                 if (!userResponse.ok) {
                     setError(`Failed to load user data: ${userResponse.status}`);
                     navigate('/not-found');
                     return;
                 }
-    
+
                 const userData = await userResponse.json();
                 const userName = userData.name || userData.email?.split('@')[0] || 'User';
                 setUser({ ...userData, name: userName });
-    
+
                 await fetchQueries(); // fetch queries after user loaded
             } catch (err) {
                 console.error('Unexpected error fetching user data:', err);
@@ -162,10 +162,10 @@ const UserProfile = () => {
                 setLoading(false);
             }
         };
-    
+
         fetchUserData();
     }, []);
-    
+
 
     const fetchQueries = async () => {
         try {
@@ -525,20 +525,7 @@ const UserProfile = () => {
         }
     }, [location.state]);
 
-
-    // Add useEffect to handle success messages from loading page
-    useEffect(() => {
-        // Check for success message from loading page
-        const state = location.state;
-        if (state?.message && state?.type === 'success') {
-            showToastMessage(state.message);
-
-            // Clear the state to prevent re-showing on refresh
-            window.history.replaceState({}, document.title);
-        }
-    }, [location.state]);
-
-
+    // Handle deleting a query
     const handleDeleteQuery = async (queryId) => {
         if (!window.confirm('Are you sure you want to delete this query?')) {
             return;
@@ -651,7 +638,6 @@ const UserProfile = () => {
         }
     };
 
-
     const handleEditQuery = async (query) => {
         setViewMode('edit');
         setViewingQuery(null);
@@ -676,8 +662,6 @@ const UserProfile = () => {
             }
 
             const queryData = await response.json();
-
-
             console.log('Query data from backend:', queryData);
 
             const drugsToEdit = (queryData.drugs || []).map(d => ({
@@ -711,7 +695,6 @@ const UserProfile = () => {
             setLoading(false);
         }
     };
-
 
     const cancelEditing = () => {
         resetForm();
@@ -787,216 +770,35 @@ const UserProfile = () => {
                                     </button>
                                 )}
 
-                                <ToastNotification message={toastMessage} type="error" />
-
+                                <ToastNotification message={toastMessage} type="error" show={showToast} />
                             </div>
 
-                            <form onSubmit={handleSubmitQuery}>
-                                <div className="form-section">
-                                    <div className="form-field">
-                                        <div className="mb-2">
-                                            <label className="block text-sm font-medium text-gray-700">Query Name</label>
-                                            <input
-                                                type="text"
-                                                name="queryName"
-                                                value={queryName}
-                                                onChange={(e) => {
-                                                    setQueryName(e.target.value);
+                            <QueryForm
+                                drugs={drugs}
+                                reactions={reactions}
+                                yearStart={yearStart}
+                                yearEnd={yearEnd}
+                                quarterStart={quarterStart}
+                                quarterEnd={quarterEnd}
+                                queryName={queryName}
+                                isEditing={isEditing}
+                                isSubmitting={isSubmitting}
+                                submitError={submitError}
+                                showToastMessage={showToastMessage}
+                                onSubmit={handleSubmitQuery}
+                                onCancel={cancelEditing}
+                                onDrugChange={handleDrugChange}
+                                onReactionChange={handleReactionChange}
+                                addDrug={addDrugField}
+                                addReaction={addReactionField}
+                                removeDrug={removeDrugField}
+                                removeReaction={removeReactionField}
+                                activeDrugSearchIndex={activeDrugSearchIndex}
+                                activeReactionSearchIndex={activeReactionSearchIndex}
+                                drugSearchResults={drugSearchResults}
+                                reactionSearchResults={reactionSearchResults}
+                            />
 
-                                                    // validate on the fly
-                                                    const errors = validateQueryForm({
-                                                        drugs,
-                                                        reactions,
-                                                        yearStart,
-                                                        yearEnd,
-                                                        quarterStart,
-                                                        quarterEnd,
-                                                        queryName: e.target.value
-                                                    });
-
-                                                    if (errors.length > 0) {
-                                                        errors.forEach(err => showToastMessage(err));
-                                                    }
-                                                }}
-                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                                                placeholder="Enter query name"
-                                            />
-                                        </div>
-
-                                        <div className="mb-2">
-                                            <label className="block text-sm font-medium text-gray-700">Start Year</label>
-                                            <input
-                                                type="number"
-                                                min="1900"
-                                                max="2100"
-                                                name="startYear"
-                                                value={yearStart}
-                                                onChange={handleInputChange}
-                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                                            />
-                                        </div>
-
-                                        <div className="mb-2">
-                                            <label className="block text-sm font-medium text-gray-700">End Year</label>
-                                            <input
-                                                type="number"
-                                                min="1900"
-                                                max="2100"
-                                                name="endYear"
-                                                value={yearEnd}
-                                                onChange={handleInputChange}
-                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                                            />
-                                        </div>
-
-                                        <div className="mb-2">
-                                            <label className="block text-sm font-medium text-gray-700">Start Quarter</label>
-                                            <CustomSelect
-                                                name="startQuarter"
-                                                value={quarterStart}
-                                                onChange={handleInputChange}
-                                                placeholder="Select Quarter"
-                                                options={[
-                                                    { value: "1", label: "Quarter 1" },
-                                                    { value: "2", label: "Quarter 2" },
-                                                    { value: "3", label: "Quarter 3" },
-                                                    { value: "4", label: "Quarter 4" }
-                                                ]}
-                                            />
-                                        </div>
-
-                                        <div className="mb-2">
-                                            <label className="block text-sm font-medium text-gray-700">End Quarter</label>
-                                            <CustomSelect
-                                                name="endQuarter"
-                                                value={quarterEnd}
-                                                onChange={handleInputChange}
-                                                placeholder="Select Quarter"
-                                                options={[
-                                                    { value: "1", label: "Quarter 1" },
-                                                    { value: "2", label: "Quarter 2" },
-                                                    { value: "3", label: "Quarter 3" },
-                                                    { value: "4", label: "Quarter 4" }
-                                                ]}
-                                            />
-                                        </div>
-                                    </div>
-                                    <h3 className="section-label">Drugs List</h3>
-                                    {drugs.map((drug, index) => (
-                                        <div key={`drug-${index}`} className="input-group">
-                                            <input
-                                                type="text"
-                                                className="input-field"
-                                                value={drug.name}
-                                                onChange={(e) => handleDrugChange(index, e.target.value)}
-                                                placeholder="Enter a drug..."
-                                                dir="ltr"
-                                            />
-                                            {activeDrugSearchIndex === index && drugSearchResults.length > 0 && (
-                                                <div className="search-results">
-                                                    {drugSearchResults.map((result, resultIndex) => (
-                                                        <div
-                                                            key={resultIndex}
-                                                            className="search-result-item"
-                                                            onClick={() => selectDrug(result)}
-                                                        >
-                                                            {result.name}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                            {(index > 0 || drugs.length > 1) && (
-                                                <button
-                                                    type="button"
-                                                    className="remove-button"
-                                                    onClick={() => removeDrugField(index)}
-                                                >
-                                                    <FaTimes />
-                                                </button>
-                                            )}
-                                        </div>
-                                    ))}
-                                    <button
-                                        type="button"
-                                        className="add-button"
-                                        onClick={addDrugField}
-                                    >
-                                        Add Drug <FaPlus />
-                                    </button>
-                                </div>
-
-                                <div className="form-section">
-                                    <h3 className="section-label">Reactions List</h3>
-                                    {reactions.map((reaction, index) => (
-                                        <div key={`reaction-${index}`} className="input-group">
-                                            <input
-                                                type="text"
-                                                className="input-field"
-                                                value={reaction.name}
-                                                onChange={(e) => handleReactionChange(index, e.target.value)}
-                                                placeholder="Enter a reaction..."
-                                                dir="ltr"
-                                            />
-                                            {activeReactionSearchIndex === index && reactionSearchResults.length > 0 && (
-                                                <div className="search-results">
-                                                    {reactionSearchResults.map((result, resultIndex) => (
-                                                        <div
-                                                            key={resultIndex}
-                                                            className="search-result-item"
-                                                            onClick={() => selectReaction(result)}
-                                                        >
-                                                            {result.name}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                            {(index > 0 || reactions.length > 1) && (
-                                                <button
-                                                    type="button"
-                                                    className="remove-button"
-                                                    onClick={() => removeReactionField(index)}
-                                                >
-                                                    <FaTimes />
-                                                </button>
-                                            )}
-                                        </div>
-                                    ))}
-                                    <button
-                                        type="button"
-                                        className="add-button"
-                                        onClick={addReactionField}
-                                    >
-                                        Add Reaction <FaPlus />
-                                    </button>
-                                </div>
-
-                                <div className="submit-container">
-                                    {submitError && (
-                                        <div className="error-message" style={{ color: 'red', marginBottom: '10px' }}>
-                                            {submitError}
-                                        </div>
-                                    )}
-                                    <button
-                                        type="submit"
-                                        className="submit-button"
-                                        disabled={
-                                            isSubmitting ||
-                                            drugs.every(d => !d.name || !d.name.trim()) ||
-                                            reactions.every(r => !r.name || !r.name.trim())
-                                        }
-                                    >
-                                        {isSubmitting ? (
-                                            <>
-                                                {isEditing ? 'Updating...' : 'Saving...'}
-                                            </>
-                                        ) : (
-                                            <>
-                                                {isEditing ? 'Update + Calc' : 'Save + Calc'}
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                            </form>
                         </>
                     )}
                 </div>
@@ -1011,7 +813,7 @@ const UserProfile = () => {
                 onNewQuery={handleNewQuery}
                 showLogoutConfirm={showLogoutConfirm}
                 showLogoutPopup={showLogoutPopup}
-                handleLogoutClick={setShowLogoutConfirm}
+                handleLogoutClick={handleLogoutClick}
                 handleLogout={handleLogout}
             />
         </div>
