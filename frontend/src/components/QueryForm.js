@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, { useState, useRef } from 'react';
 import { FaPlus, FaTimes } from 'react-icons/fa';
 import CustomSelect from './CustomSelect';
@@ -162,6 +163,41 @@ export default function QueryForm({ onSubmit, onCancel, showToastMessage, isEdit
                 </div>
             )}
 
+=======
+import React from 'react';
+import { FaPlus, FaTimes } from 'react-icons/fa';
+import CustomSelect from './CustomSelect';
+import ToastNotification from './ToastNotification';
+import '../Pages/UserProfile.css'
+
+export default function QueryForm({
+    drugs,
+    reactions,
+    yearStart,
+    yearEnd,
+    quarterStart,
+    quarterEnd,
+    queryName,
+    isEditing,
+    isSubmitting,
+    submitError,
+    showToastMessage,
+    onSubmit,
+    onCancel,
+    onDrugChange,
+    onReactionChange,
+    addDrug,
+    addReaction,
+    removeDrug,
+    removeReaction,
+    activeDrugSearchIndex,
+    activeReactionSearchIndex,
+    drugSearchResults,
+    reactionSearchResults,
+}) {
+    return (
+        <form onSubmit={onSubmit}>
+>>>>>>> f411e9f61f5caa78d223766188e47a90ddafbb00
             <div className="form-section">
                 <div className="form-field">
                     <div className="mb-2">
@@ -170,7 +206,11 @@ export default function QueryForm({ onSubmit, onCancel, showToastMessage, isEdit
                             type="text"
                             name="queryName"
                             value={queryName}
+<<<<<<< HEAD
                             onChange={handleInputChange}
+=======
+                            onChange={(e) => showToastMessage(e.target.value)}
+>>>>>>> f411e9f61f5caa78d223766188e47a90ddafbb00
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
                             placeholder="Enter query name"
                         />
@@ -184,7 +224,11 @@ export default function QueryForm({ onSubmit, onCancel, showToastMessage, isEdit
                             max="2100"
                             name="startYear"
                             value={yearStart}
+<<<<<<< HEAD
                             onChange={handleInputChange}
+=======
+                            onChange={(e) => showToastMessage(e.target.value)}
+>>>>>>> f411e9f61f5caa78d223766188e47a90ddafbb00
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
                         />
                     </div>
@@ -197,7 +241,11 @@ export default function QueryForm({ onSubmit, onCancel, showToastMessage, isEdit
                             max="2100"
                             name="endYear"
                             value={yearEnd}
+<<<<<<< HEAD
                             onChange={handleInputChange}
+=======
+                            onChange={(e) => showToastMessage(e.target.value)}
+>>>>>>> f411e9f61f5caa78d223766188e47a90ddafbb00
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
                         />
                     </div>
@@ -207,7 +255,11 @@ export default function QueryForm({ onSubmit, onCancel, showToastMessage, isEdit
                         <CustomSelect
                             name="startQuarter"
                             value={quarterStart}
+<<<<<<< HEAD
                             onChange={handleInputChange}
+=======
+                            onChange={(e) => showToastMessage(e.target.value)}
+>>>>>>> f411e9f61f5caa78d223766188e47a90ddafbb00
                             placeholder="Select Quarter"
                             options={[
                                 { value: "1", label: "Quarter 1" },
@@ -223,7 +275,11 @@ export default function QueryForm({ onSubmit, onCancel, showToastMessage, isEdit
                         <CustomSelect
                             name="endQuarter"
                             value={quarterEnd}
+<<<<<<< HEAD
                             onChange={handleInputChange}
+=======
+                            onChange={(e) => showToastMessage(e.target.value)}
+>>>>>>> f411e9f61f5caa78d223766188e47a90ddafbb00
                             placeholder="Select Quarter"
                             options={[
                                 { value: "1", label: "Quarter 1" },
@@ -234,9 +290,13 @@ export default function QueryForm({ onSubmit, onCancel, showToastMessage, isEdit
                         />
                     </div>
                 </div>
+<<<<<<< HEAD
             </div>
 
             <div className="form-section">
+=======
+
+>>>>>>> f411e9f61f5caa78d223766188e47a90ddafbb00
                 <h3 className="section-label">Drugs List</h3>
                 {drugs.map((drug, index) => (
                     <div key={`drug-${index}`} className="input-group">
@@ -244,21 +304,42 @@ export default function QueryForm({ onSubmit, onCancel, showToastMessage, isEdit
                             type="text"
                             className="input-field"
                             value={drug.name}
+<<<<<<< HEAD
                             onChange={(e) => handleDrugChange(index, e.target.value)}
+=======
+                            onChange={(e) => onDrugChange(index, e.target.value)}
+>>>>>>> f411e9f61f5caa78d223766188e47a90ddafbb00
                             placeholder="Enter a drug..."
                             dir="ltr"
                         />
                         {activeDrugSearchIndex === index && drugSearchResults.length > 0 && (
                             <div className="search-results">
+<<<<<<< HEAD
                                 {drugSearchResults.map((result, idx) => (
                                     <div key={idx} className="search-result-item" onClick={() => selectDrug(result)}>
+=======
+                                {drugSearchResults.map((result, resultIndex) => (
+                                    <div
+                                        key={resultIndex}
+                                        className="search-result-item"
+                                        onClick={() => onDrugChange(index, result.name)}
+                                    >
+>>>>>>> f411e9f61f5caa78d223766188e47a90ddafbb00
                                         {result.name}
                                     </div>
                                 ))}
                             </div>
                         )}
                         {(index > 0 || drugs.length > 1) && (
+<<<<<<< HEAD
                             <button type="button" className="remove-button" onClick={() => removeDrug(index)}>
+=======
+                            <button
+                                type="button"
+                                className="remove-button"
+                                onClick={() => removeDrug(index)}
+                            >
+>>>>>>> f411e9f61f5caa78d223766188e47a90ddafbb00
                                 <FaTimes />
                             </button>
                         )}
@@ -277,21 +358,42 @@ export default function QueryForm({ onSubmit, onCancel, showToastMessage, isEdit
                             type="text"
                             className="input-field"
                             value={reaction.name}
+<<<<<<< HEAD
                             onChange={(e) => handleReactionChange(index, e.target.value)}
+=======
+                            onChange={(e) => onReactionChange(index, e.target.value)}
+>>>>>>> f411e9f61f5caa78d223766188e47a90ddafbb00
                             placeholder="Enter a reaction..."
                             dir="ltr"
                         />
                         {activeReactionSearchIndex === index && reactionSearchResults.length > 0 && (
                             <div className="search-results">
+<<<<<<< HEAD
                                 {reactionSearchResults.map((result, idx) => (
                                     <div key={idx} className="search-result-item" onClick={() => selectReaction(result)}>
+=======
+                                {reactionSearchResults.map((result, resultIndex) => (
+                                    <div
+                                        key={resultIndex}
+                                        className="search-result-item"
+                                        onClick={() => onReactionChange(index, result.name)}
+                                    >
+>>>>>>> f411e9f61f5caa78d223766188e47a90ddafbb00
                                         {result.name}
                                     </div>
                                 ))}
                             </div>
                         )}
                         {(index > 0 || reactions.length > 1) && (
+<<<<<<< HEAD
                             <button type="button" className="remove-button" onClick={() => removeReaction(index)}>
+=======
+                            <button
+                                type="button"
+                                className="remove-button"
+                                onClick={() => removeReaction(index)}
+                            >
+>>>>>>> f411e9f61f5caa78d223766188e47a90ddafbb00
                                 <FaTimes />
                             </button>
                         )}
@@ -303,7 +405,20 @@ export default function QueryForm({ onSubmit, onCancel, showToastMessage, isEdit
             </div>
 
             <div className="submit-container">
+<<<<<<< HEAD
                 <button type="submit" className="submit-button" disabled={isSubmitting}>
+=======
+                {submitError && (
+                    <div className="error-message" style={{ color: 'red', marginBottom: '10px' }}>
+                        {submitError}
+                    </div>
+                )}
+                <button
+                    type="submit"
+                    className="submit-button"
+                    disabled={isSubmitting}
+                >
+>>>>>>> f411e9f61f5caa78d223766188e47a90ddafbb00
                     {isSubmitting ? (isEditing ? 'Updating...' : 'Saving...') : (isEditing ? 'Update + Calc' : 'Save + Calc')}
                 </button>
                 {isEditing && (
@@ -312,6 +427,14 @@ export default function QueryForm({ onSubmit, onCancel, showToastMessage, isEdit
                     </button>
                 )}
             </div>
+<<<<<<< HEAD
         </form>
     );
 }
+=======
+
+            <ToastNotification message={submitError} type="error" />
+        </form>
+    );
+}
+>>>>>>> f411e9f61f5caa78d223766188e47a90ddafbb00
