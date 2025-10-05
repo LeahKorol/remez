@@ -17,6 +17,9 @@ import NotFoundPage from './NotFoundPage';
 import ServerErrorPage from './ServerErrorPage';
 import MaintenancePage from './MaintenancePage';
 import SessionExpiredPage from './SessionExpiredPage';
+import QueryResultPage from './QueryResultPage';
+import AnalysisEmailNotification from './AnalysisEmailNotification';
+
 
 function App() {
   return (
@@ -31,10 +34,12 @@ function App() {
         <Route path="/email-verification-sent" element={<EmailVerificationSent />} />
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/loading" element={<LoadingPage />} />
+        <Route path="/queries/:id" element={<QueryResultPage />} />
         <Route path="*" element={<NotFoundPage />} />
         <Route path="/500" element={<ServerErrorPage />} />
         <Route path="/maintenance" element={<MaintenancePage />} />
         <Route path="/session-expired" element={<SessionExpiredPage />} />
+        <Route path="/analysis-email-notification" element={<AnalysisEmailNotification />} />
       </Routes>
 
       <ToastContainer
