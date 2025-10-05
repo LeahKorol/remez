@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { GoogleAuthButton, GoogleOneTap } from '../components/GoogleAuth';
 import { fetchWithRefresh } from '../utils/tokenService';
@@ -61,12 +61,13 @@ function Login() {
   const [dynamicButtonType, setDynamicButtonType] = useState(null);
 
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useUser();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) navigate('/profile');
-  }, [navigate]);
+    if (token) navigate(location.state?.from || '/profile');
+  }, [navigate, location.state]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -100,7 +101,9 @@ function Login() {
         login(data.user_id);
       }
 
-      navigate('/profile');
+      // navigate('/profile');
+      navigate(location.state?.from || "/profile");
+
       return;
     }
 
@@ -204,7 +207,7 @@ function Login() {
     setIsResetLoading(true);
     setErrors([]);
     try {
-      const res = await axios.post('/password/reset/', { email }); 
+      const res = await axios.post('/password/reset/', { email });
       toast.success('If an account exists, a reset link has been sent.');
       setShowForgotPassword(false);
       setDynamicButtonType(null);
