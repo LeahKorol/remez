@@ -19,6 +19,8 @@ import MaintenancePage from './MaintenancePage';
 import SessionExpiredPage from './SessionExpiredPage';
 import QueryResultPage from './QueryResultPage';
 import AnalysisEmailNotification from './AnalysisEmailNotification';
+import PrivacyPolicy from './PrivacyPolicy';
+import AboutResearch from './AboutResearch';
 
 
 function App() {
@@ -35,6 +37,8 @@ function App() {
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/loading" element={<LoadingPage />} />
         <Route path="/queries/:id" element={<QueryResultPage />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/about" element={<AboutResearch />} />
         <Route path="*" element={<NotFoundPage />} />
         <Route path="/404" element={<NotFoundPage />} />
         <Route path="/500" element={<ServerErrorPage />} />
