@@ -15,14 +15,16 @@ function AboutResearch() {
                 <h1 className="main-title">About the Research</h1>
 
                 <p className="description" style={{ maxWidth: '700px' }}>
-                    REMEZ is built on evidence-based research to provide reliable medication interaction analysis. 
-                    The algorithms and methodology are derived from peer-reviewed studies and validated by clinical experts.
+                    REMEZ is built on evidence-based research conducted by Dr. Boris Gorelik to provide reliable
+                    medication interaction analysis. Our team, Eng. Leah Korol and Eng. Talya Kazayof developed this
+                    website based on his validated research and methodology.
                 </p>
 
                 <p className="description" style={{ maxWidth: '700px', marginTop: '20px' }}>
-                    You can access the main research paper here: 
-                    <a href="YOUR_RESEARCH_LINK_HERE" target="_blank" rel="noopener noreferrer" 
-                       style={{ color: '#5e68f1', textDecoration: 'underline', marginLeft: '5px' }}>
+                    You can access Dr. Boris Gorelik's main research paper here:
+                    <a href="https://gorelik.net/2020/03/11/the-cardiovascular-safety-of-antiobesity-drugs-analysis-of-signals-in-the-fda-adverse-event-report-system-database"
+                        target="_blank" rel="noopener noreferrer"
+                        style={{ color: '#5e68f1', textDecoration: 'underline', marginLeft: '5px' }}>
                         View Research
                     </a>
                 </p>
