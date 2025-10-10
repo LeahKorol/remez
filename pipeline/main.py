@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from api.v1.router import api_router
 from core.config import get_settings
 from core.logging import setup_logging
+from core.http_client import http_client
 from database import create_db_and_tables
 from fastapi import FastAPI
 from models import *
@@ -22,7 +23,9 @@ async def lifespan(app: FastAPI):
     logger.info("FAERS API starting up...")
     logger.info(f"Environment: {settings.ENVIRONMENT}")
     create_db_and_tables()
+    await http_client.get_or_create()
     yield
+    await http_client.stop()
     logger.info("FAERS API shutting down...")
 
 
