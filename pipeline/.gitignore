@@ -9,5 +9,6 @@ __pycache__/
 **/pipeline_output/**
 
 **/*.sqlite3
+*.sqlite3
 
 logs/**

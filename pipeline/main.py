@@ -2,7 +2,6 @@
 FastAPI main application entry point
 """
 
-import logging
 from contextlib import asynccontextmanager
 
 from api.v1.router import api_router
@@ -18,8 +17,7 @@ from models import *
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
     settings = get_settings()
-    setup_logging(settings.LOG_LEVEL)
-    logger = logging.getLogger("faers-api")
+    logger = setup_logging(settings.LOG_LEVEL)
     logger.info("FAERS API starting up...")
     logger.info(f"Environment: {settings.ENVIRONMENT}")
     create_db_and_tables()
