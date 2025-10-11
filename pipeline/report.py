@@ -692,6 +692,7 @@ def main(
     dir_reports: str,
     output_raw_exposure_data: bool = False,
     return_plot_data_only: bool = False,
+    custom_logger=None,
 ) -> Dict[str, Dict[str, Reporter.PlotDataDict]]:
     """
     Generate reports and optionally return plot data
@@ -706,6 +707,8 @@ def main(
         whether to include raw table of exposure cases
     :param bool return_plot_data:
         If True, returns a dict containing plot data points instead of generating plots
+    :param logging.Logger logger:
+        Optional logger instance to direct the output.
 
     :return:
         If return_plot_data=False: None
@@ -722,6 +725,10 @@ def main(
                 'ror_values': [0.8536837501490995], 'ror_lower': [0.616947607155467], 'ror_upper': [1.1812606724074433],
                 'log10_ror': [-0.06870298528530162], 'log10_ror_lower': [-0.2097517158523444], 'log10_ror_upper': [0.07234574528174116]}}}}
     """
+
+    global logger
+    if custom_logger:
+        logger = custom_logger
 
     config_items = QuestionConfig.load_config_items(config_dir)
     files = sorted(glob(os.path.join(dir_marked_data, "*.pkl")))

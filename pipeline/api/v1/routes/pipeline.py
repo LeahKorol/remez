@@ -12,7 +12,7 @@ from models.schemas import (
     ErrorResponse,
     PipelineRequest,
 )
-from services.pipeline_service import pipeline_service
+from services import pipeline_service
 from starlette.status import HTTP_201_CREATED, HTTP_404_NOT_FOUND
 
 logger = logging.getLogger("faers-api.routes")
@@ -41,7 +41,7 @@ async def run_pipeline(
         session.commit()
         session.refresh(task)
 
-        pipeline_service.start_pipeline(request, backround_tasks, task)
+        pipeline_service.start_pipeline(request, task)
         return task
 
     except Exception as e:

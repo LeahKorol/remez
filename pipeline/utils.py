@@ -208,18 +208,13 @@ class QuestionConfig:
     @classmethod
     def load_config_items(cls, dir_config):
         ret = []
-        # Skip JSON files and only read from Excel files
-        # for f in sorted(glob(os.path.join(dir_config, "*.json"))):
-        #     ret.append(cls.config_from_json_file(f))
+        # read from json files
+        for f in sorted(glob(os.path.join(dir_config, "*.json"))):
+            ret.append(cls.config_from_json_file(f))
 
-        # Only read from saxenda_et_al.xlsx
-        saxenda_file = os.path.join(dir_config, "saxenda_et_al.xlsx")
-        if os.path.exists(saxenda_file):
-            ret.extend(cls.configs_from_excel_file(saxenda_file))
-        else:
-            # Fallback to any Excel file if saxenda_et_al.xlsx doesn't exist
-            for f in glob(os.path.join(dir_config, "[a-zA-Z0-9]*.xls?")):
-                ret.extend(cls.configs_from_excel_file(f))
+        # read from excel files
+        for f in glob(os.path.join(dir_config, "[a-zA-Z0-9]*.xls?")):
+            ret.extend(cls.configs_from_excel_file(f))
         return ret
 
     @staticmethod

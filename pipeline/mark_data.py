@@ -216,6 +216,7 @@ def main(
     dir_out,
     threads=1,
     clean_on_failure=True,
+    custom_logger=None
 ):
     # --skip-if-exists --year-q-from=$(QUARTER_FROM) --year-q-to=$(QUARTER_TO) --dir-in=$(DIR_FAERS_DEDUPLICATED) --config-dir=$(CONFIG_DIR) --dir-out=$(DIR_MARKED_FILES) -t $(N_THREADS) --no-clean-on-failure
     """
@@ -233,14 +234,20 @@ def main(
     :param int threads:
         Threads in parallel processing
     :param bool clean_on_failure:
-        ???
+        Remove output files on failure
+    :param logging.Logger logger: 
+        Optional logger instance to direct the output.
 
     :return: None
 
     """
+    global logger
+    if custom_logger:
+        logger = custom_logger
 
     dir_out = os.path.abspath(dir_out)
     os.makedirs(dir_out, exist_ok=True)
+
     try:
         logger.info(f"Processing data from {year_q_from} to {year_q_to}")
         logger.info(f"Input directory: {dir_in}")
