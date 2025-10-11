@@ -161,6 +161,26 @@
   margin: 5px 0;
 }
 
+.footer-links {
+  margin-top: 10px;
+}
+
+.footer-link {
+  color: #5e68f1;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.footer-link:hover {
+  color: #7b42e0;
+}
+
+.separator {
+  margin: 0 8px;
+  color: #ccc;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .App-logo {
     animation: App-logo-spin infinite 20s linear;
