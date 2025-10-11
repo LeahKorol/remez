@@ -37,10 +37,19 @@ class PipelineRequest(BaseModel):
 class HealthResponse(BaseModel):
     """Health check response model"""
 
-    status: str = Field(..., description="Health status")
     api_version: str = Field(..., description="API version")
     timestamp: str = Field(..., description="Current timestamp")
     environment: str = Field(..., description="Current environment")
+
+
+class ReadinessResponse(BaseModel):
+    """Readiness check response."""
+
+    checks: Dict[str, bool] = Field(
+        ..., description="Checks were done to test readiness"
+    )
+    timestamp: str = Field(..., description="Current timestamp")
+    error: Optional[str] = Field(description="Error retirned during readiness checks")
 
 
 class AvailableDataResponse(BaseModel):
