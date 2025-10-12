@@ -119,7 +119,7 @@ def mark_data(
     year_q_from,
     year_q_to,
     dir_external,
-    config_dir,
+    config_dict,
     marked_data_dir,
 ):
     task_logger.info("Starting Step 1: Mark data")
@@ -127,7 +127,7 @@ def mark_data(
         year_q_from=year_q_from,
         year_q_to=year_q_to,
         dir_in=str(dir_external),
-        config_dir=str(config_dir),
+        config_dict=config_dict,
         dir_out=str(marked_data_dir),
         threads=settings.PIPELINE_THREADS,
         clean_on_failure=False,
@@ -136,12 +136,12 @@ def mark_data(
     task_logger.info("Data marking step completed successfully")
 
 
-def generate_reports(marked_data_dir, dir_external, config_dir, dir_reports):
+def generate_reports(marked_data_dir, dir_external, config_dict, dir_reports):
     task_logger.info("Starting Step 2: Generate reports")
     report_main(
         dir_marked_data=str(marked_data_dir),
         dir_raw_data=str(dir_external),
-        config_dir=str(config_dir),
+        config_dict=config_dict,
         dir_reports=str(dir_reports),
         output_raw_exposure_data=True,
         return_plot_data_only=True,
@@ -238,18 +238,22 @@ def run_pipeline(request: PipelineRequest, task: TaskResults):
             d.mkdir(parents=True)
 
         dir_external = settings.get_external_data_path()
-        config_dir = settings.get_config_path()
+        config_dict = {
+            "drug": request.drugs,
+            "reaction": request.reactions,
+            "control": request.control,
+        }
 
         verify_data_files_exists(request, dir_external)
         mark_data(
             year_q_from,
             year_q_to,
             dir_external,
-            config_dir,
+            config_dict,
             marked_data_dir,
         )
         results_file = generate_reports(
-            marked_data_dir, dir_external, config_dir, dir_reports
+            marked_data_dir, dir_external, config_dict, dir_reports
         )
         save_results_to_db(task, results_file)
         send_results_to_callback(task)

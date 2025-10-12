@@ -32,7 +32,6 @@ class Settings(BaseSettings):
     DATA_EXTERNAL_DIR: str = "data/external/faers"
     DATA_OUTPUT_DIR: str = "pipeline_output"
     LOGS_DIR: str = "logs"
-    CONFIG_DIR: str = "config"
 
     # Database settings
     SQLITE_FILE_NAME: str = "database.sqlite3"
@@ -51,14 +50,10 @@ class Settings(BaseSettings):
     def get_output_path(self) -> Path:
         """Get the full path to pipeline output directory"""
         return self.BASE_DIR / self.DATA_OUTPUT_DIR
-    
-    def get_logs_dir(self)->Path:
+
+    def get_logs_dir(self) -> Path:
         """Get the full path to logs directory"""
         return self.BASE_DIR / self.LOGS_DIR
-
-    def get_config_path(self) -> Path:
-        """Get the full path to config directory"""
-        return self.BASE_DIR / self.CONFIG_DIR
 
 
 @lru_cache()

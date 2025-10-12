@@ -212,11 +212,12 @@ def main(
     year_q_from,
     year_q_to,
     dir_in,
-    config_dir,
+    config_dir=None,  # save config dir for backwards compatability
+    config_dict=None,
     dir_out,
     threads=1,
     clean_on_failure=True,
-    custom_logger=None
+    custom_logger=None,
 ):
     # --skip-if-exists --year-q-from=$(QUARTER_FROM) --year-q-to=$(QUARTER_TO) --dir-in=$(DIR_FAERS_DEDUPLICATED) --config-dir=$(CONFIG_DIR) --dir-out=$(DIR_MARKED_FILES) -t $(N_THREADS) --no-clean-on-failure
     """
@@ -229,13 +230,15 @@ def main(
         Input directory
     :param str config_dir:
         Directory with config files
+    :param str config_dict:
+        Dictionary object with configuration for queries
     :param str dir_out:
         Output directory
     :param int threads:
         Threads in parallel processing
     :param bool clean_on_failure:
         Remove output files on failure
-    :param logging.Logger logger: 
+    :param logging.Logger logger:
         Optional logger instance to direct the output.
 
     :return: None
@@ -252,6 +255,7 @@ def main(
         logger.info(f"Processing data from {year_q_from} to {year_q_to}")
         logger.info(f"Input directory: {dir_in}")
         logger.info(f"Config directory: {config_dir}")
+        logger.info(f"Config dictionary: {config_dict}")
         logger.info(f"Output directory: {dir_out}")
 
         q_from = Quarter(year_q_from)
@@ -271,7 +275,12 @@ def main(
             if not os.path.exists(reac_file):
                 logger.warning(f"Reaction file not found: {reac_file}")
 
-        config_items = QuestionConfig.load_config_items(config_dir)
+        config_items = []
+        if config_dir:
+            config_items = QuestionConfig.load_config_items(config_dir)
+        if config_dict:
+            config_items.append(QuestionConfig.config_from_dict(config_dict))
+
         drug_names = set()
         reaction_types = set()
         for config in config_items:
@@ -279,7 +288,7 @@ def main(
             if config.control is not None:
                 drug_names.update(set(config.control))
             reaction_types.update(set(config.reactions))
-        print(
+        logger.info(
             f"Will analyze {len(drug_names)} drugs and {len(reaction_types)} reactions"
         )
 

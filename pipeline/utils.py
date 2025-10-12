@@ -229,6 +229,24 @@ class QuestionConfig:
         return ret
 
     @classmethod
+    def config_from_dict(cls, config: Dict[str, Any], name="dict-config"):
+        if "drug" not in config or "reaction" not in config:
+            raise KeyError("Config dictionary must contain 'drug' and 'reaction' keys")
+        
+        if "control" in config and not config["control"]:
+            logger.warning("Control field is empty")
+
+        drugs = [cls.normalize_drug_name(d) for d in config["drug"]]
+        reactions = [cls.normalize_reaction_name(r) for r in config["reaction"]]
+        control = (
+            [cls.normalize_drug_name(d) for d in config["control"]]
+            if "control" in config and config["control"]
+            else None
+        )
+
+        return QuestionConfig(name, drugs=drugs, reactions=reactions, control=control)
+
+    @classmethod
     def config_from_json_file(cls, fn):
         name = os.path.split(fn)[-1].replace(".json", "")
         config = json.load(open(fn))

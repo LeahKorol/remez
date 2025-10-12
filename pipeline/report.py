@@ -687,7 +687,8 @@ def filter_data_for_regression(
 def main(
     *,
     dir_marked_data: str,
-    config_dir: str,
+    config_dir: str = None,  # # save config dir for backwards compatability
+    config_dict: str = None,
     dir_raw_data: str,
     dir_reports: str,
     output_raw_exposure_data: bool = False,
@@ -701,6 +702,8 @@ def main(
         marked data directory
     :param str config_dir:
         config directory
+    :param str config_dict:
+        config dictionary
     :param str dir_reports:
         output directory
     :param bool output_raw_exposure_data:
@@ -730,7 +733,12 @@ def main(
     if custom_logger:
         logger = custom_logger
 
-    config_items = QuestionConfig.load_config_items(config_dir)
+    config_items = []
+    if config_dir:
+        config_items = QuestionConfig.load_config_items(config_dir)
+    if config_dict:
+        config_items.append(QuestionConfig.config_from_dict(config_dict))
+
     files = sorted(glob(os.path.join(dir_marked_data, "*.pkl")))
     data_all_configs = pd.concat([pickle.load(open(f, "rb")) for f in files])
 

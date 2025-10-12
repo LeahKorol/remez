@@ -5,7 +5,7 @@ Pipeline API routes
 import logging
 
 from database import SessionDep
-from fastapi import APIRouter, BackgroundTasks, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from models.models import TaskBase, TaskResults
 from models.schemas import (
     AvailableDataResponse,
@@ -28,7 +28,6 @@ router = APIRouter()
 )
 async def run_pipeline(
     request: PipelineRequest,
-    backround_tasks: BackgroundTasks,
     session: SessionDep,
 ) -> TaskBase:
     """Start a new pipeline execution"""

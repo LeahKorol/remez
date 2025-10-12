@@ -16,6 +16,13 @@ class PipelineRequest(BaseModel):
     year_end: int = Field(..., description="Ending year for analysis", ge=2000, le=2030)
     quarter_start: int = Field(..., ge=1, le=4, description="Starting quarter (1-4)")
     quarter_end: int = Field(..., ge=1, le=4, description="Ending quarter (1-4)")
+    drugs: List[str] = Field(..., description="List of drugs to analyze", min_items=1)
+    reactions: List[str] = Field(
+        ..., description="List of reactions to analyze", min_items=1
+    )
+    control: Optional[List[str]] = Field(
+        None, description="Optional list of control drugs for comparison"
+    )
     external_id: str = Field(
         ...,
         min_length=1,
