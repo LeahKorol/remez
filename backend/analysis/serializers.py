@@ -1,44 +1,59 @@
 from django.db import transaction
 from rest_framework import serializers
 
-from analysis.models import DrugName, Query, ReactionName, Result
+from analysis.models import DrugName, Query, ReactionName, Result, ResultStatus
+
+
+class DrugNameSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DrugName
+        fields = "__all__"
+        read_only_fields = ("id", "name")
+
+
+class ReactionNameSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReactionName
+        fields = "__all__"
+        read_only_fields = ("id", "name")
+
+
+class ResultSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Result
+        fields = "__all__"
+        read_only_fields = ("id", "query")
 
 
 class QuerySerializer(serializers.ModelSerializer):
-    # Accepts only arrays of IDs for drugs and reactions on input (create/update)
+    # Write-only fields: Accept simple IDs for input (POST/PUT/PATCH)
     drugs = serializers.PrimaryKeyRelatedField(
-        many=True, queryset=DrugName.objects.all()
+        many=True, queryset=DrugName.objects.all(), write_only=True
     )
     reactions = serializers.PrimaryKeyRelatedField(
-        many=True, queryset=ReactionName.objects.all()
+        many=True, queryset=ReactionName.objects.all(), write_only=True
     )
 
-    def to_representation(self, instance):
-        # On output (GET, PUT, POST), returns arrays of objects with both id and name for drugs and reactions
-        # This overrides the default representation provided by PrimaryKeyRelatedField
-        # It allows showing the drugs and reations names to the user without needing extra requests
-        rep = super().to_representation(instance)
-        rep["drugs"] = [
-            {"id": drug.id, "name": drug.name} for drug in instance.drugs.all()
-        ]
-        rep["reactions"] = [
-            {"id": reaction.id, "name": reaction.name}
-            for reaction in instance.reactions.all()
-        ]
-        return rep
+    # Read-only fields: Return full nested objects for output (GET responses)
+    # Return lists of drugs and reactions with their details (id and name) instead of just IDs
+    # provided by default PrimarKeyRelatedField. It prevents additional queries to get the terms names.
+    drugs_details = DrugNameSerializer(source="drugs", many=True, read_only=True)
+    reactions_details = ReactionNameSerializer(
+        source="reactions", many=True, read_only=True
+    )
+    result = ResultSerializer(read_only=True)
 
     class Meta:
         model = Query
         fields = "__all__"
-
         read_only_fields = (
             "id",
             "user",
             "created_at",
             "updated_at",
-            "ror_values",
-            "ror_lower",
-            "ror_upper",
+            "drugs_details",
+            "reactions_details",
+            "result",
         )
 
     def validate(self, data):
@@ -79,15 +94,20 @@ class QuerySerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """
         Creates a new Query instance with associated drugs and reactions.
-        This method handles the atomic creation of a Query object along with its
-        many-to-many relationships with drugs and reactions.
+        Also creates the associated Result object in PENDING status.
+        This method handles the atomic creation of both objects along with
+        many-to-many relationships.
         """
         drugs = validated_data.pop("drugs")
         reactions = validated_data.pop("reactions")
+
         with transaction.atomic():
             query = Query.objects.create(**validated_data)
             query.drugs.set(drugs)
             query.reactions.set(reactions)
+
+            # Create associated Result object in PENDING status
+            Result.objects.create(query=query, status=ResultStatus.PENDING)
 
             return query
         return None
@@ -122,33 +142,4 @@ class QuerySerializer(serializers.ModelSerializer):
                     }
                 )
 
-        # Handle ROR fields that are read-only but can be updated by the system.
-        # These values are recalculated when other fields change and injected via
-        # the view's perform_update method.
-        # Direct user modifications to read-only fields are ignored by DRF
-        for field in ("ror_values", "ror_lower", "ror_upper", "updated_by"):
-            if field in validated_data:
-                setattr(instance, field, validated_data.pop(field))
-
         return super().update(instance, validated_data)
-
-
-class ResultSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Result
-        fields = "__all__"
-        read_only_fields = ("id", "query")
-
-
-class DrugNameSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = DrugName
-        fields = "__all__"
-        read_only_fields = ("id", "name")
-
-
-class ReactionNameSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ReactionName
-        fields = "__all__"
-        read_only_fields = ("id", "name")

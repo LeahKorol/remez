@@ -2,7 +2,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from analysis.models import DrugName, Query, ReactionName
+from analysis.models import DrugName, Query, ReactionName, Result, ResultStatus
 from analysis.serializers import (
     DrugNameSerializer,
     QuerySerializer,
@@ -31,6 +31,15 @@ def query_test_data():
     )
     query.drugs.set([drug1.id])
     query.reactions.set([reaction1.id])
+    
+    # Create the associated Result object
+    result = Result.objects.create(
+        query=query,
+        status=ResultStatus.PENDING,
+        ror_values=[],
+        ror_lower=[],
+        ror_upper=[]
+    )
 
     return {
         "user": user,
@@ -39,6 +48,7 @@ def query_test_data():
         "reaction1": reaction1,
         "reaction2": reaction2,
         "query": query,
+        "result": result,
     }
 
 
@@ -58,17 +68,22 @@ class TestQuerySerializer:
 
         expected_data = {
             "id": query.id,
-            "drugs": [{"id": drug1.id, "name": drug1.name}],
-            "reactions": [{"id": reaction1.id, "name": reaction1.name}],
+            "drugs_details": [{"id": drug1.id, "name": drug1.name}],
+            "reactions_details": [{"id": reaction1.id, "name": reaction1.name}],
             "name": query.name,
             "user": query.user.id,  # ForeignKey should be serialized as ID
             "quarter_start": query.quarter_start,
             "quarter_end": query.quarter_end,
             "year_start": query.year_start,
             "year_end": query.year_end,
-            "ror_values": query.ror_values,
-            "ror_lower": query.ror_lower,
-            "ror_upper": query.ror_upper,
+            "result": {
+                "id": query.result.id,
+                "query": query.id,
+                "status": query.result.status,
+                "ror_values": query.result.ror_values,
+                "ror_lower": query.result.ror_lower,
+                "ror_upper": query.result.ror_upper,
+            }
         }
         assert response_data == expected_data
 
@@ -103,7 +118,7 @@ class TestQuerySerializer:
         assert "reactions" in serializer.errors
 
     def test_create_query(self, query_test_data):
-        """Test successful creation of a Query"""
+        """Test successful creation of a Query and associated Result"""
         user = query_test_data["user"]
         drug1 = query_test_data["drug1"]
         drug2 = query_test_data["drug2"]
@@ -128,6 +143,10 @@ class TestQuerySerializer:
         assert query.quarter_end == 2
         assert list(query.drugs.all()) == [drug1, drug2]
         assert set(query.reactions.all()) == {reaction1, reaction2}
+        
+        # Check that Result object was created
+        assert hasattr(query, 'result')
+        assert query.result.status == 'pending'
 
     def test_update_query(self, query_test_data):
         """Test successful update of a Query"""
@@ -262,6 +281,14 @@ class TestQuerySerializer:
             quarter_end=3,
             year_start=2020,
             year_end=2020,
+        )
+        # Create associated Result object for this test query
+        Result.objects.create(
+            query=query,
+            status=ResultStatus.PENDING,
+            ror_values=[],
+            ror_lower=[],
+            ror_upper=[]
         )
         serializer = QuerySerializer(instance=query, data=data, partial=True)
         assert serializer.is_valid()

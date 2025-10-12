@@ -9,15 +9,15 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from analysis.constants import PIPELINE_DEMO_DATA
-from analysis.models import DrugName, Query, ReactionName, Result
+from analysis.models import DrugName, Query, ReactionName, Result, ResultStatus
 from analysis.permissions import IsPipelineService
-from analysis.pipeline.trigger_pipeline import run_luigi_pipeline
 from analysis.serializers import (
     DrugNameSerializer,
     QuerySerializer,
     ReactionNameSerializer,
     ResultSerializer,
 )
+from analysis.services.pipeline_service import pipeline_service
 
 logger = logging.getLogger(__name__)
 
@@ -47,51 +47,39 @@ class QueryViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Only return queries owned by the authenticated user."""
-        return Query.objects.filter(user=self.request.user)
+        # Optimize queries with related objects:
+        # select_related for one-to-one or foreign key relationships
+        # prefetch_related for many-to-many or reverse foreign key relationships
+        return (
+            Query.objects.filter(user=self.request.user)
+            .select_related("result")
+            .prefetch_related("drugs", "reactions")
+        )
 
     def get_object(self):
-        """Single database lookup for single-obkect queries"""
+        """Single database lookup for single-object queries"""
         return get_object_or_404(Query, user=self.request.user, id=self.kwargs["id"])
 
     def perform_create(self, serializer):
         """
-        Override perform_create method to automatically assign the authenticated user and calculate ror results.
+        Override perform_create method to automatically assign the authenticated user and trigger pipeline analysis.
         DRF calls serializer.is_valid() before perform_create is invoked.
-        Pass the calculated results and the user as additional fields to serializer.save().
+        Creates Query and Result objects both and calls pipeline service.
         If settings.NUM_DEMO_QUARTERS is set to a value between 0 and 4, use demo data for the results.
         """
-        # save the user because it's a create operation
-        save_kwards = {"user": self.request.user}
+        # Create Query with user assigned (as it is a create operation)
+        query = serializer.save(user=self.request.user)
+
+        # Handle demo data mode
         if settings.NUM_DEMO_QUARTERS >= 0:
-            save_kwards.update(self.get_demo_data())
+            self._create_demo_result(query)
         else:
-            query = serializer.save(**save_kwards)
-            # Trigger the pipeline to calculate ror_values, ror_lower, ror_upper
-            try:
-                year_start = serializer.validated_data["year_start"]
-                year_end = serializer.validated_data["year_end"]
-
-                quarter_start = serializer.validated_data["quarter_start"]
-                quarter_end = serializer.validated_data["quarter_end"]
-
-                pid = run_luigi_pipeline(
-                    year_start, year_end, quarter_start, quarter_end, query.id
-                )
-
-                logger.debug(f"Luigi pipeline started with PID: {pid}")
-
-            except Exception as e:
-                logger.error(f"Error starting Luigi pipeline: {str(e)}")
-                return Response(
-                    {
-                        "error": "Failed to start pipeline",
-                    },
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
+            # Trigger pipeline service for real analysis
+            self._trigger_pipeline_analysis(query, serializer.validated_data)
 
     def perform_update(self, serializer):
         """
-        Override perform_update method to calculate ror results.
+        Override perform_update method to trigger recalculation when relevant fields change.
         DRF calls serializer.is_valid() before perform_update is invoked.
         If settings.NUM_DEMO_QUARTERS is set to a value between 0 and 4, use demo data for the results.
         """
@@ -108,14 +96,83 @@ class QueryViewSet(viewsets.ModelViewSet):
             serializer.save()
             return
 
-        save_kwards = {}
-        if settings.NUM_DEMO_QUARTERS >= 0:
-            save_kwards.update(self.get_demo_data())
-        else:
-            # TO-DO: Recalculate ror_values, ror_lower, ror_upper
-            pass
+        # Save the query first
+        query = serializer.save()
 
-        serializer.save(**save_kwards)
+        # Handle demo data mode or trigger pipeline
+        if settings.NUM_DEMO_QUARTERS >= 0:
+            self._create_demo_result(query)
+        else:
+            self._trigger_pipeline_analysis(query, serializer.validated_data)
+
+    def _create_demo_result(self, query):
+        """Create Result object with demo data and mark as completed."""
+        try:
+            demo_data = self.get_demo_data()
+
+            # Update the result created by serializer with demo data
+            result = query.result
+            result.status = ResultStatus.COMPLETED
+            result.ror_values = demo_data["ror_values"]
+            result.ror_lower = demo_data["ror_lower"]
+            result.ror_upper = demo_data["ror_upper"]
+            result.save()
+
+            logger.info(f"Demo result created for query {query.id}")
+
+        except Exception as e:
+            logger.error(f"Error creating demo result for query {query.id}: {str(e)}")
+            # Keep result in PENDING status if demo creation fails
+
+    def _trigger_pipeline_analysis(self, query, validated_data):
+        """Trigger pipeline analysis for the query."""
+        try:
+            # Mark result as pending
+            result = query.result
+            result.status = ResultStatus.PENDING
+            result.save()
+
+            # Prepare data for pipeline service
+            drugs = list(query.drugs.all())
+            reactions = list(query.reactions.all())
+
+            # Use current query values for parameters not in validated_data (for updates)
+            year_start = validated_data.get("year_start", query.year_start)
+            year_end = validated_data.get("year_end", query.year_end)
+            quarter_start = validated_data.get("quarter_start", query.quarter_start)
+            quarter_end = validated_data.get("quarter_end", query.quarter_end)
+
+            # Call pipeline service
+            pipeline_service.trigger_pipeline_analysis(
+                drugs=drugs,
+                reactions=reactions,
+                result_id=result.id,
+                year_start=year_start,
+                year_end=year_end,
+                quarter_start=quarter_start,
+                quarter_end=quarter_end,
+            )
+
+            logger.info(
+                f"Pipeline analysis triggered for query {query.id}, result {result.id}"
+            )
+
+        except Exception as e:
+            logger.error(
+                f"Error triggering pipeline analysis for query {query.id}: {str(e)}"
+            )
+            # Mark result as failed
+            try:
+                result = query.result
+                result.status = ResultStatus.FAILED
+                result.save()
+            except Exception as e:
+                logger.error(
+                    f"Error updating result status for query {query.id}: {str(e)}"
+                )
+                # Don't fail on result update error
+
+            raise  # Re-raise to let DRF handle the error response
 
     @action(detail=False, methods=["get"], url_path="queries-names")
     def get_queries_names(self, request):
@@ -204,6 +261,7 @@ class ResultViewSet(viewsets.ReadOnlyModelViewSet):
         try:
             result = Result.objects.get(id=task_id)
         except Result.DoesNotExist:
+            logger.warning(f"No result was found for id {task_id}")
             return Response(
                 {"error": "Result not found for this task_id"},
                 status=status.HTTP_404_NOT_FOUND,
@@ -212,6 +270,8 @@ class ResultViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = self.get_serializer(result, data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        
+        logger.info(f"Result {result.id} is updated by task_id {task_id}")
 
         return Response(serializer.data)
 

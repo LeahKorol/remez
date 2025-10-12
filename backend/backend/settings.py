@@ -353,3 +353,11 @@ ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = (
 REST_AUTH_REGISTER_SERIALIZERS = {
     "REGISTER_SERIALIZER": "users.serializers.CustomRegisterSerializer",
 }
+
+# Pipeline service settings
+
+ # Comma-separated list of allowed IPs. If the variable is empty or not set, allow all IPs.
+pipeline_ips = os.getenv("PIPELINE_SERVICE_IPS", "")
+PIPELINE_SERVICE_IPS = pipeline_ips.strip().split(",") if pipeline_ips else None
+PIPELINE_BASE_URL = "http://localhost:8001"
+PIPELINE_TIMEOUT = 30  # seconds

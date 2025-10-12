@@ -70,13 +70,6 @@ class Query(models.Model):
         validators=[MinValueValidator(YEAR_START), MaxValueValidator(YEAR_END)]
     )
 
-    # Result parameters - ROR values, lower and upper confidence intervals
-    # Once Result model is fully implemented these fields should be removed
-    # and accessed via query.result.
-    ror_values = models.JSONField(default=list)
-    ror_lower = models.JSONField(default=list)
-    ror_upper = models.JSONField(default=list)
-
     class Meta:
         ordering = ["-updated_at"]
 
@@ -89,6 +82,7 @@ class Query(models.Model):
 
     def __str__(self):
         return self.name if self.name else f"Query #{self.id}"
+
 
 # status chiches are same as the pipeline sevice uses
 class ResultStatus(models.TextChoices):

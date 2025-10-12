@@ -76,6 +76,14 @@ def query1(user1, drug, reaction):
     )
     query.drugs.set([drug.id])
     query.reactions.set([reaction.id])
+    # Create associated Result object
+    Result.objects.create(
+        query=query,
+        status=ResultStatus.PENDING,
+        ror_values=[],
+        ror_lower=[],
+        ror_upper=[],
+    )
     return query
 
 
@@ -92,6 +100,14 @@ def query2(user1, drug, reaction):
     )
     query.drugs.set([drug.id])
     query.reactions.set([reaction.id])
+    # Create associated Result object
+    Result.objects.create(
+        query=query,
+        status=ResultStatus.PENDING,
+        ror_values=[],
+        ror_lower=[],
+        ror_upper=[],
+    )
     return query
 
 
@@ -108,31 +124,45 @@ def query3(user2, drug, reaction):
     )
     query.drugs.set([drug.id])
     query.reactions.set([reaction.id])
+    # Create associated Result object
+    Result.objects.create(
+        query=query,
+        status=ResultStatus.PENDING,
+        ror_values=[],
+        ror_lower=[],
+        ror_upper=[],
+    )
     return query
 
 
 @pytest.fixture
 def result1(query1):
     """Fixture for result belonging to user1"""
-    return Result.objects.create(
-        query=query1,
-        status=ResultStatus.COMPLETED,
-        ror_values=[1.5, 2.0],
-        ror_lower=[1.2, 1.8],
-        ror_upper=[1.8, 2.2],
+    result, created = Result.objects.update_or_create(
+        query=query1,  # lookup by query1 (user1's query)
+        defaults={
+            "status": ResultStatus.COMPLETED,
+            "ror_values": [1.5, 2.0],
+            "ror_lower": [1.2, 1.8],
+            "ror_upper": [1.8, 2.2],
+        },
     )
+    return result
 
 
 @pytest.fixture
 def result2(query3):
     """Fixture for result belonging to user2"""
-    return Result.objects.create(
-        query=query3,
-        status=ResultStatus.PENDING,
-        ror_values=[],
-        ror_lower=[],
-        ror_upper=[],
+    result, created = Result.objects.update_or_create(
+        query=query3,  # lookup by query3 (user2's query)
+        defaults={
+            "status": ResultStatus.PENDING,
+            "ror_values": [],
+            "ror_lower": [],
+            "ror_upper": [],
+        },
     )
+    return result
 
 
 @pytest.fixture
@@ -219,8 +249,13 @@ class TestQueryViewSet:
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_create_query_authenticated_user(self, api_client, user1, required_fields):
-        """Test that an authenticated user can create a query."""
+    def test_create_query_authenticated_user(self, mocker, api_client, user1, required_fields):
+        """Test that an authenticated user can create a query and associated result."""
+        # Mock the pipeline service call to prevent real HTTP requests during unit tests
+        mocker.patch("analysis.views.pipeline_service.trigger_pipeline_analysis")
+        # Mock demo mode as disabled
+        mocker.patch.object(settings, "NUM_DEMO_QUARTERS", -1)
+
         self.authenticate_user(api_client, user=user1)
         list_url = reverse("query-list")
         data = {"name": "New Query by User1", **required_fields}
@@ -229,6 +264,15 @@ class TestQueryViewSet:
         assert response.status_code == status.HTTP_201_CREATED
         assert Query.objects.filter(user=user1).count() == 1
 
+        # Verify that a Result object was also created
+        query = Query.objects.get(user=user1)
+        assert hasattr(query, "result")
+        assert query.result.status == ResultStatus.PENDING
+
+        # Verify the response contains result data
+        assert "result" in response.data
+        assert response.data["result"]["status"] == ResultStatus.PENDING
+
     def test_create_query_unauthenticated_user(self, api_client, required_fields):
         """Test that an unauthenticated user cannot create a query."""
         list_url = reverse("query-list")
@@ -236,6 +280,8 @@ class TestQueryViewSet:
         response = api_client.post(list_url, data)
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
 
     def test_delete_query_owned_by_user(self, api_client, user1, query1):
         """Test that a user can delete their own query."""
@@ -255,8 +301,11 @@ class TestQueryViewSet:
         assert response.status_code == status.HTTP_404_NOT_FOUND
         assert Query.objects.filter(id=query3.id).exists()
 
-    def test_partial_update_query_owned_by_user(self, api_client, user1, query1):
+    def test_partial_update_query_owned_by_user(self, mocker, api_client, user1, query1):
         """Test that a user can update their own query."""
+        # Mock pipeline service to prevent real HTTP requests during unit tests
+        mocker.patch("analysis.views.pipeline_service.trigger_pipeline_analysis")
+
         self.authenticate_user(api_client, user=user1)
         detail_url = reverse("query-detail", kwargs={"id": query1.id})
         updated_name = {"name": "Updated Query"}
@@ -278,9 +327,14 @@ class TestQueryViewSet:
         assert query3.name != "Attempted Unauthorized Update"
 
     def test_full_update_query_owned_by_user(
-        self, api_client, user1, query1, required_fields
+        self, mocker, api_client, user1, query1, required_fields
     ):
         """Test that a user can update their own query."""
+        # Mock the pipeline service call to prevent real HTTP requests during unit tests
+        mocker.patch("analysis.views.pipeline_service.trigger_pipeline_analysis")
+        # Mock demo mode as disabled
+        mocker.patch.object(settings, "NUM_DEMO_QUARTERS", -1)
+
         self.authenticate_user(api_client, user=user1)
         detail_url = reverse("query-detail", kwargs={"id": query1.id})
         updated_data = required_fields.copy()
@@ -307,9 +361,12 @@ class TestQueryViewSet:
 
     @pytest.mark.parametrize("invalid_quarter", [0, 5, -1, 10])
     def test_query_serializer_blocks_invalid_quarters(
-        self, api_client, user1, query1, required_fields, invalid_quarter
+        self, mocker, api_client, user1, query1, required_fields, invalid_quarter
     ):
         """Test that serializer blocks invalid quarter numbers."""
+        # Mock the pipeline service call to prevent real HTTP requests during unit tests
+        mock_trigger = mocker.patch("analysis.views.pipeline_service.trigger_pipeline_analysis")
+
         self.authenticate_user(api_client, user=user1)
         detail_url = reverse("query-detail", kwargs={"id": query1.id})
         updated_data = required_fields.copy()
@@ -318,8 +375,16 @@ class TestQueryViewSet:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "quarter_start" in response.data
 
-    def test_year_start_lte_year_end(self, api_client, user1, query1, required_fields):
+        # Verify pipeline service was NOT called due to validation error
+        mock_trigger.assert_not_called()
+
+    def test_year_start_lte_year_end(
+        self, mocker, api_client, user1, query1, required_fields
+    ):
         """Test that serializer blocks year_start greater than year_end."""
+        # Mock the pipeline service call to prevent real HTTP requests during unit tests
+        mock_trigger = mocker.patch("analysis.views.pipeline_service.trigger_pipeline_analysis")
+
         self.authenticate_user(api_client, user=user1)
         detail_url = reverse("query-detail", kwargs={"id": query1.id})
         updated_data = required_fields.copy()
@@ -328,6 +393,9 @@ class TestQueryViewSet:
         response = api_client.put(detail_url, updated_data)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "year_start" in response.data
+
+        # Verify pipeline service was NOT called due to validation error
+        mock_trigger.assert_not_called()
 
     @pytest.mark.parametrize(
         "year_start, year_end, quarter_start, quarter_end, res_status",
@@ -342,6 +410,7 @@ class TestQueryViewSet:
     )
     def test_quarter_start_lte_quarter_end(
         self,
+        mocker,
         api_client,
         user1,
         query1,
@@ -352,7 +421,12 @@ class TestQueryViewSet:
         quarter_end,
         res_status,
     ):
-        """Test that serializer blocks quarter_start greater than quarter_end."""
+        """Test that serializer validates quarter and year ranges properly."""
+        # Mock the pipeline service call to prevent real HTTP requests during unit tests
+        mock_trigger = mocker.patch("analysis.views.pipeline_service.trigger_pipeline_analysis")
+        # Mock demo mode as disabled
+        mocker.patch.object(settings, "NUM_DEMO_QUARTERS", -1)
+
         self.authenticate_user(api_client, user=user1)
         detail_url = reverse("query-detail", kwargs={"id": query1.id})
         updated_data = required_fields.copy()
@@ -364,6 +438,11 @@ class TestQueryViewSet:
         assert response.status_code == res_status
         if response.status_code != status.HTTP_200_OK:
             assert "quarter_start" in response.data
+            # Verify pipeline service was NOT called due to validation error
+            mock_trigger.assert_not_called()
+        else:
+            # Verify pipeline service was called for successful updates
+            mock_trigger.assert_called_once()
 
 
 @pytest.mark.django_db

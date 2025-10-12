@@ -165,12 +165,12 @@ class QueryTests(TestCase):
         self.assertGreater(query.updated_at, old_updated_at)
 
     def test_quarter_start_greater_than_end(self):
-        """Ensure IntegrityError is raised when quarter_start > quarter_end"""
+        """Ensure ValidationError is raised when quarter_start > quarter_end"""
         query = Query(
             user=self.user,
-            quarter_start=3,
+            quarter_start=1,
             quarter_end=2,
-            year_start=2020,
+            year_start=2021,
             year_end=2020,
         )
         with self.assertRaises(ValidationError):
