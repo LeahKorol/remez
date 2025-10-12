@@ -1,10 +1,13 @@
-import React from "react";
+import React, {useState} from "react";
 import { useNavigate } from "react-router-dom";
+import TutorialCarousel from "../components/TutorialCarousel";
 import './App.css'
 
 
 function Home() {
     const navigate = useNavigate();
+
+    const [showTutorial, setShowTutorial] = useState(false);
 
     const handleLoginClick = () => {
         navigate('/login');
@@ -121,6 +124,19 @@ function Home() {
                 </div>
 
                 <button className="begin-btn" onClick={handleLoginClick}>Login to Begin</button>
+
+                <button
+                    className="help-button"
+                    onClick={() => setShowTutorial(true)}
+                    aria-label="Open tutorial"
+                >
+                    ?
+                </button>
+
+                <TutorialCarousel
+                    open={showTutorial}
+                    onClose={() => setShowTutorial(false)}
+                />
 
                 <div className="footer">
                     <p>Created by Eng. Leah Korol and Eng. Talya Kazayof</p>

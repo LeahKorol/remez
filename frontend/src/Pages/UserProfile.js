@@ -9,6 +9,7 @@ import { validateQueryForm } from '../utils/formValidation';
 import Sidebar from '../components/Sidebar';
 import ToastNotification from '../components/ToastNotification';
 import QueryForm from '../components/QueryForm';
+import TutorialCarousel from '../components/TutorialCarousel';
 import './UserProfile.css';
 
 
@@ -71,6 +72,7 @@ const UserProfile = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState('');
     const [globalLoading, setGlobalLoading] = useState(false);
+    const [showTutorial, setShowTutorial] = useState(false);
 
     const [viewMode, setViewMode] = useState('new');
     const [viewingQuery, setViewingQuery] = useState(null);
@@ -820,6 +822,19 @@ const UserProfile = () => {
                 showLogoutPopup={showLogoutPopup}
                 handleLogoutClick={handleLogoutClick}
                 handleLogout={handleLogout}
+            />
+
+            <button
+                className="help-button"
+                onClick={() => setShowTutorial(true)}
+                aria-label="Open tutorial"
+            >
+                ?
+            </button>
+
+            <TutorialCarousel
+                open={showTutorial}
+                onClose={() => setShowTutorial(false)}
             />
         </div>
     );
