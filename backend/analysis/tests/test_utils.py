@@ -2,11 +2,12 @@ import numpy as np
 import pandas as pd
 import pandas.testing as pdt
 import pytest
-from analysis.faers_analysis.src.utils import (
-    normalize_string,
+
+from analysis.utils import (
     empty_to_none,
-    validate_event_dt_num,
     normalize_dataframe,
+    normalize_string,
+    validate_event_dt_num,
 )
 
 

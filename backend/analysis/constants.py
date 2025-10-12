@@ -1,3 +1,8 @@
+# The years there are records about in FAERS data
+YEAR_START = 2004
+YEAR_END = 2025
+
+# Demo data for pipeline results
 PIPELINE_DEMO_DATA = {
     0: {"ror_values": [], "ror_lower": [], "ror_upper": []},
     1: {"ror_values": [0.672604], "ror_lower": [0.563321], "ror_upper": [0.803088]},

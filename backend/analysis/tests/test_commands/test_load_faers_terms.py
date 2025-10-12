@@ -1,11 +1,11 @@
-import pytest
-import pandas as pd
-from pathlib import Path
 from io import StringIO
+from pathlib import Path
 from typing import Callable
 
+import pandas as pd
+import pytest
+from django.core.management import CommandError, call_command
 
-from django.core.management import call_command, CommandError
 from analysis.models import DrugName, ReactionName
 
 

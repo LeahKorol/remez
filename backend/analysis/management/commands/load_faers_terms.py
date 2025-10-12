@@ -1,15 +1,17 @@
-from django.core.management.base import BaseCommand, CommandError
 from pathlib import Path
-import pandas as pd
 from typing import Type
+
+import pandas as pd
+from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Model
 
 from analysis.models import DrugName, ReactionName
-from analysis.faers_analysis.src.utils import (
+from analysis.utils import (
     Quarter,
     generate_quarters,
     normalize_string,
 )
+
 from ..cli_utils import QuarterRangeArgMixin
 
 

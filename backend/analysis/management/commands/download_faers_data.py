@@ -13,7 +13,7 @@ from multiprocessing.dummy import Pool as ThreadPool
 import tqdm
 from django.core.management.base import BaseCommand, CommandError
 
-from analysis.faers_analysis.src.utils import Quarter, generate_quarters
+from backend.analysis.utils import Quarter, generate_quarters
 
 from ..cli_utils import QuarterRangeArgMixin
 
