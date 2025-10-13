@@ -139,8 +139,13 @@ function Home() {
                 />
 
                 <div className="footer">
-                    <p>Created by Eng. Leah Korol and Eng. Talya Kazayof</p>
-                    <p>In collaboration with Dr. Boris Gorelik</p>
+                  <p>Created by Eng. Leah Korol and Eng. Talya Kazayof</p>
+                  <p>In collaboration with Dr. Boris Gorelik</p>
+                  <div className="footer-links">
+                    <a href="/about-research" className="footer-link">About the Research</a>
+                    <span className="separator">|</span>
+                    <a href="/privacy-policy" className="footer-link">Privacy Policy</a>
+                  </div>
                 </div>
             </div>
         </div>
