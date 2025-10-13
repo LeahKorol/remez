@@ -702,6 +702,10 @@ const UserProfile = () => {
 
     const cancelEditing = () => {
         resetForm();
+        setResetFormTrigger(prev => prev + 1); 
+        setIsEditing(false);
+        setEditingQueryId(null);
+        setViewMode('new');
     };
 
     const handleNewQuery = () => {
