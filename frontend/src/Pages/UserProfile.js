@@ -73,6 +73,8 @@ const UserProfile = () => {
     const [submitError, setSubmitError] = useState('');
     const [globalLoading, setGlobalLoading] = useState(false);
     const [showTutorial, setShowTutorial] = useState(false);
+    const [deleteQueryId, setDeleteQueryId] = useState(null);
+    const [showDeletePopup, setShowDeletePopup] = useState(false);
 
     const [viewMode, setViewMode] = useState('new');
     const [viewingQuery, setViewingQuery] = useState(null);
@@ -532,74 +534,111 @@ const UserProfile = () => {
 
     // Handle deleting a query
     const handleDeleteQuery = async (queryId) => {
-        if (!window.confirm('Are you sure you want to delete this query?')) {
-            return;
-        }
+        setDeleteQueryId(queryId);
+        setShowDeletePopup(true);
+        // if (!window.confirm('Are you sure you want to delete this query?')) {
+        //     return;
+        // }
+
+        // try {
+        //     const token = localStorage.getItem('token');
+
+        //     if (!token) {
+        //         alert('You are not logged in. Please log in first.');
+        //         navigate('/session-expired');
+        //         return;
+        //     }
+
+        //     console.log('Deleting query with ID:', queryId);
+
+        //     const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`, {
+        //         method: 'DELETE'
+        //     });
+
+        //     if (!response) {
+        //         // fetchWithRefresh handles redirect to login on auth failure
+        //         return;
+        //     }
+
+        //     console.log('Delete response status:', response.status);
+
+        //     if (response.status === 403) {
+        //         alert('You do not have permission to delete this query.');
+        //         return;
+        //     }
+
+        //     if (response.status === 404) {
+        //         alert('Query not found. It may have already been deleted.');
+        //         // Refresh queries to sync with server state
+        //         await fetchQueries();
+        //         return;
+        //     }
+
+        //     if (response.ok || response.status === 204) {
+        //         // Successfully deleted
+        //         setSavedQueries(savedQueries.filter(q => q.id !== queryId));
+        //         showToastMessage('Query deleted successfully!');
+
+        //         // If we were editing this query, reset the form
+        //         if (editingQueryId === queryId) {
+        //             resetForm();
+        //         }
+        //     } else {
+        //         // Handle other error responses
+        //         let errorMessage = 'Failed to delete query';
+        //         try {
+        //             const errorData = await response.json();
+        //             errorMessage = errorData.detail || errorData.message || errorMessage;
+        //         } catch (parseError) {
+        //             errorMessage = `Server error (${response.status})`;
+        //         }
+
+        //         console.error('Error deleting query:', errorMessage);
+        //         alert(`Failed to delete query: ${errorMessage}`);
+        //     }
+        // } catch (error) {
+        //     console.error('Network error during delete:', error);
+        //     if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        //         alert('Network error: Unable to connect to server. Please check your connection.');
+        //     } else {
+        //         alert(`Failed to delete query: ${error.message || 'Network error'}`);
+        //     }
+        // }
+    };
+
+    const confirmDeleteQuery = async () => {
+        if (!deleteQueryId) return;
 
         try {
             const token = localStorage.getItem('token');
-
             if (!token) {
                 alert('You are not logged in. Please log in first.');
                 navigate('/session-expired');
                 return;
             }
 
-            console.log('Deleting query with ID:', queryId);
-
-            const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`, {
+            const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/queries/${deleteQueryId}/`, {
                 method: 'DELETE'
             });
 
-            if (!response) {
-                // fetchWithRefresh handles redirect to login on auth failure
-                return;
-            }
-
-            console.log('Delete response status:', response.status);
-
-            if (response.status === 403) {
-                alert('You do not have permission to delete this query.');
-                return;
-            }
-
-            if (response.status === 404) {
-                alert('Query not found. It may have already been deleted.');
-                // Refresh queries to sync with server state
-                await fetchQueries();
-                return;
-            }
-
-            if (response.ok || response.status === 204) {
-                // Successfully deleted
-                setSavedQueries(savedQueries.filter(q => q.id !== queryId));
+            if (response && (response.ok || response.status === 204)) {
+                setSavedQueries(savedQueries.filter(q => q.id !== deleteQueryId));
                 showToastMessage('Query deleted successfully!');
-
-                // If we were editing this query, reset the form
-                if (editingQueryId === queryId) {
-                    resetForm();
-                }
             } else {
-                // Handle other error responses
-                let errorMessage = 'Failed to delete query';
-                try {
-                    const errorData = await response.json();
-                    errorMessage = errorData.detail || errorData.message || errorMessage;
-                } catch (parseError) {
-                    errorMessage = `Server error (${response.status})`;
-                }
-
-                console.error('Error deleting query:', errorMessage);
-                alert(`Failed to delete query: ${errorMessage}`);
+                alert('Failed to delete query');
             }
         } catch (error) {
-            console.error('Network error during delete:', error);
-            if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                alert('Network error: Unable to connect to server. Please check your connection.');
-            } else {
-                alert(`Failed to delete query: ${error.message || 'Network error'}`);
-            }
+            console.error('Error deleting query:', error);
+            alert('Network error: Unable to delete query.');
+        } finally {
+            setDeleteQueryId(null);
+            setShowDeletePopup(false);
         }
+    };
+
+    const cancelDelete = () => {
+        setDeleteQueryId(null);
+        setShowDeletePopup(false);
     };
 
 
@@ -673,7 +712,7 @@ const UserProfile = () => {
                 id: d.id ?? null,
                 name: d.name ?? ''
             }));
-            
+
             const reactionsToEdit = (queryData.reactions_details || queryData.reactions || []).map(r => ({
                 id: r.id ?? null,
                 name: r.name ?? ''
@@ -702,7 +741,7 @@ const UserProfile = () => {
 
     const cancelEditing = () => {
         resetForm();
-        setResetFormTrigger(prev => prev + 1); 
+        setResetFormTrigger(prev => prev + 1);
         setIsEditing(false);
         setEditingQueryId(null);
         setViewMode('new');
@@ -839,6 +878,20 @@ const UserProfile = () => {
                 open={showTutorial}
                 onClose={() => setShowTutorial(false)}
             />
+
+            {showDeletePopup && (
+                <div className="modal-overlay">
+                    <div className="modal-content">
+                        <img src="delete-icon.png" alt="Delete" className="modal-icon" />
+                        <h3>Delete Query</h3>
+                        <p>Are you sure you want to delete this query?</p>
+                        <div className="modal-buttons">
+                            <button className="confirm-button" onClick={confirmDeleteQuery}>Delete</button>
+                            <button className="cancel-button" onClick={cancelDelete}>Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
