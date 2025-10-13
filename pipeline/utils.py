@@ -10,6 +10,7 @@ from typing import Any, Dict, Union
 import numpy as np
 import pandas as pd
 import scipy.stats as stats
+from models import TaskResults
 
 logger = logging.getLogger("FAERS")
 import base64
@@ -232,7 +233,7 @@ class QuestionConfig:
     def config_from_dict(cls, config: Dict[str, Any], name="dict-config"):
         if "drug" not in config or "reaction" not in config:
             raise KeyError("Config dictionary must contain 'drug' and 'reaction' keys")
-        
+
         if "control" in config and not config["control"]:
             logger.warning("Control field is empty")
 
@@ -409,3 +410,33 @@ def get_ror_fields(json_file: Union[str, Path]) -> Dict[str, Any]:
 
     except (FileNotFoundError, KeyError, IndexError, json.JSONDecodeError) as e:
         raise ValueError(f"Error processing ROR data from {json_file}: {e}")
+
+
+def normalise_empty_ror_fields(task: TaskResults) -> None:
+    """Convert None and [numpy.nan] to empty lists so that they can be parsed as float JSON arrays"""
+    import math
+
+    def is_nan_list(field_value):
+        """Check if field is None, empty, or contains only nan values"""
+        if field_value is None:
+            return True
+        if not isinstance(field_value, list):
+            logger.warning(
+                f"Expected list or None, got {type(field_value)} with value {field_value}"
+            )
+            return False
+        if len(field_value) == 0:
+            return False  # Empty list is already valid
+
+        # Check if all values are nan
+        for val in field_value:
+            if isinstance(val, (int, float)) and math.isnan(val):
+                continue
+            # If we find any non-nan value, it's not a nan-only list. This function doesn't handle such cases
+            return False
+        return True
+
+    for field_name in ["ror_values", "ror_lower", "ror_upper"]:
+        field_value = getattr(task, field_name)
+        if is_nan_list(field_value):
+            setattr(task, field_name, [])

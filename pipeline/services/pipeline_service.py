@@ -13,7 +13,7 @@ from mark_data import main as mark_data_main
 from models.models import TaskResults
 from models.schemas import PipelineRequest
 from report import main as report_main
-from utils import get_ror_fields
+from utils import get_ror_fields, normalise_empty_ror_fields
 
 # Global static settings
 settings = get_settings()
@@ -189,6 +189,9 @@ def send_results_to_callback(task: TaskResults):
 
         # Scoped client ensures proper cleanup before event loop closes
         async with httpx.AsyncClient(timeout=timeout, limits=limits) as client:
+            normalise_empty_ror_fields(task)
+            task_logger.debug(f"Sending task data: {task}")
+            # Convert task to JSON-compatible dict. Use mode="json" to handle datetime serialization as well.
             task_json = task.model_dump(mode="json")
             url = f"{callback_url}/{task_json['external_id']}/"
 
