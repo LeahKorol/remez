@@ -646,7 +646,7 @@ const UserProfile = () => {
     const handleEditQuery = async (query) => {
         setViewMode('edit');
         setViewingQuery(null);
-        setIsEditing(true);
+        // setIsEditing(true);
         setEditingQueryId(query.id);
         setLoading(true);
 
@@ -669,18 +669,15 @@ const UserProfile = () => {
             const queryData = await response.json();
             console.log('Query data from backend:', queryData);
 
-            const drugsToEdit = (queryData.drugs || []).map(d => ({
-                id: d.id,
-                name: d.name
+            const drugsToEdit = (queryData.drugs_details || queryData.drugs || []).map(d => ({
+                id: d.id ?? null,
+                name: d.name ?? ''
             }));
-
-            const reactionsToEdit = (queryData.reactions || []).map(r => ({
-                id: r.id,
-                name: r.name
+            
+            const reactionsToEdit = (queryData.reactions_details || queryData.reactions || []).map(r => ({
+                id: r.id ?? null,
+                name: r.name ?? ''
             }));
-
-            console.log('Drugs for editing (final):', drugsToEdit);
-            console.log('Reactions for editing (final):', reactionsToEdit);
 
             setDrugs(drugsToEdit.length > 0 ? drugsToEdit : [{ name: '', id: null }]);
             setReactions(reactionsToEdit.length > 0 ? reactionsToEdit : [{ name: '', id: null }]);
@@ -690,6 +687,8 @@ const UserProfile = () => {
             setQuarterStart(queryData.quarter_start ? queryData.quarter_start.toString() : '');
             setQuarterEnd(queryData.quarter_end ? queryData.quarter_end.toString() : '');
             setQueryName(queryData.name || 'New Query');
+
+            setIsEditing(true);
 
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (error) {

@@ -5,7 +5,21 @@ import ToastNotification from './ToastNotification';
 import { fetchWithRefresh } from '../utils/tokenService';
 import '../Pages/UserProfile.css';
 
-export default function QueryForm({ onSubmit, onCancel, showToastMessage, isEditing, isSubmitting, resetTrigger }) {
+export default function QueryForm({
+    onSubmit,
+    onCancel,
+    showToastMessage,
+    isEditing,
+    isSubmitting,
+    resetTrigger,
+    queryName: initialQueryName,
+    yearStart: initialYearStart,
+    yearEnd: initialYearEnd,
+    quarterStart: initialQuarterStart,
+    quarterEnd: initialQuarterEnd,
+    drugs: initialDrugs,
+    reactions: initialReactions, }) {
+
     // Form state
     const [queryName, setQueryName] = useState('New Query');
     const [yearStart, setYearStart] = useState('');
@@ -26,6 +40,19 @@ export default function QueryForm({ onSubmit, onCancel, showToastMessage, isEdit
             setReactions([{ name: '', id: null }]);
         }
     }, [resetTrigger]);
+
+    useEffect(() => {
+        if (isEditing) {
+            setQueryName(initialQueryName || 'New Query');
+            setYearStart(initialYearStart || '');
+            setYearEnd(initialYearEnd || '');
+            setQuarterStart(initialQuarterStart || '');
+            setQuarterEnd(initialQuarterEnd || '');
+            setDrugs(initialDrugs && initialDrugs.length > 0 ? initialDrugs : [{ name: '', id: null }]);
+            setReactions(initialReactions && initialReactions.length > 0 ? initialReactions : [{ name: '', id: null }]);
+        }
+    }, [isEditing, initialQueryName, initialYearStart, initialYearEnd, initialQuarterStart, initialQuarterEnd, initialDrugs, initialReactions]);
+
 
     // Search state
     const [drugSearchResults, setDrugSearchResults] = useState([]);
@@ -301,11 +328,6 @@ export default function QueryForm({ onSubmit, onCancel, showToastMessage, isEdit
                         ? (isEditing ? 'Updating...' : 'Saving...')
                         : (isEditing ? 'Update + Calc' : 'Save + Calc')}
                 </button>
-                {isEditing && (
-                    <button type="button" className="cancel-button" onClick={onCancel}>
-                        Cancel
-                    </button>
-                )}
             </div>
         </form>
     );
