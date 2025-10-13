@@ -31,10 +31,6 @@ def setup_logging(log_level: str = "INFO") -> logging.Logger:
         ],
     )
 
-    # Set specific logger levels
-    logging.getLogger("uvicorn").setLevel(logging.INFO)
-    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
-
     # Create application logger
     logger = logging.getLogger("faers-api")
     logger.setLevel(getattr(logging, log_level.upper()))

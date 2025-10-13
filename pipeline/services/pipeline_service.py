@@ -5,9 +5,9 @@ from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
 from pathlib import Path
 
+import httpx
 from constants import RorFields, TaskStatus
 from core.config import get_settings
-from core.http_client import http_client
 from database import create_session
 from mark_data import main as mark_data_main
 from models.models import TaskResults
@@ -180,20 +180,32 @@ def send_results_to_callback(task: TaskResults):
         return
 
     async def _send():
-        try:
+        # Configure client for single-use in subprocess context
+        timeout = httpx.Timeout(30.0, connect=10.0)
+        limits = httpx.Limits(
+            max_connections=1,
+            max_keepalive_connections=0,  # No persistent connections to avoid cleanup issues
+        )
+
+        # Scoped client ensures proper cleanup before event loop closes
+        async with httpx.AsyncClient(timeout=timeout, limits=limits) as client:
             task_json = task.model_dump(mode="json")
             url = f"{callback_url}/{task_json['external_id']}/"
-            await http_client.put(url, json=task_json)
+
+            response = await client.put(url, json=task_json)
+            response.raise_for_status()
+
             task_logger.info(
                 f"Sent results for task {task.id} to callback URL {callback_url}"
             )
-        except Exception as e:
-            task_logger.error(
-                f"Failed to send results for task {task.id} to callback URL {callback_url}: {str(e)}",
-                exc_info=True,
-            )
 
-    asyncio.run(_send())
+    try:
+        asyncio.run(_send())
+    except Exception as e:
+        task_logger.error(
+            f"Failed to send results for task {task.id} to callback URL {callback_url}: {str(e)}",
+            exc_info=True,
+        )
 
 
 def cleanup(calc_dir: Path):
