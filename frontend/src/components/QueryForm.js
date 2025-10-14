@@ -119,7 +119,14 @@ export default function QueryForm({
     };
 
     const addDrug = () => setDrugs([...drugs, { name: '', id: null }]);
-    const removeDrug = (index) => setDrugs(drugs.filter((_, i) => i !== index));
+    const removeDrug = (index) => {
+        const updatedDrugs = drugs.filter((_, i) => i !== index);
+        setDrugs(updatedDrugs);
+
+        if (updatedDrugs.length === 0) {
+            showToastMessage('At least one drug is required');
+        }
+    };
 
     // ===== Reactions =====
     const searchReactions = async (prefix, index) => {
@@ -129,7 +136,6 @@ export default function QueryForm({
             return;
         }
         try {
-            // 💬 תיקון ל-template literal
             const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/reaction-names/search/${prefix}/`);
             if (response.ok) {
                 const data = await response.json();
@@ -163,7 +169,14 @@ export default function QueryForm({
     };
 
     const addReaction = () => setReactions([...reactions, { name: '', id: null }]);
-    const removeReaction = (index) => setReactions(reactions.filter((_, i) => i !== index));
+    const removeReaction = (index) => {
+        const updatedReactions = reactions.filter((_, i) => i !== index);
+        setReactions(updatedReactions);
+
+        if (updatedReactions.length === 0) {
+            showToastMessage('At least one reaction is required');
+        }
+    };
 
     // ===== Submit =====
     const handleSubmit = (e) => {
@@ -278,11 +291,13 @@ export default function QueryForm({
                                 ))}
                             </div>
                         )}
-                        {(index > 0 || drugs.length > 1) && (
-                            <button type="button" className="remove-button" onClick={() => removeDrug(index)}>
-                                <FaTimes />
-                            </button>
-                        )}
+                        <button
+                            type="button"
+                            className="remove-button"
+                            onClick={() => removeDrug(index)}
+                        >
+                            <FaTimes />
+                        </button>
                     </div>
                 ))}
                 <button type="button" className="add-button" onClick={addDrug}>
@@ -310,11 +325,13 @@ export default function QueryForm({
                                 ))}
                             </div>
                         )}
-                        {(index > 0 || reactions.length > 1) && (
-                            <button type="button" className="remove-button" onClick={() => removeReaction(index)}>
-                                <FaTimes />
-                            </button>
-                        )}
+                        <button
+                            type="button"
+                            className="remove-button"
+                            onClick={() => removeReaction(index)}
+                        >
+                            <FaTimes />
+                        </button>
                     </div>
                 ))}
                 <button type="button" className="add-button" onClick={addReaction}>
@@ -322,13 +339,19 @@ export default function QueryForm({
                 </button>
             </div>
 
-            <div className="submit-container">
-                <button type="submit" className="submit-button" disabled={isSubmitting}>
-                    {isSubmitting
-                        ? (isEditing ? 'Updating...' : 'Saving...')
-                        : (isEditing ? 'Update + Calc' : 'Save + Calc')}
-                </button>
-            </div>
+            <button
+                type="submit"
+                className={`submit-button ${isSubmitting ? 'disabled' : ''}`}
+                disabled={
+                    isSubmitting ||
+                    drugs.every(d => !d.name.trim()) ||
+                    reactions.every(r => !r.name.trim())
+                }
+            >
+                {isSubmitting
+                    ? (isEditing ? 'Updating...' : 'Saving...')
+                    : (isEditing ? 'Update + Calc' : 'Save + Calc')}
+            </button>
         </form>
     );
 }
