@@ -53,13 +53,18 @@ export default function QueryForm({
         }
     }, [isEditing, initialQueryName, initialYearStart, initialYearEnd, initialQuarterStart, initialQuarterEnd, initialDrugs, initialReactions]);
 
-
     // Search state
     const [drugSearchResults, setDrugSearchResults] = useState([]);
     const [reactionSearchResults, setReactionSearchResults] = useState([]);
     const [activeDrugSearchIndex, setActiveDrugSearchIndex] = useState(null);
     const [activeReactionSearchIndex, setActiveReactionSearchIndex] = useState(null);
     const [localErrors, setLocalErrors] = useState([]);
+
+    useEffect(() => {
+        if (localErrors.length > 0) {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+    }, [localErrors]);
 
     const drugSearchTimeout = useRef(null);
     const reactionSearchTimeout = useRef(null);
@@ -85,7 +90,6 @@ export default function QueryForm({
             return;
         }
         try {
-            // 💬 תיקון ל-template literal
             const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/drug-names/search/${prefix}/`);
             if (response.ok) {
                 const data = await response.json();
@@ -118,13 +122,28 @@ export default function QueryForm({
         setDrugSearchResults([]);
     };
 
-    const addDrug = () => setDrugs([...drugs, { name: '', id: null }]);
-    const removeDrug = (index) => {
-        const updatedDrugs = drugs.filter((_, i) => i !== index);
-        setDrugs(updatedDrugs);
+    const addDrug = () => {
+        // check if there are any empty drug fields
+        const hasEmptyDrug = drugs.some(drug => !drug.name.trim());
+        if (hasEmptyDrug) {
+            showToastMessage && showToastMessage('Please fill the existing drug field before adding a new one');
+            return;
+        }
+        setDrugs([...drugs, { name: '', id: null }]);
+    };
 
-        if (updatedDrugs.length === 0) {
-            showToastMessage('At least one drug is required');
+    const removeDrug = (index) => {
+        // if there is only one box - clear only content
+        if (drugs.length === 1) {
+            const newDrugs = [...drugs];
+            newDrugs[0] = { name: '', id: null };
+            setDrugs(newDrugs);
+            setActiveDrugSearchIndex(null);
+            setDrugSearchResults([]);
+        } else {
+            // if there are multiple boxes - remove the selected one (content and box)
+            const updatedDrugs = drugs.filter((_, i) => i !== index);
+            setDrugs(updatedDrugs);
         }
     };
 
@@ -168,13 +187,28 @@ export default function QueryForm({
         setReactionSearchResults([]);
     };
 
-    const addReaction = () => setReactions([...reactions, { name: '', id: null }]);
-    const removeReaction = (index) => {
-        const updatedReactions = reactions.filter((_, i) => i !== index);
-        setReactions(updatedReactions);
+    const addReaction = () => {
+        // check if there are any empty drug fields
+        const hasEmptyReaction = reactions.some(reaction => !reaction.name.trim());
+        if (hasEmptyReaction) {
+            showToastMessage && showToastMessage('Please fill the existing reaction field before adding a new one');
+            return;
+        }
+        setReactions([...reactions, { name: '', id: null }]);
+    };
 
-        if (updatedReactions.length === 0) {
-            showToastMessage('At least one reaction is required');
+    const removeReaction = (index) => {
+        // if there is only one box - clear only content
+        if (reactions.length === 1) {
+            const newReactions = [...reactions];
+            newReactions[0] = { name: '', id: null };
+            setReactions(newReactions);
+            setActiveReactionSearchIndex(null);
+            setReactionSearchResults([]);
+        } else {
+            // if there are multiple boxes - remove the selected one (content and box)
+            const updatedReactions = reactions.filter((_, i) => i !== index);
+            setReactions(updatedReactions);
         }
     };
 
@@ -194,8 +228,14 @@ export default function QueryForm({
         if (reactions.every(r => !r.name)) errors.push('At least one reaction is required');
 
         if (errors.length > 0) {
-            setLocalErrors(errors);
-            errors.forEach(err => showToastMessage && showToastMessage(err));
+            // id uniqueness ensures proper handling in ToastNotification
+            const newErrObjs = errors.map(msg => ({
+                id: `err-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+                message: msg
+            }));
+            // adding to existing errors (if any) to show all at once
+            setLocalErrors(prev => [...prev, ...newErrObjs]);
+            // don't call again to TastNotification - it's already done in the render
             return;
         }
 
@@ -205,167 +245,177 @@ export default function QueryForm({
 
     // ===== Render =====
     return (
-        <form onSubmit={handleSubmit}>
-            {localErrors.length > 0 && (
-                <div className="error-container">
-                    {localErrors.map((err, idx) => (
-                        <ToastNotification key={idx} message={err} type="error" />
+        <div className="form-wrapper">
+            <form onSubmit={handleSubmit}>
+                {localErrors.length > 0 && (
+                    <div className="error-container">
+                        {localErrors.map((errObj, idx) => (
+                            <ToastNotification
+                                key={errObj.id}
+                                id={errObj.id}
+                                message={errObj.message}
+                                type="error"
+                                index={idx}            // לצורך z-index / סדר
+                                duration={8000}
+                                onClose={(id) => setLocalErrors(prev => prev.filter(e => e.id !== id))}
+                            />
+                        ))}
+                    </div>
+                )}
+
+                <div className="form-section">
+                    <div className="form-field">
+                        <label>Query Name</label>
+                        <input
+                            type="text"
+                            name="queryName"
+                            value={queryName}
+                            onChange={handleInputChange}
+                            className="input-field"
+                        />
+
+                        <div className="row">
+                            <div className="form-field" style={{ flex: 1 }}>
+                                <label>Start Year</label>
+                                <input
+                                    type="number"
+                                    name="startYear"
+                                    value={yearStart}
+                                    onChange={handleInputChange}
+                                    className="input-field"
+                                />
+                            </div>
+
+                            <div className="form-field" style={{ flex: 1 }}>
+                                <label>End Year</label>
+                                <input
+                                    type="number"
+                                    name="endYear"
+                                    value={yearEnd}
+                                    onChange={handleInputChange}
+                                    className="input-field"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="row">
+                            <div className="form-field" style={{ flex: 1 }}>
+                                <label>Start Quarter</label>
+                                <CustomSelect
+                                    name="startQuarter"
+                                    value={quarterStart}
+                                    onChange={handleInputChange}
+                                    options={[
+                                        { value: "1", label: "Quarter 1" },
+                                        { value: "2", label: "Quarter 2" },
+                                        { value: "3", label: "Quarter 3" },
+                                        { value: "4", label: "Quarter 4" },
+                                    ]}
+                                />
+                            </div>
+
+                            <div className="form-field" style={{ flex: 1 }}>
+                                <label>End Quarter</label>
+                                <CustomSelect
+                                    name="endQuarter"
+                                    value={quarterEnd}
+                                    onChange={handleInputChange}
+                                    options={[
+                                        { value: "1", label: "Quarter 1" },
+                                        { value: "2", label: "Quarter 2" },
+                                        { value: "3", label: "Quarter 3" },
+                                        { value: "4", label: "Quarter 4" },
+                                    ]}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="form-section">
+                    <h3 className="section-label">Drugs List</h3>
+                    {drugs.map((drug, index) => (
+                        <div key={`drug-${index}`} className="input-group">
+                            <input
+                                type="text"
+                                className="input-field"
+                                value={drug.name}
+                                onChange={(e) => handleDrugChange(index, e.target.value)}
+                                placeholder="Enter a drug..."
+                            />
+                            {activeDrugSearchIndex === index && drugSearchResults.length > 0 && (
+                                <div className="search-results">
+                                    {drugSearchResults.map((result, idx) => (
+                                        <div key={idx} className="search-result-item" onClick={() => selectDrug(result)}>
+                                            {result.name}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            <button
+                                type="button"
+                                className="remove-button"
+                                onClick={() => removeDrug(index)}
+                            >
+                                <FaTimes />
+                            </button>
+                        </div>
                     ))}
+                    <button type="button" className="add-button" onClick={addDrug}>
+                        Add Drug <FaPlus />
+                    </button>
                 </div>
-            )}
 
-            <div className="form-section">
-                <div className="form-field">
-                    <label>Query Name</label>
-                    <input
-                        type="text"
-                        name="queryName"
-                        value={queryName}
-                        onChange={handleInputChange}
-                        className="input-field"
-                    />
-
-                    <div className="row">
-                        <div className="form-field" style={{ flex: 1 }}>
-                            <label>Start Year</label>
+                <div className="form-section">
+                    <h3 className="section-label">Reactions List</h3>
+                    {reactions.map((reaction, index) => (
+                        <div key={`reaction-${index}`} className="input-group">
                             <input
-                                type="number"
-                                name="startYear"
-                                value={yearStart}
-                                onChange={handleInputChange}
+                                type="text"
                                 className="input-field"
+                                value={reaction.name}
+                                onChange={(e) => handleReactionChange(index, e.target.value)}
+                                placeholder="Enter a reaction..."
                             />
+                            {activeReactionSearchIndex === index && reactionSearchResults.length > 0 && (
+                                <div className="search-results">
+                                    {reactionSearchResults.map((result, idx) => (
+                                        <div key={idx} className="search-result-item" onClick={() => selectReaction(result)}>
+                                            {result.name}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            <button
+                                type="button"
+                                className="remove-button"
+                                onClick={() => removeReaction(index)}
+                            >
+                                <FaTimes />
+                            </button>
                         </div>
-
-                        <div className="form-field" style={{ flex: 1 }}>
-                            <label>End Year</label>
-                            <input
-                                type="number"
-                                name="endYear"
-                                value={yearEnd}
-                                onChange={handleInputChange}
-                                className="input-field"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="row">
-                        <div className="form-field" style={{ flex: 1 }}>
-                            <label>Start Quarter</label>
-                            <CustomSelect
-                                name="startQuarter"
-                                value={quarterStart}
-                                onChange={handleInputChange}
-                                options={[
-                                    { value: "1", label: "Quarter 1" },
-                                    { value: "2", label: "Quarter 2" },
-                                    { value: "3", label: "Quarter 3" },
-                                    { value: "4", label: "Quarter 4" },
-                                ]}
-                            />
-                        </div>
-
-                        <div className="form-field" style={{ flex: 1 }}>
-                            <label>End Quarter</label>
-                            <CustomSelect
-                                name="endQuarter"
-                                value={quarterEnd}
-                                onChange={handleInputChange}
-                                options={[
-                                    { value: "1", label: "Quarter 1" },
-                                    { value: "2", label: "Quarter 2" },
-                                    { value: "3", label: "Quarter 3" },
-                                    { value: "4", label: "Quarter 4" },
-                                ]}
-                            />
-                        </div>
-                    </div>
+                    ))}
+                    <button type="button" className="add-button" onClick={addReaction}>
+                        Add Reaction <FaPlus />
+                    </button>
                 </div>
-            </div>
 
-            <div className="form-section">
-                <h3 className="section-label">Drugs List</h3>
-                {drugs.map((drug, index) => (
-                    <div key={`drug-${index}`} className="input-group">
-                        <input
-                            type="text"
-                            className="input-field"
-                            value={drug.name}
-                            onChange={(e) => handleDrugChange(index, e.target.value)}
-                            placeholder="Enter a drug..."
-                        />
-                        {activeDrugSearchIndex === index && drugSearchResults.length > 0 && (
-                            <div className="search-results">
-                                {drugSearchResults.map((result, idx) => (
-                                    <div key={idx} className="search-result-item" onClick={() => selectDrug(result)}>
-                                        {result.name}
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                        <button
-                            type="button"
-                            className="remove-button"
-                            onClick={() => removeDrug(index)}
-                        >
-                            <FaTimes />
-                        </button>
-                    </div>
-                ))}
-                <button type="button" className="add-button" onClick={addDrug}>
-                    Add Drug <FaPlus />
-                </button>
-            </div>
-
-            <div className="form-section">
-                <h3 className="section-label">Reactions List</h3>
-                {reactions.map((reaction, index) => (
-                    <div key={`reaction-${index}`} className="input-group">
-                        <input
-                            type="text"
-                            className="input-field"
-                            value={reaction.name}
-                            onChange={(e) => handleReactionChange(index, e.target.value)}
-                            placeholder="Enter a reaction..."
-                        />
-                        {activeReactionSearchIndex === index && reactionSearchResults.length > 0 && (
-                            <div className="search-results">
-                                {reactionSearchResults.map((result, idx) => (
-                                    <div key={idx} className="search-result-item" onClick={() => selectReaction(result)}>
-                                        {result.name}
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                        <button
-                            type="button"
-                            className="remove-button"
-                            onClick={() => removeReaction(index)}
-                        >
-                            <FaTimes />
-                        </button>
-                    </div>
-                ))}
-                <button type="button" className="add-button" onClick={addReaction}>
-                    Add Reaction <FaPlus />
-                </button>
-            </div>
-
-            <div className="submit-container">
-                <button
-                    type="submit"
-                    className={`submit-button ${isSubmitting ? 'disabled' : ''}`}
-                    disabled={
-                        isSubmitting ||
-                        drugs.every(d => !d.name.trim()) ||
-                        reactions.every(r => !r.name.trim())
-                    }
-                >
-                    {isSubmitting
-                        ? (isEditing ? 'Updating...' : 'Saving...')
-                        : (isEditing ? 'Update + Calc' : 'Save + Calc')}
-                </button>
-            </div>
-        </form>
+                <div className="submit-container">
+                    <button
+                        type="submit"
+                        className={`submit-button ${isSubmitting ? 'disabled' : ''}`}
+                        disabled={
+                            isSubmitting ||
+                            drugs.every(d => !d.name.trim()) ||
+                            reactions.every(r => !r.name.trim())
+                        }
+                    >
+                        {isSubmitting
+                            ? (isEditing ? 'Updating...' : 'Saving...')
+                            : (isEditing ? 'Update + Calc' : 'Save + Calc')}
+                    </button>
+                </div>
+            </form>
+        </div>
     );
 }
