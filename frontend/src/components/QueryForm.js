@@ -225,49 +225,61 @@ export default function QueryForm({
                         className="input-field"
                     />
 
-                    <label>Start Year</label>
-                    <input
-                        type="number"
-                        name="startYear"
-                        value={yearStart}
-                        onChange={handleInputChange}
-                        className="input-field"
-                    />
+                    <div className="row">
+                        <div className="form-field" style={{ flex: 1 }}>
+                            <label>Start Year</label>
+                            <input
+                                type="number"
+                                name="startYear"
+                                value={yearStart}
+                                onChange={handleInputChange}
+                                className="input-field"
+                            />
+                        </div>
 
-                    <label>End Year</label>
-                    <input
-                        type="number"
-                        name="endYear"
-                        value={yearEnd}
-                        onChange={handleInputChange}
-                        className="input-field"
-                    />
+                        <div className="form-field" style={{ flex: 1 }}>
+                            <label>End Year</label>
+                            <input
+                                type="number"
+                                name="endYear"
+                                value={yearEnd}
+                                onChange={handleInputChange}
+                                className="input-field"
+                            />
+                        </div>
+                    </div>
 
-                    <label>Start Quarter</label>
-                    <CustomSelect
-                        name="startQuarter"
-                        value={quarterStart}
-                        onChange={handleInputChange}
-                        options={[
-                            { value: "1", label: "Quarter 1" },
-                            { value: "2", label: "Quarter 2" },
-                            { value: "3", label: "Quarter 3" },
-                            { value: "4", label: "Quarter 4" },
-                        ]}
-                    />
+                    <div className="row">
+                        <div className="form-field" style={{ flex: 1 }}>
+                            <label>Start Quarter</label>
+                            <CustomSelect
+                                name="startQuarter"
+                                value={quarterStart}
+                                onChange={handleInputChange}
+                                options={[
+                                    { value: "1", label: "Quarter 1" },
+                                    { value: "2", label: "Quarter 2" },
+                                    { value: "3", label: "Quarter 3" },
+                                    { value: "4", label: "Quarter 4" },
+                                ]}
+                            />
+                        </div>
 
-                    <label>End Quarter</label>
-                    <CustomSelect
-                        name="endQuarter"
-                        value={quarterEnd}
-                        onChange={handleInputChange}
-                        options={[
-                            { value: "1", label: "Quarter 1" },
-                            { value: "2", label: "Quarter 2" },
-                            { value: "3", label: "Quarter 3" },
-                            { value: "4", label: "Quarter 4" },
-                        ]}
-                    />
+                        <div className="form-field" style={{ flex: 1 }}>
+                            <label>End Quarter</label>
+                            <CustomSelect
+                                name="endQuarter"
+                                value={quarterEnd}
+                                onChange={handleInputChange}
+                                options={[
+                                    { value: "1", label: "Quarter 1" },
+                                    { value: "2", label: "Quarter 2" },
+                                    { value: "3", label: "Quarter 3" },
+                                    { value: "4", label: "Quarter 4" },
+                                ]}
+                            />
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -339,19 +351,21 @@ export default function QueryForm({
                 </button>
             </div>
 
-            <button
-                type="submit"
-                className={`submit-button ${isSubmitting ? 'disabled' : ''}`}
-                disabled={
-                    isSubmitting ||
-                    drugs.every(d => !d.name.trim()) ||
-                    reactions.every(r => !r.name.trim())
-                }
-            >
-                {isSubmitting
-                    ? (isEditing ? 'Updating...' : 'Saving...')
-                    : (isEditing ? 'Update + Calc' : 'Save + Calc')}
-            </button>
+            <div className="submit-container">
+                <button
+                    type="submit"
+                    className={`submit-button ${isSubmitting ? 'disabled' : ''}`}
+                    disabled={
+                        isSubmitting ||
+                        drugs.every(d => !d.name.trim()) ||
+                        reactions.every(r => !r.name.trim())
+                    }
+                >
+                    {isSubmitting
+                        ? (isEditing ? 'Updating...' : 'Saving...')
+                        : (isEditing ? 'Update + Calc' : 'Save + Calc')}
+                </button>
+            </div>
         </form>
     );
 }
