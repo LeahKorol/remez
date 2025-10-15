@@ -51,12 +51,12 @@ const steps = [
     {
         title: "Edit an Existing Query",
         text: `Press “Edit” to modify a query. You can change its parameters, then re-run the analysis and save the updated version.`,
-        img: "/assets/tutorial/step-edit-query.png",
+        img: "step-edit-query.png",
     },
     {
         title: "Delete a Query",
         text: `If you no longer need a saved query, click “Delete”. You’ll be asked to confirm before the data is removed.`,
-        img: "/assets/tutorial/step-delete-query.png",
+        img: "step-delete-query.png",
     },
     {
         title: "Logout",

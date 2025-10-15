@@ -17,8 +17,8 @@
 .tutorial-container {
     position: relative;
     width: 60vw;
-    max-width: 75vw;
-    height: 50vh;
+    max-width: 85vw;
+    height: 65vh;
     max-height: 65vh;
     background: white;
     border-radius: 12px;
@@ -78,7 +78,7 @@
 }
 
 .tutorial-image-wrap {
-    flex: 1;
+    flex: 2;
     display: flex;
     align-items: center;   
     justify-content: center; 
@@ -186,7 +186,7 @@
     padding: 16px 8px 0;
     margin-top: auto;
     border-top: 1px solid #f1f1f5;
-    gap: 8rem;
+    gap: 7rem;
 }
 
 .tutorial-footer {
