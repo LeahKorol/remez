@@ -24,7 +24,7 @@ const steps = [
         img: "step-drug.png",
     },
     {
-        title: "Add Adverse Reactions",
+        title: "Add Reactions",
         text: `Same rule as drugs: type 3+ characters and choose from suggestions. You can add multiple reactions.`,
         img: "step-reaction.png",
     },
@@ -35,8 +35,8 @@ const steps = [
     },
     {
         title: "Error Handling",
-        text: `If something goes wrong the application will show an error message (network/server errors might return 404 / 500). Fix the indicated issues and try again.`,
-        img: "/assets/tutorial/step-error.png",
+        text: `If something goes wrong the application will show an error message (network errors might return 404). Fix the indicated issues and try again.`,
+        img: "step-error.png",
     },
     {
         title: "Saved Queries List",
