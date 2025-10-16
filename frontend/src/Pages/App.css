@@ -202,6 +202,30 @@
   color: #61dafb;
 }
 
+.help-button {
+  position: fixed;
+  right: 20px;
+  bottom: 24px;
+  z-index: 1100;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, #7b42e0, #5e68f1);
+  color: #fff;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(94,104,241,0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.help-button:hover { 
+  transform: translateY(-2px); 
+}
+
 @keyframes App-logo-spin {
   from {
     transform: rotate(0deg);
