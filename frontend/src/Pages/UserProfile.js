@@ -215,8 +215,8 @@ const UserProfile = () => {
 
             // Sort queries: results first, then by creation date descending
             const sortedQueries = data.sort((a, b) => {
-                const aHasResults = a.ror_values && a.ror_values.length > 0;
-                const bHasResults = b.ror_values && b.ror_values.length > 0;
+                const aHasResults = a.result && a.result.ror_values && a.result.ror_values.length > 0;
+                const bHasResults = b.result && b.result.ror_values && b.result.ror_values.length > 0;
 
                 if (aHasResults && !bHasResults) return -1;
                 if (!aHasResults && bHasResults) return 1;
@@ -708,12 +708,12 @@ const UserProfile = () => {
             const queryData = await response.json();
             console.log('Query data from backend:', queryData);
 
-            const drugsToEdit = (queryData.drugs_details || queryData.drugs || []).map(d => ({
+            const drugsToEdit = (queryData.drugs_details || []).map(d => ({
                 id: d.id ?? null,
                 name: d.name ?? ''
             }));
 
-            const reactionsToEdit = (queryData.reactions_details || queryData.reactions || []).map(r => ({
+            const reactionsToEdit = (queryData.reactions_details || []).map(r => ({
                 id: r.id ?? null,
                 name: r.name ?? ''
             }));
