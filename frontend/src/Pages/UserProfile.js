@@ -9,6 +9,7 @@ import { validateQueryForm } from '../utils/formValidation';
 import Sidebar from '../components/Sidebar';
 import ToastNotification from '../components/ToastNotification';
 import QueryForm from '../components/QueryForm';
+import TutorialCarousel from '../components/TutorialCarousel';
 import './UserProfile.css';
 
 
@@ -71,6 +72,9 @@ const UserProfile = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState('');
     const [globalLoading, setGlobalLoading] = useState(false);
+    const [showTutorial, setShowTutorial] = useState(false);
+    const [deleteQueryId, setDeleteQueryId] = useState(null);
+    const [showDeletePopup, setShowDeletePopup] = useState(false);
 
     const [viewMode, setViewMode] = useState('new');
     const [viewingQuery, setViewingQuery] = useState(null);
@@ -211,8 +215,8 @@ const UserProfile = () => {
 
             // Sort queries: results first, then by creation date descending
             const sortedQueries = data.sort((a, b) => {
-                const aHasResults = a.ror_values && a.ror_values.length > 0;
-                const bHasResults = b.ror_values && b.ror_values.length > 0;
+                const aHasResults = a.result && a.result.ror_values && a.result.ror_values.length > 0;
+                const bHasResults = b.result && b.result.ror_values && b.result.ror_values.length > 0;
 
                 if (aHasResults && !bHasResults) return -1;
                 if (!aHasResults && bHasResults) return 1;
@@ -530,74 +534,111 @@ const UserProfile = () => {
 
     // Handle deleting a query
     const handleDeleteQuery = async (queryId) => {
-        if (!window.confirm('Are you sure you want to delete this query?')) {
-            return;
-        }
+        setDeleteQueryId(queryId);
+        setShowDeletePopup(true);
+        // if (!window.confirm('Are you sure you want to delete this query?')) {
+        //     return;
+        // }
+
+        // try {
+        //     const token = localStorage.getItem('token');
+
+        //     if (!token) {
+        //         alert('You are not logged in. Please log in first.');
+        //         navigate('/session-expired');
+        //         return;
+        //     }
+
+        //     console.log('Deleting query with ID:', queryId);
+
+        //     const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`, {
+        //         method: 'DELETE'
+        //     });
+
+        //     if (!response) {
+        //         // fetchWithRefresh handles redirect to login on auth failure
+        //         return;
+        //     }
+
+        //     console.log('Delete response status:', response.status);
+
+        //     if (response.status === 403) {
+        //         alert('You do not have permission to delete this query.');
+        //         return;
+        //     }
+
+        //     if (response.status === 404) {
+        //         alert('Query not found. It may have already been deleted.');
+        //         // Refresh queries to sync with server state
+        //         await fetchQueries();
+        //         return;
+        //     }
+
+        //     if (response.ok || response.status === 204) {
+        //         // Successfully deleted
+        //         setSavedQueries(savedQueries.filter(q => q.id !== queryId));
+        //         showToastMessage('Query deleted successfully!');
+
+        //         // If we were editing this query, reset the form
+        //         if (editingQueryId === queryId) {
+        //             resetForm();
+        //         }
+        //     } else {
+        //         // Handle other error responses
+        //         let errorMessage = 'Failed to delete query';
+        //         try {
+        //             const errorData = await response.json();
+        //             errorMessage = errorData.detail || errorData.message || errorMessage;
+        //         } catch (parseError) {
+        //             errorMessage = `Server error (${response.status})`;
+        //         }
+
+        //         console.error('Error deleting query:', errorMessage);
+        //         alert(`Failed to delete query: ${errorMessage}`);
+        //     }
+        // } catch (error) {
+        //     console.error('Network error during delete:', error);
+        //     if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        //         alert('Network error: Unable to connect to server. Please check your connection.');
+        //     } else {
+        //         alert(`Failed to delete query: ${error.message || 'Network error'}`);
+        //     }
+        // }
+    };
+
+    const confirmDeleteQuery = async () => {
+        if (!deleteQueryId) return;
 
         try {
             const token = localStorage.getItem('token');
-
             if (!token) {
                 alert('You are not logged in. Please log in first.');
                 navigate('/session-expired');
                 return;
             }
 
-            console.log('Deleting query with ID:', queryId);
-
-            const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`, {
+            const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/queries/${deleteQueryId}/`, {
                 method: 'DELETE'
             });
 
-            if (!response) {
-                // fetchWithRefresh handles redirect to login on auth failure
-                return;
-            }
-
-            console.log('Delete response status:', response.status);
-
-            if (response.status === 403) {
-                alert('You do not have permission to delete this query.');
-                return;
-            }
-
-            if (response.status === 404) {
-                alert('Query not found. It may have already been deleted.');
-                // Refresh queries to sync with server state
-                await fetchQueries();
-                return;
-            }
-
-            if (response.ok || response.status === 204) {
-                // Successfully deleted
-                setSavedQueries(savedQueries.filter(q => q.id !== queryId));
+            if (response && (response.ok || response.status === 204)) {
+                setSavedQueries(savedQueries.filter(q => q.id !== deleteQueryId));
                 showToastMessage('Query deleted successfully!');
-
-                // If we were editing this query, reset the form
-                if (editingQueryId === queryId) {
-                    resetForm();
-                }
             } else {
-                // Handle other error responses
-                let errorMessage = 'Failed to delete query';
-                try {
-                    const errorData = await response.json();
-                    errorMessage = errorData.detail || errorData.message || errorMessage;
-                } catch (parseError) {
-                    errorMessage = `Server error (${response.status})`;
-                }
-
-                console.error('Error deleting query:', errorMessage);
-                alert(`Failed to delete query: ${errorMessage}`);
+                alert('Failed to delete query');
             }
         } catch (error) {
-            console.error('Network error during delete:', error);
-            if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                alert('Network error: Unable to connect to server. Please check your connection.');
-            } else {
-                alert(`Failed to delete query: ${error.message || 'Network error'}`);
-            }
+            console.error('Error deleting query:', error);
+            alert('Network error: Unable to delete query.');
+        } finally {
+            setDeleteQueryId(null);
+            setShowDeletePopup(false);
         }
+    };
+
+    const cancelDelete = () => {
+        setDeleteQueryId(null);
+        setShowDeletePopup(false);
     };
 
 
@@ -644,7 +685,7 @@ const UserProfile = () => {
     const handleEditQuery = async (query) => {
         setViewMode('edit');
         setViewingQuery(null);
-        setIsEditing(true);
+        // setIsEditing(true);
         setEditingQueryId(query.id);
         setLoading(true);
 
@@ -667,18 +708,15 @@ const UserProfile = () => {
             const queryData = await response.json();
             console.log('Query data from backend:', queryData);
 
-            const drugsToEdit = (queryData.drugs || []).map(d => ({
-                id: d.id,
-                name: d.name
+            const drugsToEdit = (queryData.drugs_details || []).map(d => ({
+                id: d.id ?? null,
+                name: d.name ?? ''
             }));
 
-            const reactionsToEdit = (queryData.reactions || []).map(r => ({
-                id: r.id,
-                name: r.name
+            const reactionsToEdit = (queryData.reactions_details || []).map(r => ({
+                id: r.id ?? null,
+                name: r.name ?? ''
             }));
-
-            console.log('Drugs for editing (final):', drugsToEdit);
-            console.log('Reactions for editing (final):', reactionsToEdit);
 
             setDrugs(drugsToEdit.length > 0 ? drugsToEdit : [{ name: '', id: null }]);
             setReactions(reactionsToEdit.length > 0 ? reactionsToEdit : [{ name: '', id: null }]);
@@ -688,6 +726,8 @@ const UserProfile = () => {
             setQuarterStart(queryData.quarter_start ? queryData.quarter_start.toString() : '');
             setQuarterEnd(queryData.quarter_end ? queryData.quarter_end.toString() : '');
             setQueryName(queryData.name || 'New Query');
+
+            setIsEditing(true);
 
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (error) {
@@ -701,6 +741,10 @@ const UserProfile = () => {
 
     const cancelEditing = () => {
         resetForm();
+        setResetFormTrigger(prev => prev + 1);
+        setIsEditing(false);
+        setEditingQueryId(null);
+        setViewMode('new');
     };
 
     const handleNewQuery = () => {
@@ -821,6 +865,33 @@ const UserProfile = () => {
                 handleLogoutClick={handleLogoutClick}
                 handleLogout={handleLogout}
             />
+
+            <button
+                className="help-button"
+                onClick={() => setShowTutorial(true)}
+                aria-label="Open tutorial"
+            >
+                ?
+            </button>
+
+            <TutorialCarousel
+                open={showTutorial}
+                onClose={() => setShowTutorial(false)}
+            />
+
+            {showDeletePopup && (
+                <div className="modal-overlay">
+                    <div className="modal-content">
+                        <img src="delete-icon.png" alt="Delete" className="modal-icon" />
+                        <h3>Delete Query</h3>
+                        <p>Are you sure you want to delete this query?</p>
+                        <div className="modal-buttons">
+                            <button className="confirm-button" onClick={confirmDeleteQuery}>Delete</button>
+                            <button className="cancel-button" onClick={cancelDelete}>Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
