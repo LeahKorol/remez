@@ -64,7 +64,7 @@ const AnalysisEmailNotification = () => {
           <button
             className="primary-button"
             onClick={() =>
-              navigate(`/queries/${queryData?.id}`, { state: { queryData } })
+              navigate(`/queries/${queryData?.query}`, { state: { queryData } })
             }
           >
             View Results Now

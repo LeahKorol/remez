@@ -29,7 +29,7 @@ ChartJS.register(
 
 export default function QueryResultPage() {
     const navigate = useNavigate();
-    const { id } = useParams();
+    const { queryId } = useParams();
 
     const [queryData, setQueryData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -37,14 +37,14 @@ export default function QueryResultPage() {
     useEffect(() => {
         const token = localStorage.getItem("token");
         if (!token) {
-            navigate("/login", { state: { from: `/queries/${id}/` } });
+            navigate("/login", { state: { from: `/queries/${queryId}/` } });
             return;
         }
 
         const fetchQueryData = async () => {
             try {
                 const startTime = Date.now();
-                const res = await axios.get(`/analysis/queries/${id}/`, {
+                const res = await axios.get(`/analysis/queries/${queryId}/`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 const elapsed = Date.now() - startTime;
@@ -62,7 +62,7 @@ export default function QueryResultPage() {
         };
 
         fetchQueryData();
-    }, [id, navigate]);
+    }, [queryId, navigate]);
 
     if (loading) {
         return (
@@ -75,7 +75,7 @@ export default function QueryResultPage() {
 
     if (!queryData) return <p>No query data found.</p>;
 
-    const labels = queryData.ror_values?.map((_, idx) => `Q${idx + 1}`) || [];
+    const labels = queryData.ror_values?.map((_, queryIdx) => `Q${queryIdx + 1}`) || [];
     const chartData = {
         labels,
         datasets: [
@@ -85,10 +85,10 @@ export default function QueryResultPage() {
                 fill: false,
                 borderColor: "rgb(75, 192, 192)",
                 tension: 0.3,
-                borderWidth: 2,
+                borderWqueryIdth: 2,
             },
             {
-                label: "Confidence Interval Upper",
+                label: "ConfqueryIdence Interval Upper",
                 data: queryData.ror_upper || [],
                 borderColor: "rgba(0,0,0,0)",
                 backgroundColor: "rgba(75,192,192,0.2)",
@@ -97,7 +97,7 @@ export default function QueryResultPage() {
                 fill: "+1",
             },
             {
-                label: "Confidence Interval Lower",
+                label: "ConfqueryIdence Interval Lower",
                 data: queryData.ror_lower || [],
                 borderColor: "rgba(0,0,0,0)",
                 backgroundColor: "rgba(75,192,192,0.2)",
