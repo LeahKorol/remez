@@ -174,40 +174,13 @@ function Login() {
     }
   };
 
-  // const handleForgotPassword = async () => {
-  //   if (!email.trim()) return setErrors(['Please enter your email to reset password.']);
-  //   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setErrors(['Please enter a valid email address.']);
-  //   setIsResetLoading(true);
-  //   setErrors([]);
-  //   try {
-  //     const res = await fetch('http://127.0.0.1:8000/api/v1/auth/password/reset/', {
-  //       method: 'POST',
-  //       headers: { 'Content-Type': 'application/json' },
-  //       body: JSON.stringify({ email }),
-  //     });
-  //     if (res.ok) {
-  //       toast.success('If an account exists, a reset link has been sent.');
-  //       setShowForgotPassword(false);
-  //       setDynamicButtonType(null);
-  //     } else {
-  //       const data = await res.json();
-  //       setErrors(handleBackendErrors(data));
-  //     }
-  //   } catch {
-  //     setErrors(['Network error. Please try again.']);
-  //   } finally {
-  //     setIsResetLoading(false);
-  //   }
-  // };
-
-
   const handleForgotPassword = async () => {
     if (!email.trim()) return setErrors(['Please enter your email to reset password.']);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setErrors(['Please enter a valid email address.']);
     setIsResetLoading(true);
     setErrors([]);
     try {
-      const res = await axios.post('/password/reset/', { email });
+      const res = await axios.post('auth/password/reset/', { email });
       toast.success('If an account exists, a reset link has been sent.');
       setShowForgotPassword(false);
       setDynamicButtonType(null);
@@ -273,6 +246,17 @@ function Login() {
               {isLoading ? 'Logging in...' : 'Login'}
             </button>
           </form>
+
+          <div className="forgot-password-inline">
+            <button
+              type="button"
+              className="forgot-password-link"
+              onClick={handleForgotPassword}
+              disabled={isResetLoading}
+            >
+              {isResetLoading ? 'Sending...' : 'Forgot your password?'}
+            </button>
+          </div>
 
           <div className="separator"><span>or</span></div>
           <GoogleAuthButton isRegistration={false} className="google-login-button" size="large" />

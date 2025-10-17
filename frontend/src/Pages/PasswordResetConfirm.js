@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import axios from '../axiosConfig';
 import './PasswordResetConfirm.css';
 
 // Function to handle backend error formatting
@@ -49,14 +48,6 @@ function PasswordResetConfirm() {
 
   const navigate = useNavigate();
   const { uidb64, token } = useParams();
-
-  useEffect(() => {
-    if (!uidb64 || !token) {
-      setErrors(['Invalid password reset link. Please request a new one.']);
-      setIsTokenExpired(true);
-    }
-    setIsTokenExpired(false);
-  }, [uidb64, token]);
 
   // Function to validate token on page load 
   const validateToken = async () => {
@@ -125,10 +116,6 @@ function PasswordResetConfirm() {
 
   // Validate token on component mount
   useEffect(() => {
-
-    // it is an option to try to validate token (recommended if you have a validation endpoint)
-    // validateToken();
-
     // Skip validation entirely and let form submission handle it
     skipTokenValidation();
   }, [uidb64, token]);
@@ -276,10 +263,6 @@ function PasswordResetConfirm() {
   if (isValidatingToken) {
     return (
       <div className="password-reset-confirm-container">
-        <div className="password-reset-confirm-header">
-          <div className="logo">REMEZ</div>
-        </div>
-
         <div className="password-reset-confirm-form-container">
           <div className="password-reset-confirm-form">
             <div className="loading-icon">⏳</div>
@@ -297,10 +280,6 @@ function PasswordResetConfirm() {
   if (isTokenExpired) {
     return (
       <div className="password-reset-confirm-container">
-        <div className="password-reset-confirm-header">
-          <div className="logo">REMEZ</div>
-        </div>
-
         <div className="password-reset-confirm-form-container">
           <div className="password-reset-confirm-form">
             <div className="error-icon">⚠️</div>
@@ -338,10 +317,6 @@ function PasswordResetConfirm() {
   if (isSuccess) {
     return (
       <div className="password-reset-confirm-container">
-        <div className="password-reset-confirm-header">
-          <div className="logo">REMEZ</div>
-        </div>
-
         <div className="password-reset-confirm-form-container">
           <div className="password-reset-confirm-form">
             <div className="success-icon">✓</div>
@@ -369,10 +344,6 @@ function PasswordResetConfirm() {
   // Show password reset form (only if token is valid)
   return (
     <div className="password-reset-confirm-container">
-      <div className="password-reset-confirm-header">
-        <div className="logo">REMEZ</div>
-      </div>
-
       <div className="password-reset-confirm-form-container">
         <div className="password-reset-confirm-form">
           <h1>Reset Your Password</h1>

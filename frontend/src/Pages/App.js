@@ -36,7 +36,7 @@ function App() {
         <Route path="/email-verification-sent" element={<EmailVerificationSent />} />
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/loading" element={<LoadingPage />} />
-        <Route path="/queries/:id" element={<QueryResultPage />} />
+        <Route path="/queries/:queryId" element={<QueryResultPage />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/about" element={<AboutResearch />} />
         <Route path="*" element={<NotFoundPage />} />
