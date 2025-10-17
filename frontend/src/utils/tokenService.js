@@ -109,6 +109,8 @@ class TokenService {
             }
         };
 
+        console.log("📡 Sending request with headers:", config.headers);
+
         return fetch(requestConfig.url, config);
     }
 }

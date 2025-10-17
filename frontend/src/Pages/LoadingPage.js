@@ -12,143 +12,145 @@ const LoadingPage = () => {
 
     const [progress, setProgress] = useState(10);
     const [statusText, setStatusText] = useState("Analysis submitted to server...");
+    const [resultId, setResultId] = useState(queryData?.result?.id || null);
 
     useEffect(() => {
-        if (!queryData || !queryData.id) {
-            console.error("No query data or ID provided");
+        // if there is no queryData, redirect back to profile
+        if (!queryData?.id) {
+            console.error("No query ID provided");
             navigate("/profile");
             return;
         }
 
-        console.log("Starting polling for query ID:", queryData.id);
+        if (queryData.result?.id) {
+            const resId = queryData.result.id;
+            console.log("✅ Result exists, polling Result ID:", resId);
+            setResultId(resId);
+            pollForResult(resId);
+        }
 
-        // start the polling process
-        pollForResults(queryData.id);
+        else {
+            console.log("Starting polling for query ID:", queryData.id);
+            // start the polling process
+            pollForResultCreation(queryData.id);
+        }
     }, [queryData, navigate]);
 
-    const pollForResults = (queryId) => {
+    // Stage 1: Poll until the Result is created
+    const pollForResultCreation = (queryId) => {
         let attempts = 0;
-        const maxAttempts = 120;
+        const maxAttempts = 60; // e.g. 5 minutes at 5s intervals
+        const intervalTime = 5000;
 
-        const interval = setInterval(async () => {
+        const poll = async () => {
+            attempts++;
+            console.log(`Checking if Result exists (attempt ${attempts})...`);
+
             try {
-                attempts++;
-                console.log(`Polling attempt ${attempts} for query ${queryId}`);
+                const response = await fetchWithRefresh(
+                    `http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`
+                );
 
-                const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`);
-
-                if (!response) {
-                    console.error("No response from fetchWithRefresh");
-                    clearInterval(interval);
-                    navigate("/", {
-                        state: {
-                            message: "Authentication failed. Please log in again.",
-                            type: "error"
-                        }
-                    });
-                    return;
-                }
-
-                if (response.status === 404) {
-                    clearInterval(interval);
-                    navigate("/profile", {
-                        state: {
-                            message: "Query not found. It may have been deleted.",
-                            type: "error"
-                        }
-                    });
-                    return;
-                }
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
                 const data = await response.json();
 
-                // Validate data structure
-                if (!data || !data.id) {
-                    throw new Error("Invalid data structure received from server");
-                }
-
-                console.log("Received data from server:", {
-                    id: data.id,
-                    name: data.name,
-                    hasRorValues: !!(data.ror_values && data.ror_values.length > 0),
-                    hasRorLower: !!(data.ror_lower && data.ror_lower.length > 0),
-                    hasRorUpper: !!(data.ror_upper && data.ror_upper.length > 0)
-                });
-
-                // update progress and status text
-                const progressValue = Math.min(90, 10 + (attempts * 1.5));
-                setProgress(progressValue);
-
-                if (attempts < 10) {
-                    setStatusText("Processing drug data...");
-                } else if (attempts < 20) {
-                    setStatusText("Analyzing adverse reactions...");
-                } else if (attempts < 40) {
-                    setStatusText("Computing statistical analysis...");
-                } else {
-                    setStatusText("Finalizing results...");
-                }
-
-                // check if results are ready
-                if (data.ror_values && data.ror_values.length > 0 &&
-                    data.ror_lower && data.ror_lower.length > 0 &&
-                    data.ror_upper && data.ror_upper.length > 0) {
-
-                    console.log("Results are ready! Navigating to profile...");
-                    clearInterval(interval);
-                    setProgress(100);
-                    setStatusText("Analysis complete!");
-
-                    // wait a moment before navigating to show 100% completion
-                    setTimeout(() => {
-                        navigate("/analysis-email-notification", {
-                            state: {
-                                queryData: data,
-                                isUpdate: isUpdate
-                            },
-                        });
-                    }, 1500);
-
+                if (data.result?.id) {
+                    console.log("✅ Result found! ID:", data.result.id);
+                    setResultId(data.result.id);
+                    setStatusText("Result found. Starting analysis polling...");
+                    pollForResult(data.result.id);
                     return;
                 }
 
-                // if max attempts reached, stop polling
                 if (attempts >= maxAttempts) {
-                    console.log("Max attempts reached, stopping polling");
-                    clearInterval(interval);
-                    setStatusText("Analysis is taking longer than expected...");
-
-                    setTimeout(() => {
-                        navigate("/profile", {
-                            state: {
-                                message: "Analysis is still in progress. Results will appear in your saved queries when ready.",
-                                type: "info",
-                            },
-                        });
-                    }, 3000);
-                }
-
-            } catch (err) {
-                console.error("Error during polling:", err);
-
-                // Count consecutive failures
-                if (attempts >= 5) {
-                    clearInterval(interval);
+                    setStatusText("Analysis is still initializing...");
                     navigate("/profile", {
                         state: {
-                            message: "Unable to check analysis status. Please try refreshing the page later.",
-                            type: "error"
+                            message: "Analysis is still initializing. Please check again later.",
+                            type: "info"
                         }
                     });
+                    return;
                 }
-            }
-        }, 5000);
 
-        return () => clearInterval(interval);
+                setStatusText("Waiting for server to start processing...");
+                setTimeout(poll, intervalTime);
+            } catch (error) {
+                console.error("Error checking query:", error);
+                setTimeout(poll, intervalTime);
+            }
+        };
+
+        poll();
+    };
+
+    // Stage 2: Poll until the Result is completed
+    const pollForResult = (resId) => {
+        let attempts = 0;
+        const maxAttempts = 120;
+        let intervalTime = 5000;
+
+        const poll = async () => {
+            attempts++;
+            console.log(`Polling result ${resId}, attempt ${attempts}`);
+
+            try {
+                const response = await fetchWithRefresh(
+                    `http://127.0.0.1:8000/api/v1/analysis/results/${resId}/`
+                );
+
+                if (response.status === 404) {
+                    console.log("Result not ready yet (404)...");
+                    setStatusText("Waiting for analysis to start on server...");
+                    setTimeout(poll, intervalTime);
+                    return;
+                }
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+
+                // Simulate progress
+                const progressValue = Math.min(90, 10 + attempts * 1.5);
+                setProgress(progressValue);
+
+                if (data?.status === "completed" && data?.ror_values) {
+                    console.log("✅ Analysis complete!");
+                    setProgress(100);
+                    setStatusText("Analysis complete!");
+                    setTimeout(() => {
+                        navigate("/analysis-email-notification", {
+                            state: { queryData: data, isUpdate }
+                        });
+                    }, 1500);
+                    return;
+                }
+
+                if (attempts >= maxAttempts) {
+                    setStatusText("Analysis is taking longer than expected...");
+                    navigate("/profile", {
+                        state: {
+                            message: "Analysis is still in progress. Check again later.",
+                            type: "info"
+                        }
+                    });
+                    return;
+                }
+
+                // Backoff logic
+                if (attempts % 20 === 0 && intervalTime < 30000) {
+                    intervalTime += 5000;
+                }
+
+                setTimeout(poll, intervalTime);
+            } catch (err) {
+                console.error("Polling error:", err);
+                setTimeout(poll, intervalTime);
+            }
+        };
+
+        poll();
     };
 
     if (!queryData) {

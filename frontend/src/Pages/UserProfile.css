@@ -1328,7 +1328,7 @@
   display: inline-block;
   background: linear-gradient(135deg, #7b61ff 0%, #5e68f1 100%);
   color: #fff;
-  padding: 12px 18px;
+  padding: 0;
   margin: 6px 0;
   border-radius: 10px;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
