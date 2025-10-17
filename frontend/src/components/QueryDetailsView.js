@@ -1,8 +1,8 @@
 import React, { useRef, useState } from "react";
 import { FaTimes, FaFileImage, FaFileCsv, FaArrowDown } from "react-icons/fa";
-import RorChart from "./RorChart"; 
-import "../Pages/UserProfile.css"; 
-import { showToastMessage } from "../utils/toast"; 
+import RorChart from "./RorChart";
+import "../Pages/UserProfile.css";
+import { showToastMessage } from "../utils/toast";
 
 const QueryDetailsView = ({ query, handleNewQuery }) => {
   const chartRef = useRef(null);
@@ -11,10 +11,11 @@ const QueryDetailsView = ({ query, handleNewQuery }) => {
   console.log("Rendering QueryDetailsView for:", query);
 
   const hasResults =
-    query.ror_values &&
-    query.ror_values.length > 0 &&
-    query.ror_lower &&
-    query.ror_upper;
+    query.result &&
+    query.result.ror_values &&
+    query.result.ror_values.length > 0 &&
+    query.result.ror_lower &&
+    query.result.ror_upper;
 
   const csvHeaders = [
     "Time Period",
@@ -25,10 +26,10 @@ const QueryDetailsView = ({ query, handleNewQuery }) => {
   ];
 
   const csvRows =
-    query.ror_values?.map((rorValue, index) => {
+    query.result?.ror_values?.map((rorValue, index) => {
       const logValue = Math.log10(rorValue || 0.1);
-      const lowerCI = query.ror_lower[index] || "";
-      const upperCI = query.ror_upper[index] || "";
+      const lowerCI = query.result.ror_lower[index] || "";
+      const upperCI = query.result.ror_upper[index] || "";
       let currentYear = query.year_start;
       let currentQuarter = query.quarter_start + index;
       while (currentQuarter > 4) {
@@ -67,7 +68,7 @@ const QueryDetailsView = ({ query, handleNewQuery }) => {
     const csvData = [headers.join(",")];
 
     const labels = (() => {
-      const actualDataLength = query.ror_values ? query.ror_values.length : 0;
+      const actualDataLength = query.result.ror_values ? query.result.ror_values.length : 0;
       const labels = [];
       let currentYear = query.year_start;
       let currentQuarter = query.quarter_start;
@@ -83,10 +84,10 @@ const QueryDetailsView = ({ query, handleNewQuery }) => {
       return labels;
     })();
 
-    query.ror_values.forEach((rorValue, index) => {
+    query.result.ror_values.forEach((rorValue, index) => {
       const logValue = Math.log10(rorValue || 0.1);
-      const lowerCI = query.ror_lower[index] || "";
-      const upperCI = query.ror_upper[index] || "";
+      const lowerCI = query.result.ror_lower[index] || "";
+      const upperCI = query.result.ror_upper[index] || "";
       const timePeriod = labels[index] || `Period ${index + 1}`;
 
       csvData.push(
@@ -158,34 +159,26 @@ const QueryDetailsView = ({ query, handleNewQuery }) => {
 
       {/* Drugs */}
       <div className="query-section">
-        <h3>Drugs ({query.drugs?.length || 0})</h3>
-        <div className="items-list">
-          {query.drugs && query.drugs.length > 0 ? (
-            query.drugs.map((drug, index) => (
-              <div key={index} className="item-tag drug-tag">
-                {drug.name}
-              </div>
-            ))
-          ) : (
-            <p className="no-items">No drugs specified</p>
-          )}
-        </div>
+        <h3>Drugs ({query.drugs_details?.length || 0})</h3>
+        {query.drugs_details && query.drugs_details.length > 0 ? (
+          query.drugs_details.map((drug, index) => (
+            <div key={index} className="item-tag drug-tag">{drug.name}</div>
+          ))
+        ) : (
+          <p className="no-items">No drugs specified</p>
+        )}
       </div>
 
       {/* Reactions */}
       <div className="query-section">
-        <h3>Reactions ({query.reactions?.length || 0})</h3>
-        <div className="items-list">
-          {query.reactions && query.reactions.length > 0 ? (
-            query.reactions.map((reaction, index) => (
-              <div key={index} className="item-tag reaction-tag">
-                {reaction.name}
-              </div>
-            ))
-          ) : (
-            <p className="no-items">No reactions specified</p>
-          )}
-        </div>
+      <h3>Reactions ({query.reactions_details?.length || 0})</h3>
+        {query.reactions_details && query.reactions_details.length > 0 ? (
+          query.reactions_details.map((reaction, index) => (
+            <div key={index} className="item-tag reaction-tag">{reaction.name}</div>
+          ))
+        ) : (
+          <p className="no-items">No reactions specified</p>
+        )}
       </div>
 
       {/* Results */}
