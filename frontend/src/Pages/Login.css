@@ -348,6 +348,12 @@
   box-shadow: none !important;
 }
 
+.forgot-password-inline {
+  text-align: right;
+  margin-top: 6px;
+  margin-bottom: 10px;
+}
+
 .forgot-password-link {
   text-align: center;
   color: #7b42e0;
@@ -356,6 +362,8 @@
   font-weight: 500;
   margin-top: 15px;
   transition: color 0.3s ease;
+  background: none;
+  border: none;
 }
 
 .forgot-password-link:hover {
