@@ -88,6 +88,14 @@ export default function RorChart({ query }) {
     const options = {
         responsive: true,
         maintainAspectRatio: false,
+        layout: {
+            padding: {
+                left: 0,
+                right: 20,
+                top: 20,
+                bottom: 0
+            }
+        },
         animation: {
             duration: 500,
             easing: 'easeOutCubic'
@@ -123,10 +131,41 @@ export default function RorChart({ query }) {
                 },
             },
         },
+        // scales: {
+        //     x: {
+        //         title: { display: true, text: 'Time Period' },
+        //         ticks: { font: { size: 11 } },
+        //         offset: false,
+        //         min: 0,
+        //         max: labels.length - 1,
+        //         beginAtZero: true,
+        //     },
+        //     y: {
+        //         title: { display: true, text: 'ROR (log₁₀)' },
+        //         beginAtZero: false,
+        //         ticks: {
+        //             callback: v => {
+        //                 const val = Math.pow(10, v);
+        //                 return val >= 1 ? val.toFixed(1) : val.toFixed(2);
+        //             },
+        //         },
+        //         min: Math.min(...query.result.ror_lower.map(v => Math.log10(v || 0.1))),
+        //         max: Math.max(...query.result.ror_upper.map(v => Math.log10(v || 0.1))) * 1.15,
+        //     },
+        // },
+
         scales: {
             x: {
                 title: { display: true, text: 'Time Period' },
                 ticks: { font: { size: 11 } },
+                offset: false,
+                grid: {
+                    offset: false,
+                    drawOnChartArea: true,
+                },
+                border: {
+                    display: true,
+                },
             },
             y: {
                 title: { display: true, text: 'ROR (log₁₀)' },
@@ -136,6 +175,13 @@ export default function RorChart({ query }) {
                         return val >= 1 ? val.toFixed(1) : val.toFixed(2);
                     },
                 },
+                grid: {
+                    offset: false,
+                    drawOnChartArea: true,
+                },
+                border: {
+                    display: true,
+                },
             },
         },
     };
@@ -144,14 +190,14 @@ export default function RorChart({ query }) {
     const zoomIn = () => {
         const chart = chartRef.current;
         if (!chart) return;
-        
+
         const scale = chart.scales.x;
         const currentMin = scale.min;
         const currentMax = scale.max;
         const centerValue = (currentMax + currentMin) / 2;
         const currentRange = (currentMax - currentMin) / 2;
         const newRange = currentRange / 1.5; // zoom factor
-        
+
         // Set new zoom level with animation
         scale.options.min = centerValue - newRange;
         scale.options.max = centerValue + newRange;
@@ -161,7 +207,7 @@ export default function RorChart({ query }) {
     const resetZoom = () => {
         const chart = chartRef.current;
         if (!chart) return;
-        
+
         // Reset with smooth animation
         chart.resetZoom('active');
     };
