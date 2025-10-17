@@ -89,7 +89,7 @@ function Login() {
     }
 
     try {
-      const { data } = await axios.post('/login/', { email, password });
+      const { data } = await axios.post('auth/login/', { email, password });
 
       toast.success('Login successful!');
       localStorage.setItem('token', data.access);
