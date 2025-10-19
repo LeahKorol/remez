@@ -59,13 +59,27 @@ class ReadinessResponse(BaseModel):
     error: Optional[str] = Field(description="Error retirned during readiness checks")
 
 
+class QuarterData(BaseModel):
+    """Information about a specific quarter's data"""
+
+    files: List[str] = Field(
+        ..., description="List of available files for this quarter"
+    )
+    complete: bool = Field(
+        ..., description="Whether this quarter has all required file types"
+    )
+
+
 class AvailableDataResponse(BaseModel):
     """Available data response model"""
 
-    available_quarters: List[str] = Field(..., description="All available quarters")
+    incomplete_quarters: List[str] = Field(
+        ..., description="Quarters with missing required files"
+    )
     complete_quarters: List[str] = Field(..., description="Quarters with complete data")
-    file_details: Dict = Field(..., description="Detailed file information")
-    total_quarters: int = Field(..., description="Total number of quarters")
+    file_details: Dict[str, QuarterData] = Field(
+        ..., description="Detailed file information by quarter"
+    )
 
 
 class ErrorResponse(BaseModel):
