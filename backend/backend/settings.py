@@ -275,16 +275,7 @@ LOGGING = {
     "disable_existing_loggers": False,
     "formatters": {
         "color": {
-            "()": "colorlog.ColoredFormatter",
-            "format": "[%(asctime)s] %(log_color)s%(levelname)s (%(module)s:%(lineno)d): %(message)s",
-            "datefmt": "%Y-%m-%d %H:%M:%S",
-            "log_colors": {
-                "INFO": "green",
-                "ERROR": "red",
-                "CRITICAL": "bold_red",
-                "WARNING": "yellow",
-                "DEBUG": "cyan",
-            },
+            "()": "backend.logging_formatters.ColoredRelativePathFormatter",
         },
     },
     "handlers": {

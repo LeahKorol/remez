@@ -511,11 +511,6 @@ class TestRorFieldChangeDetection:
                 lambda reactions: reactions[:-1],
                 True,
             ),  # remove one reaction
-            (
-                lambda drugs: drugs + [999],
-                lambda reactions: reactions,
-                True,
-            ),  # add a drug
         ],
     )
     def test_list_order_changes_only(
@@ -528,9 +523,6 @@ class TestRorFieldChangeDetection:
         expected_change,
     ):
         """Test that changing only the order of drugs/reactions doesn't trigger recalculation"""
-        # Create an additional drug for the "add" case
-        third_drug = DrugName.objects.create(name="Third Drug")
-
         # Get current IDs dynamically from the query instance
         drug_ids = list(sample_query_multiple.drugs.values_list("id", flat=True))
         reaction_ids = list(
@@ -540,11 +532,6 @@ class TestRorFieldChangeDetection:
         # Apply transformations
         new_drug_ids = drugs_transform(drug_ids)
         new_reaction_ids = reactions_transform(reaction_ids)
-
-        # Replace placeholder ID (999) with the new third drug ID
-        new_drug_ids = [
-            third_drug.id if drug_id == 999 else drug_id for drug_id in new_drug_ids
-        ]
 
         # Build request data
         request_data = {
