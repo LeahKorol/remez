@@ -119,9 +119,16 @@ const LoadingPage = () => {
                     console.log("✅ Analysis complete!");
                     setProgress(100);
                     setStatusText("Analysis complete!");
+
+                    // get the full query data with results
+                    const fullQueryResponse = await fetchWithRefresh(
+                        `http://127.0.0.1:8000/api/v1/analysis/queries/${queryData.id}/`
+                    );
+                    const fullQueryData = await fullQueryResponse.json();
+
                     setTimeout(() => {
                         navigate("/analysis-email-notification", {
-                            state: { queryData: data, isUpdate }
+                            state: { queryData: fullQueryData, isUpdate }
                         });
                     }, 1500);
                     return;

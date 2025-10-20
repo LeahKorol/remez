@@ -65,33 +65,6 @@ function EmailVerify() {
     }
   };
 
-  // const verifyEmail = async (verificationKey) => {
-  //   try {
-  //     const response = await axiosConfig.get(`/auth/email-verify/${verificationKey}/`);
-
-  //     if (response.ok) {
-  //       setIsSuccess(true);
-  //       toast.success('Email verified successfully! You can now log in.');
-  //       setTimeout(() => {
-  //         navigate('/login');
-  //       }, 3000);
-  //     } else {
-  //       const data = await response.json();
-  //       setError(data.detail || 'Email verification failed');
-  //       setErrorType('api_error');
-  //       toast.error('Email verification failed');
-  //     }
-  //   } catch (err) {
-  //     console.error('Verification error:', err);
-  //     setError('Network error during verification');
-  //     setErrorType('network');
-  //     toast.error('Network error during verification');
-  //   } finally {
-  //     setIsVerifying(false);
-  //   }
-  // };
-
-
   const verifyEmail = async (verificationKey) => {
     try {
       const response = await axiosConfig.get(`/auth/email-verify/${verificationKey}/`);
