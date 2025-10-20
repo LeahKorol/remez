@@ -6,77 +6,77 @@ const steps = [
     {
         title: "Welcome to REMEZ",
         text: `This quick walkthrough will show you how to run an interaction analysis. You can open this tutorial anytime using the "?" icon on the bottom-right of the User page.`,
-        img: "step-welcome.png",
+        img: "images/steps/step-welcome.png",
     },
     {
         title: "Create a Query (optional name)",
         text: `Here you may enter a name for your query (optional). This helps you find it later in the saved queries list.`,
-        img: "step-name.png",
+        img: "images/steps/step-name.png",
     },
     {
         title: "Select Period: Start / End Year & Quarter",
         text: `Enter a start year and an end year (allowed range: 2020–2025). Quarters must be 1–4. The start period must be equal to or before the end period.`,
-        img: "step-period.png",
+        img: "images/steps/step-period.png",
     },
     {
         title: "Add Drugs",
         text: `Type at least 3 characters to search the drug database. Select the matching item from the suggestions to attach the drug to your query.`,
-        img: "step-drug.png",
+        img: "images/steps/step-drug.png",
     },
     {
         title: "Add Reactions",
         text: `Same rule as drugs: type 3+ characters and choose from suggestions. You can add multiple reactions.`,
-        img: "step-reaction.png",
+        img: "images/steps/step-reaction.png",
     },
     {
         title: "Save & Calculate",
         text: `After all required fields are valid, click SAVE + CALC. The system will run the analysis based on Dr. Boris Gorelik's research and email you results including a graph once ready.`,
-        img: "step-save.png",
+        img: "images/steps/step-save.png",
     },
     {
         title: "Processing & Email Notification",
         text: `Your analysis is now running in the background. You’ll receive an email with the results once it's ready. You can safely leave the page or continue using the site while the calculation is in progress.`,
-        img: "step-calc.png",
+        img: "images/steps/step-calc.png",
     },
     {
         title: "Error Handling",
         text: `If something goes wrong the application will show an error message (network errors might return 404). Fix the indicated issues and try again.`,
-        img: "step-error.png",
+        img: "images/steps/step-error.png",
     },
     {
         title: "Saved Queries List",
         text: `Your saved queries appear here. Use View / Edit / Delete actions. You can also export results later as CSV or image, or view them as a table.`,
-        img: "step-saved-list.png",
+        img: "images/steps/step-saved-list.png",
     },
     {
         title: "View Query Details",
         text: `Click “View” on a saved query to open its full details, including the drugs, reactions, and analysis results.`,
-        img: "step-view-query.png",
+        img: "images/steps/step-view-query.png",
     },
     {
         title: "Edit an Existing Query",
         text: `Press “Edit” to modify a query. You can change its parameters, then re-run the analysis and save the updated version.`,
-        img: "step-edit-query.png",
+        img: "images/steps/step-edit-query.png",
     },
     {
         title: "Delete a Query",
         text: `If you no longer need a saved query, click “Delete”. You’ll be asked to confirm before the data is removed.`,
-        img: "step-delete-query.png",
+        img: "images/steps/step-delete-query.png",
     },
     {
         title: "Logout",
         text: `You can log out safely at any time using the logout button located on the sidebar. This will securely end your session and return you to the login page.`,
-        img: "step-logout.png",
+        img: "images/steps/step-logout.png",
     },
     {
         title: "Session Expired",
         text: `If you stay inactive for too long, your session will expire automatically for security reasons. You’ll be redirected to the login page with a short message asking you to sign in again.`,
-        img: "step-session-expired.png",
+        img: "images/steps/step-session-expired.png",
     },    
     {
         title: "That's it — You're Ready",
         text: `Press 'Got it' to close the tutorial and start using REMEZ. You can reopen the walkthrough anytime with the "?" icon.`,
-        img: "step-done.png",
+        img: "images/steps/step-done.png",
     }
 ];
 

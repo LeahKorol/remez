@@ -17,7 +17,7 @@ export default function ServerErrorPage() {
             <main style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "40px 20px" }}>
                 
                 <img
-                    src="500.png"
+                    src="images/500.png"
                     alt="500 status"
                     style={{ width: "450px", maxWidth: "90%", marginBottom: "30px", display: "block", marginLeft: "auto", marginRight: "auto" }}
                 />

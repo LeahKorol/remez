@@ -3,7 +3,7 @@
   "name": "REMEZ - Risk Evaluation & Monitoring of Emerging Signals",
   "icons": [
     {
-      "src": "/r-icon.png",
+      "src": "images/r-icon.png",
       "sizes": "28x37",
       "type": "image/png"
     }

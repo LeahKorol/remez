@@ -18,7 +18,7 @@ export default function MaintenancePage() {
                 
                 {/* Image */}
                 <img
-                    src="maintenance.png"
+                    src="images/maintenance.png"
                     alt="Maintenance illustration"
                     style={{ width: "350px", maxWidth: "90%", marginBottom: "30px", display: "block", marginLeft: "auto", marginRight: "auto" }}
                 />

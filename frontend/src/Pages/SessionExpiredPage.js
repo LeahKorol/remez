@@ -19,7 +19,7 @@ export default function SessionExpiredPage() {
             <main style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "40px 20px" }}>
                 
                 <img
-                    src="session_expired.png" 
+                    src="images/session_expired.png" 
                     alt="Session expired"
                     style={{ width: "400px", maxWidth: "90%", marginBottom: "30px", display: "block", marginLeft: "auto", marginRight: "auto" }}
                 />

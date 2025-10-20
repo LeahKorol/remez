@@ -40,7 +40,7 @@ const Sidebar = ({
                     <div className="logout-popup-overlay"></div>
                     <div className="logout-popup">
                         <img
-                            src="logout.png"
+                            src="images/logout.png"
                             alt="Logging out"
                             style={{ width: '250px', height: 'auto' }}
                         />

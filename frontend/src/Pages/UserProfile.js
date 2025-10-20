@@ -845,7 +845,7 @@ const UserProfile = () => {
             {showDeletePopup && (
                 <div className="modal-overlay">
                     <div className="modal-content">
-                        <img src="delete-icon.png" alt="Delete" className="modal-icon" />
+                        <img src="images/delete-icon.png" alt="Delete" className="modal-icon" />
                         <h3>Delete Query</h3>
                         <p>Are you sure you want to delete this query?</p>
                         <div className="modal-buttons">
