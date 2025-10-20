@@ -268,23 +268,29 @@ PASSWORD_RESET_CONFIRM_REDIRECT_BASE_URL = os.getenv(
     "PASSWORD_RESET_CONFIRM_REDIRECT_BASE_URL"
 )
 
+################################################################################
+# Logging configuration
+# Pay Attention: When running in debug mode (DEBUG=True),
+# there is file lock issue in Windows causes the rotating log file handler fails.
+# See more here: https://stackoverflow.com/questions/26830918/django-logging-rotating-files-not-working
+# To avoid this issue, start the app with 'python manage.py runserver --noreload'.
+###################################################################################
+
 ROOT_LOG_LEVEL = os.getenv("ROOT_LOG_LEVEL", "WARNING").upper()
+
+# Ensure logs directory exists
+LOGS_DIR = BASE_DIR / "logs"
+LOGS_DIR.mkdir(exist_ok=True)
 
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
         "color": {
-            "()": "colorlog.ColoredFormatter",
-            "format": "[%(asctime)s] %(log_color)s%(levelname)s (%(module)s:%(lineno)d): %(message)s",
-            "datefmt": "%Y-%m-%d %H:%M:%S",
-            "log_colors": {
-                "INFO": "green",
-                "ERROR": "red",
-                "CRITICAL": "bold_red",
-                "WARNING": "yellow",
-                "DEBUG": "cyan",
-            },
+            "()": "backend.logging_formatters.ColoredRelativePathFormatter",
+        },
+        "file": {
+            "()": "backend.logging_formatters.RelativePathFormatter",
         },
     },
     "handlers": {
@@ -292,16 +298,24 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": "color",
         },
+        "file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": str(LOGS_DIR / "backend.log"),
+            "maxBytes": 10 * 1024 * 1024,  # 10MB
+            "backupCount": 3,
+            "formatter": "file",
+            "encoding": "utf-8",
+        },
     },
     "loggers": {
         "FAERS": {
-            "handlers": ["console"],
+            "handlers": ["console", "file"],
             "level": "DEBUG",
             "propagate": False,
         },
     },
     "root": {
-        "handlers": ["console"],
+        "handlers": ["console", "file"],
         "level": ROOT_LOG_LEVEL,
     },
 }
@@ -356,7 +370,7 @@ REST_AUTH_REGISTER_SERIALIZERS = {
 
 # Pipeline service settings
 
- # Comma-separated list of allowed IPs. If the variable is empty or not set, allow all IPs.
+# Comma-separated list of allowed IPs. If the variable is empty or not set, allow all IPs.
 pipeline_ips = os.getenv("PIPELINE_SERVICE_IPS", "")
 PIPELINE_SERVICE_IPS = pipeline_ips.strip().split(",") if pipeline_ips else None
 PIPELINE_BASE_URL = "http://localhost:8001"

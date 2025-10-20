@@ -8,6 +8,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from analysis.models import DrugName, Query, ReactionName, Result, ResultStatus
+from analysis.views import is_ror_field_changed
 
 User = get_user_model()
 
@@ -346,3 +347,304 @@ class TestPipelineIntegration:
         assert len(query.result.ror_values) > 0  # Should have demo data
         assert len(query.result.ror_lower) > 0  # Should have demo data
         assert len(query.result.ror_upper) > 0  # Should have demo data
+
+
+@pytest.fixture
+def sample_query(user, drug, reaction):
+    """Fixture for a sample query with related objects"""
+    query = Query.objects.create(
+        user=user,
+        name="Sample Query",
+        quarter_start=1,
+        quarter_end=2,
+        year_start=2020,
+        year_end=2020,
+    )
+    query.drugs.set([drug])
+    query.reactions.set([reaction])
+    return query
+
+
+@pytest.fixture
+def sample_query_multiple(user, drug, reaction, extra_drug, extra_reaction):
+    """Fixture for a sample query with multiple drugs and reactions for order testing"""
+    query = Query.objects.create(
+        user=user,
+        name="Sample Query Multiple",
+        quarter_start=1,
+        quarter_end=2,
+        year_start=2020,
+        year_end=2020,
+    )
+    query.drugs.set([drug, extra_drug])
+    query.reactions.set([reaction, extra_reaction])
+    return query
+
+
+@pytest.fixture
+def extra_drug(db):
+    """Fixture for an additional drug"""
+    return DrugName.objects.create(name="Extra Drug")
+
+
+@pytest.fixture
+def extra_reaction(db):
+    """Fixture for an additional reaction"""
+    return ReactionName.objects.create(name="Extra Reaction")
+
+
+@pytest.mark.django_db
+class TestRorFieldChangeDetection:
+    """Unit tests for the is_ror_field_changed function"""
+
+    @pytest.mark.parametrize(
+        "request_data,expected_change",
+        [
+            # No changes - should return False
+            ({}, False),
+            ({"name": "Updated Name"}, False),
+            # Scalar field changes - should return True
+            ({"year_start": 2021}, True),
+            ({"year_end": 2021}, True),
+            ({"quarter_start": 2}, True),
+            ({"quarter_end": 3}, True),
+            # Same values - should return False
+            ({"year_start": 2020}, False),
+            ({"year_end": 2020}, False),
+            ({"quarter_start": 1}, False),
+            ({"quarter_end": 2}, False),
+            # Multiple scalar changes - should return True
+            ({"year_start": 2021, "year_end": 2021}, True),
+            ({"quarter_start": 2, "quarter_end": 4}, True),
+            # Mixed changes (ROR + non-ROR) - should return True
+            ({"name": "New Name", "year_start": 2021}, True),
+        ],
+    )
+    def test_scalar_field_changes(self, sample_query, request_data, expected_change):
+        """Test scalar field changes detection"""
+        result = is_ror_field_changed(sample_query, request_data)
+        assert result == expected_change
+
+    @pytest.mark.parametrize(
+        "drugs_data,reactions_data,expected_change",
+        [
+            # No list changes - should return False
+            (None, None, False),
+            # Same drugs/reactions - should return False
+            ([1], None, False),
+            (None, [1], False),
+            ([1], [1], False),
+            # Different drugs - should return True
+            ([2], None, True),
+            ([1, 2], None, True),
+            ([], None, True),
+            # Different reactions - should return True
+            (None, [2], True),
+            (None, [1, 2], True),
+            (None, [], True),
+            # Both lists changed - should return True
+            ([2], [2], True),
+            ([1, 2], [1, 2], True),
+        ],
+    )
+    def test_list_field_changes(
+        self,
+        sample_query,
+        extra_drug,
+        extra_reaction,
+        drugs_data,
+        reactions_data,
+        expected_change,
+    ):
+        """Test list field (drugs/reactions) changes detection"""
+        request_data = {}
+
+        # Build request data conditionally
+        if drugs_data is not None:
+            # Map drug indices to actual IDs
+            drug_ids = []
+            for idx in drugs_data:
+                if idx == 1:
+                    drug_ids.append(sample_query.drugs.first().id)
+                elif idx == 2:
+                    drug_ids.append(extra_drug.id)
+            request_data["drugs"] = drug_ids
+
+        if reactions_data is not None:
+            # Map reaction indices to actual IDs
+            reaction_ids = []
+            for idx in reactions_data:
+                if idx == 1:
+                    reaction_ids.append(sample_query.reactions.first().id)
+                elif idx == 2:
+                    reaction_ids.append(extra_reaction.id)
+            request_data["reactions"] = reaction_ids
+
+        result = is_ror_field_changed(sample_query, request_data)
+        assert result == expected_change
+
+    @pytest.mark.parametrize(
+        "drugs_transform, reactions_transform, expected_change",
+        [
+            (
+                lambda drugs: drugs[::-1],
+                lambda reactions: reactions,
+                False,
+            ),  # reverse drugs only
+            (
+                lambda drugs: drugs,
+                lambda reactions: reactions[::-1],
+                False,
+            ),  # reverse reactions only
+            (
+                lambda drugs: drugs[::-1],
+                lambda reactions: reactions[::-1],
+                False,
+            ),  # reverse both
+            (
+                lambda drugs: drugs[:-1],
+                lambda reactions: reactions,
+                True,
+            ),  # remove one drug
+            (
+                lambda drugs: drugs,
+                lambda reactions: reactions[:-1],
+                True,
+            ),  # remove one reaction
+        ],
+    )
+    def test_list_order_changes_only(
+        self,
+        sample_query_multiple,
+        extra_drug,
+        extra_reaction,
+        drugs_transform,
+        reactions_transform,
+        expected_change,
+    ):
+        """Test that changing only the order of drugs/reactions doesn't trigger recalculation"""
+        # Get current IDs dynamically from the query instance
+        drug_ids = list(sample_query_multiple.drugs.values_list("id", flat=True))
+        reaction_ids = list(
+            sample_query_multiple.reactions.values_list("id", flat=True)
+        )
+
+        # Apply transformations
+        new_drug_ids = drugs_transform(drug_ids)
+        new_reaction_ids = reactions_transform(reaction_ids)
+
+        # Build request data
+        request_data = {
+            "drugs": new_drug_ids,
+            "reactions": new_reaction_ids,
+        }
+
+        result = is_ror_field_changed(sample_query_multiple, request_data)
+        assert result == expected_change
+
+
+@pytest.mark.django_db
+class TestRorFieldChangeDetectionIntegration:
+    """Integration tests for ROR field change detection with PUT requests"""
+
+    @pytest.fixture
+    def query_with_result(self, user, drug, reaction):
+        """Fixture for query with completed result"""
+        query = Query.objects.create(
+            user=user,
+            name="Test Query",
+            quarter_start=1,
+            quarter_end=2,
+            year_start=2020,
+            year_end=2020,
+        )
+        query.drugs.set([drug])
+        query.reactions.set([reaction])
+
+        Result.objects.create(
+            query=query,
+            status=ResultStatus.COMPLETED,
+            ror_values=[1.5, 2.0],
+            ror_lower=[1.2, 1.8],
+            ror_upper=[1.8, 2.2],
+        )
+        return query
+
+    @pytest.mark.parametrize(
+        "update_data_builder,should_trigger_pipeline",
+        [
+            # No ROR field changes - should NOT trigger pipeline
+            (
+                lambda query, extra_drug, extra_reaction: {"name": "Updated Name"},
+                False,
+            ),
+            # Scalar ROR field changes - should trigger pipeline
+            (
+                lambda query, extra_drug, extra_reaction: {"year_end": 2021},
+                True,
+            ),
+            # List ROR field changes - should trigger pipeline
+            (
+                lambda query, extra_drug, extra_reaction: {"drugs": [extra_drug.id]},
+                True,
+            ),
+        ],
+    )
+    def test_put_ror_field_changes_pipeline_trigger(
+        self,
+        mocker,
+        api_client,
+        user,
+        query_with_result,
+        drug,
+        reaction,
+        update_data_builder,
+        should_trigger_pipeline,
+    ):
+        """Test that PUT requests trigger pipeline correctly based on ROR field changes"""
+        # Create additional resources for list changes
+        extra_drug = DrugName.objects.create(name="Extra Drug")
+        extra_reaction = ReactionName.objects.create(name="Extra Reaction")
+
+        # Mock pipeline service
+        mock_trigger = mocker.patch(
+            "analysis.views.pipeline_service.trigger_pipeline_analysis"
+        )
+        # Disable demo mode
+        mocker.patch.object(settings, "NUM_DEMO_QUARTERS", -1)
+
+        authenticate_user(api_client, user)
+
+        # Build complete data for PUT request (all required fields)
+        complete_data = {
+            "name": query_with_result.name,
+            "quarter_start": query_with_result.quarter_start,
+            "quarter_end": query_with_result.quarter_end,
+            "year_start": query_with_result.year_start,
+            "year_end": query_with_result.year_end,
+            "drugs": [drug.id for drug in query_with_result.drugs.all()],
+            "reactions": [
+                reaction.id for reaction in query_with_result.reactions.all()
+            ],
+        }
+
+        # Apply the scenario-specific updates
+        update_data = update_data_builder(query_with_result, extra_drug, extra_reaction)
+        complete_data.update(update_data)
+
+        # Perform PUT request
+        detail_url = reverse("query-detail", kwargs={"id": query_with_result.id})
+        response = api_client.put(detail_url, complete_data, format="json")
+        assert response.status_code == status.HTTP_200_OK
+
+        # Check if pipeline was triggered as expected
+        if should_trigger_pipeline:
+            mock_trigger.assert_called_once()
+            # Verify result status was reset to PENDING
+            query_with_result.refresh_from_db()
+            assert query_with_result.result.status == ResultStatus.PENDING
+        else:
+            mock_trigger.assert_not_called()
+            # Verify result status unchanged
+            query_with_result.refresh_from_db()
+            assert query_with_result.result.status == ResultStatus.COMPLETED

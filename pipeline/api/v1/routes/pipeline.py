@@ -92,11 +92,11 @@ async def get_pipeline_status(task_id: int, session: SessionDep) -> TaskResults:
 async def get_available_data():
     """Get information about available FAERS data quarters"""
     try:
-        data_info = pipeline_service.get_available_data()
+        data_info: AvailableDataResponse = pipeline_service.get_available_data()
 
-        logger.debug(f"Retrieved data info for {data_info['total_quarters']} quarters")
+        logger.debug(f"Retrieved data info: {len(data_info.complete_quarters)} complete quarters, {len(data_info.incomplete_quarters)} incomplete quarters")
 
-        return AvailableDataResponse(**data_info)
+        return data_info
 
     except Exception as e:
         logger.error(f"Error retrieving available data: {str(e)}", exc_info=True)

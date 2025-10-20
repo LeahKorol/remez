@@ -11,7 +11,7 @@ from core.config import get_settings
 from database import create_session
 from mark_data import main as mark_data_main
 from models.models import TaskResults
-from models.schemas import PipelineRequest
+from models.schemas import AvailableDataResponse, PipelineRequest, QuarterData
 from report import main as report_main
 from utils import get_ror_fields, normalise_empty_ror_fields
 
@@ -91,7 +91,7 @@ def update_task_status(task: TaskResults, status: TaskStatus):
 
 def verify_data_files_exists(request: PipelineRequest, dir_external):
     available_quarters = []
-    file_types = ["demo", "drug", "outc", "reac", "ther"]
+    file_types = ["demo", "drug", "outc", "reac"]
 
     for q in range(request.quarter_start, request.quarter_end + 1):
         quarter = f"{request.year_start}q{q}"
@@ -303,3 +303,64 @@ def start_pipeline(request: PipelineRequest, task: TaskResults):
     # Submit to process pool and immediately return
     executor.submit(run_pipeline, request, task)
     logger.debug(f"Task {task.id} was submitted sucesssfully")
+
+
+def get_available_data() -> AvailableDataResponse:
+    """Get information about available FAERS data quarters"""
+    try:
+        external_dir = settings.get_external_data_path()
+        available_data = {}
+        file_types = ["demo", "drug", "outc", "reac"]
+
+        if not external_dir.exists():
+            logger.warning(f"External data directory does not exist: {external_dir}")
+            return AvailableDataResponse(
+                incomplete_quarters=[],
+                complete_quarters=[],
+                file_details={},
+            )
+
+        all_files = [f.name for f in external_dir.iterdir() if f.is_file()]
+
+        # Organize by quarters
+        for file in all_files:
+            for file_type in file_types:
+                if file.startswith(file_type) and file.endswith(".csv.zip"):
+                    quarter = file[len(file_type) : -8]
+                    if quarter not in available_data:
+                        available_data[quarter] = {"files": [], "complete": False}
+                    available_data[quarter]["files"].append(file)
+
+        # Check which quarters have complete data
+        for quarter, data in available_data.items():
+            if len(data["files"]) == len(file_types):
+                data["complete"] = True
+
+        # Convert to Pydantic models
+        file_details = {
+            quarter: QuarterData(files=data["files"], complete=data["complete"])
+            for quarter, data in available_data.items()
+        }
+
+        # Sort quarters
+        sorted_quarters = sorted(available_data.keys())
+        complete_quarters = [
+            q for q in sorted_quarters if available_data[q]["complete"]
+        ]
+        incomplete_quarters = [
+            q for q in sorted_quarters if not available_data[q]["complete"]
+        ]
+
+        logger.info(
+            f"Found {len(sorted_quarters)} quarters total: {len(complete_quarters)} complete, {len(incomplete_quarters)} incomplete"
+        )
+
+        return AvailableDataResponse(
+            incomplete_quarters=incomplete_quarters,
+            complete_quarters=complete_quarters,
+            file_details=file_details,
+        )
+
+    except Exception as e:
+        logger.error(f"Error retrieving available data: {str(e)}", exc_info=True)
+        raise

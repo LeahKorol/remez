@@ -21,6 +21,47 @@ from analysis.services.pipeline_service import pipeline_service
 
 logger = logging.getLogger(__name__)
 
+
+def is_ror_field_changed(old_query: Query, request_data: dict) -> bool:
+    """
+    Check if any ROR-related fields have changed in the query update
+    """
+    recalculate_ror_fields = [
+        "year_start",
+        "year_end",
+        "quarter_start", 
+        "quarter_end",
+        "drugs",
+        "reactions",
+    ]
+    
+    for field in recalculate_ror_fields:
+        old_value = getattr(old_query, field)
+        new_value = request_data.get(field, None)
+
+        if new_value is None: # patch request might not include all fields
+            continue
+
+        logger.debug(f"Comparing field '{field}': old_value={old_value}, new_value={new_value}")
+
+        if field in ["drugs", "reactions"]:
+            # list fields need special handling
+            new_value = set(
+                int(pk) for pk in request_data.get(field, [])
+            )
+            old_value = set(obj.pk for obj in old_value.all())
+            if old_value != new_value:
+                logger.debug(f"Field '{field}' changed from {old_value} to {new_value}")
+                return True
+        else:
+            # scalar fields
+            if old_value != new_value:
+                logger.debug(f"Field '{field}' changed from {old_value} to {new_value}")
+                return True
+                
+    return False
+
+
 query_schemas = {
     method: extend_schema(
         tags=["Query"],
@@ -75,7 +116,7 @@ class QueryViewSet(viewsets.ModelViewSet):
             self._create_demo_result(query)
         else:
             # Trigger pipeline service for real analysis
-            self._trigger_pipeline_analysis(query, serializer.validated_data)
+            self._trigger_pipeline_analysis(query)
 
     def perform_update(self, serializer):
         """
@@ -83,19 +124,17 @@ class QueryViewSet(viewsets.ModelViewSet):
         DRF calls serializer.is_valid() before perform_update is invoked.
         If settings.NUM_DEMO_QUARTERS is set to a value between 0 and 4, use demo data for the results.
         """
-        recalculate_ror_fields = [
-            "year_start",
-            "year_end",
-            "quarter_start",
-            "quarter_end",
-            "drugs",
-            "reactions",
-        ]
-        if not any(field in self.request.data for field in recalculate_ror_fields):
+        logger.debug(f"perform_update called with method: {self.request.method}")
+        
+        if not is_ror_field_changed(serializer.instance, self.request.data):
             # No relevant fields updated, skip recalculation
+            logger.info(
+                f"Query {serializer.instance.id} updated without ROR-related fields; skipping recalculation."
+            )
             serializer.save()
             return
 
+        logger.info(f"Query {serializer.instance.id} updated with ROR-related fields; triggering recalculation.")
         # Save the query first
         query = serializer.save()
 
@@ -103,7 +142,7 @@ class QueryViewSet(viewsets.ModelViewSet):
         if settings.NUM_DEMO_QUARTERS >= 0:
             self._create_demo_result(query)
         else:
-            self._trigger_pipeline_analysis(query, serializer.validated_data)
+            self._trigger_pipeline_analysis(query)
 
     def _create_demo_result(self, query):
         """Create Result object with demo data and mark as completed."""
@@ -124,7 +163,7 @@ class QueryViewSet(viewsets.ModelViewSet):
             logger.error(f"Error creating demo result for query {query.id}: {str(e)}")
             # Keep result in PENDING status if demo creation fails
 
-    def _trigger_pipeline_analysis(self, query, validated_data):
+    def _trigger_pipeline_analysis(self, query):
         """Trigger pipeline analysis for the query."""
         try:
             # Mark result as pending
@@ -136,21 +175,15 @@ class QueryViewSet(viewsets.ModelViewSet):
             drugs = list(query.drugs.all())
             reactions = list(query.reactions.all())
 
-            # Use current query values for parameters not in validated_data (for updates)
-            year_start = validated_data.get("year_start", query.year_start)
-            year_end = validated_data.get("year_end", query.year_end)
-            quarter_start = validated_data.get("quarter_start", query.quarter_start)
-            quarter_end = validated_data.get("quarter_end", query.quarter_end)
-
-            # Call pipeline service
+            # Use saved query values directly since query is already saved with current data
             pipeline_service.trigger_pipeline_analysis(
                 drugs=drugs,
                 reactions=reactions,
                 result_id=result.id,
-                year_start=year_start,
-                year_end=year_end,
-                quarter_start=quarter_start,
-                quarter_end=quarter_end,
+                year_start=query.year_start,
+                year_end=query.year_end,
+                quarter_start=query.quarter_start,
+                quarter_end=query.quarter_end,
             )
 
             logger.info(
@@ -270,7 +303,7 @@ class ResultViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = self.get_serializer(result, data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        
+
         logger.info(f"Result {result.id} is updated by task_id {task_id}")
 
         return Response(serializer.data)
