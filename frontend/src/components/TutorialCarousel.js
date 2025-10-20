@@ -34,6 +34,11 @@ const steps = [
         img: "step-save.png",
     },
     {
+        title: "Processing & Email Notification",
+        text: `Your analysis is now running in the background. You’ll receive an email with the results once it's ready. You can safely leave the page or continue using the site while the calculation is in progress.`,
+        img: "step-calc.png",
+    },
+    {
         title: "Error Handling",
         text: `If something goes wrong the application will show an error message (network errors might return 404). Fix the indicated issues and try again.`,
         img: "step-error.png",
@@ -91,7 +96,7 @@ export default function TutorialCarousel({ open, onClose }) {
         };
         window.addEventListener('keydown', handleKey);
         return () => window.removeEventListener('keydown', handleKey);
-    }, [open, index]);
+    }, [open, index, onClose]);
 
     const goNext = () => {
         setIndex((i) => Math.min(i + 1, steps.length - 1));
