@@ -26,17 +26,16 @@ ChartJS.register(
     zoomPlugin
 );
 
-export default function RorChart({ query }) {
+export default function RorChart({ query, year_start, quarter_start }) {
     const chartRef = useRef(null);
 
-    if (!query.result || !query.result.ror_values) return null;
+    if (!query || !query.ror_values) return null;
 
-    // Build x-axis labels based on year_start, quarter_start, and the length of ror_values
     const labels = (() => {
-        const length = query.result.ror_values.length;
+        const length = query.ror_values.length;
         const arr = [];
-        let year = query.year_start;
-        let q = query.quarter_start;
+        let year = year_start;
+        let q = quarter_start;
         for (let i = 0; i < length; i++) {
             arr.push(`${year} Q${q}`);
             q++;
@@ -48,13 +47,12 @@ export default function RorChart({ query }) {
         return arr;
     })();
 
-    // Prepare chart datasets
     const data = {
         labels,
         datasets: [
             {
                 label: 'Lower CI',
-                data: query.result.ror_lower.map(v => Math.log10(v || 0.1)),
+                data: query.ror_lower.map(v => Math.log10(v || 0.1)),
                 borderColor: '#7b61ff',
                 borderDash: [3, 3],
                 tension: 0.3,
@@ -63,7 +61,7 @@ export default function RorChart({ query }) {
             },
             {
                 label: 'ROR (Log₁₀)',
-                data: query.result.ror_values.map(v => Math.log10(v || 0.1)),
+                data: query.ror_values.map(v => Math.log10(v || 0.1)),
                 borderColor: '#7b61ff',
                 backgroundColor: 'rgba(123,97,255,0.2)',
                 fill: '-1',
@@ -73,7 +71,7 @@ export default function RorChart({ query }) {
             },
             {
                 label: 'Upper CI',
-                data: query.result.ror_upper.map(v => Math.log10(v || 0.1)),
+                data: query.ror_upper.map(v => Math.log10(v || 0.1)),
                 borderColor: '#7b61ff',
                 backgroundColor: 'rgba(123,97,255,0.2)',
                 borderDash: [3, 3],

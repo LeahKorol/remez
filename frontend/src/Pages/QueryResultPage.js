@@ -1,31 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { Line } from "react-chartjs-2";
 import axios from "../axiosConfig";
 import RorChart from "../components/RorChart";
-import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Title,
-    Tooltip,
-    Legend,
-    Filler,
-} from "chart.js";
 import "./QueryResultPage.css";
-
-ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Title,
-    Tooltip,
-    Legend,
-    Filler
-);
 
 export default function QueryResultPage() {
     const navigate = useNavigate();
@@ -34,8 +11,8 @@ export default function QueryResultPage() {
 
     const [queryData, setQueryData] = useState(location.state?.queryData || null);
     const [loading, setLoading] = useState(!queryData);
-
-    console.log(queryData);
+    const [showDrugsModal, setShowDrugsModal] = useState(false);
+    const [showReactionsModal, setShowReactionsModal] = useState(false);
 
     useEffect(() => {
         if (queryData) return;
@@ -79,48 +56,6 @@ export default function QueryResultPage() {
 
     if (!queryData) return <p>No query data found.</p>;
 
-    const labels = queryData.result?.ror_values?.map((_, queryIdx) => `Q${queryIdx + 1}`) || [];
-    const chartData = {
-        labels,
-        datasets: [
-            {
-                label: "ROR",
-                data: queryData.result?.ror_values || [],
-                fill: false,
-                borderColor: "rgb(75, 192, 192)",
-                tension: 0.3,
-                borderWqueryIdth: 2,
-            },
-            {
-                label: "ConfqueryIdence Interval Upper",
-                data: queryData.result?.ror_upper || [],
-                borderColor: "rgba(0,0,0,0)",
-                backgroundColor: "rgba(75,192,192,0.2)",
-                pointRadius: 0,
-                tension: 0.3,
-                fill: "+1",
-            },
-            {
-                label: "ConfqueryIdence Interval Lower",
-                data: queryData.result?.ror_lower || [],
-                borderColor: "rgba(0,0,0,0)",
-                backgroundColor: "rgba(75,192,192,0.2)",
-                pointRadius: 0,
-                tension: 0.3,
-                fill: "-1",
-            },
-        ],
-    };
-
-    const options = {
-        responsive: true,
-        plugins: {
-            legend: { position: "top" },
-            title: { display: true, text: `Analysis Results: ${queryData.name}`, font: { size: 18 } },
-        },
-        scales: { y: { beginAtZero: true } },
-    };
-
     return (
         <div className="query-result-page">
             <header className="query-header">
@@ -133,20 +68,107 @@ export default function QueryResultPage() {
                 <h1>{queryData.name}</h1>
 
                 <div className="query-info-card">
-                    <div><strong>Period:</strong> {queryData.year_start} Q{queryData.quarter_start} → {queryData.year_end} Q{queryData.quarter_end}</div>
-                    <div><strong>Drugs:</strong> {queryData.drugs_details?.length || 0}</div>
-                    <div><strong>Reactions:</strong> {queryData.reactions_details?.length || 0}</div>
-                    <div><strong>Created:</strong> {new Date(queryData.created_at).toLocaleDateString()}</div>
+                    <div>
+                        <strong>Period:</strong>{" "}
+                        {queryData.year_start} Q{queryData.quarter_start} →{" "}
+                        {queryData.year_end} Q{queryData.quarter_end}
+                    </div>
+
+                    <div>
+                        <strong>Drugs:</strong>{" "}
+                        {queryData.drugs_details?.slice(0, 3).map(d => d.name).join(", ")}
+                        {queryData.drugs_details?.length > 3 && (
+                            <button
+                                className="view-more-btn"
+                                onClick={() => setShowDrugsModal(true)}
+                            >
+                                View all
+                            </button>
+                        )}
+                    </div>
+
+                    <div>
+                        <strong>Reactions:</strong>{" "}
+                        {queryData.reactions_details?.slice(0, 3).map(r => r.name).join(", ")}
+                        {queryData.reactions_details?.length > 3 && (
+                            <button
+                                className="view-more-btn"
+                                onClick={() => setShowReactionsModal(true)}
+                            >
+                                View all
+                            </button>
+                        )}
+                    </div>
+
+                    <div>
+                        <strong>Created:</strong>{" "}
+                        {queryData.created_at
+                            ? new Date(queryData.created_at).toLocaleDateString()
+                            : "Unknown"}
+                    </div>
                 </div>
 
                 <div className="chart-container-query-result">
-                    <RorChart query={queryData.result} />
+                    <RorChart
+                        query={queryData.result}
+                        year_start={queryData.year_start}
+                        quarter_start={queryData.quarter_start}
+                    />
                 </div>
             </main>
 
             <footer className="query-footer">
                 <p>© {new Date().getFullYear()} REMEZ — All rights reserved.</p>
             </footer>
-        </div>
+
+
+            {
+                showDrugsModal && (
+                    <div className="modal-overlay" onClick={() => setShowDrugsModal(false)}>
+                        <div
+                            className="modal-content"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <h2>Drugs Used in Analysis</h2>
+                            <ul>
+                                {queryData.drugs_details.map((d, idx) => (
+                                    <li key={idx}>{d.name}</li>
+                                ))}
+                            </ul>
+                            <button
+                                className="close-modal-btn"
+                                onClick={() => setShowDrugsModal(false)}
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                )
+            }
+
+            {
+                showReactionsModal && (
+                    <div className="modal-overlay" onClick={() => setShowReactionsModal(false)}>
+                        <div
+                            className="modal-content"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <h2>Reactions Analyzed</h2>
+                            <ul>
+                                {queryData.reactions_details.map((r, idx) => (
+                                    <li key={idx}>{r.name}</li>
+                                ))}
+                            </ul>
+                            <button
+                                className="close-modal-btn"
+                                onClick={() => setShowReactionsModal(false)}
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                )
+            }
+        </div >
     );
 }
