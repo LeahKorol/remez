@@ -147,7 +147,7 @@ export default function RorChart({ query, year_start, quarter_start }) {
                 ticks: {
                     callback: v => {
                         const val = Math.pow(10, v);
-                        return val >= 1 ? val.toFixed(1) : val.toFixed(2);
+                        return val.toFixed(2);
                     },
                 },
                 grid: {
