@@ -131,29 +131,6 @@ export default function RorChart({ query }) {
                 },
             },
         },
-        // scales: {
-        //     x: {
-        //         title: { display: true, text: 'Time Period' },
-        //         ticks: { font: { size: 11 } },
-        //         offset: false,
-        //         min: 0,
-        //         max: labels.length - 1,
-        //         beginAtZero: true,
-        //     },
-        //     y: {
-        //         title: { display: true, text: 'ROR (log₁₀)' },
-        //         beginAtZero: false,
-        //         ticks: {
-        //             callback: v => {
-        //                 const val = Math.pow(10, v);
-        //                 return val >= 1 ? val.toFixed(1) : val.toFixed(2);
-        //             },
-        //         },
-        //         min: Math.min(...query.result.ror_lower.map(v => Math.log10(v || 0.1))),
-        //         max: Math.max(...query.result.ror_upper.map(v => Math.log10(v || 0.1))) * 1.15,
-        //     },
-        // },
-
         scales: {
             x: {
                 title: { display: true, text: 'Time Period' },

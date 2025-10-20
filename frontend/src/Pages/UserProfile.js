@@ -455,6 +455,7 @@ const UserProfile = () => {
             }
 
             const newQuery = response.data;
+            console.log("newQuery: " , newQuery);
 
             if (editingQueryId) {
                 setSavedQueries(savedQueries.map(q => q.id === newQuery.id ? newQuery : q));
