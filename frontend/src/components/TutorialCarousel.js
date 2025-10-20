@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import './TutorialCarousel.css';
-import { FaChevronDown, FaChevronLeft, FaChevronRight, FaTimes } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaTimes } from 'react-icons/fa';
 
 const steps = [
     {

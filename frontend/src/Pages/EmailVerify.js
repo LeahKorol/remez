@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import axiosConfig from '../axiosConfig';
@@ -16,6 +16,22 @@ function EmailVerify() {
   const navigate = useNavigate();
   const { key } = useParams();
   const [searchParams] = useSearchParams();
+
+  const verifyEmail = useCallback(async (verificationKey) => {
+    try {
+      await axiosConfig.get(`/auth/email-verify/${verificationKey}/`);
+      setIsSuccess(true);
+      toast.success('Email verified successfully! You can now log in.');
+      setTimeout(() => navigate('/login'), 3000);
+    } catch (err) {
+      console.error('Verification error:', err);
+      setError(err.response?.data?.detail || 'Email verification failed');
+      setErrorType('api_error');
+      toast.error('Email verification failed');
+    } finally {
+      setIsVerifying(false);
+    }
+  }, [navigate]);
 
   useEffect(() => {
     // Check if this is a redirect from backend with URL parameters
@@ -42,7 +58,7 @@ function EmailVerify() {
       setErrorType('invalid');
       setIsVerifying(false);
     }
-  }, [key, searchParams]);
+  }, [key, searchParams, navigate, verifyEmail]);
 
   const handleVerificationError = (errorType) => {
     if (errorType === 'expired') {
@@ -65,62 +81,9 @@ function EmailVerify() {
     }
   };
 
-  const verifyEmail = async (verificationKey) => {
-    try {
-      const response = await axiosConfig.get(`/auth/email-verify/${verificationKey}/`);
-      setIsSuccess(true);
-      toast.success('Email verified successfully! You can now log in.');
-      setTimeout(() => navigate('/login'), 3000);
-    } catch (err) {
-      console.error('Verification error:', err);
-      setError(err.response?.data?.detail || 'Email verification failed');
-      setErrorType('api_error');
-      toast.error('Email verification failed');
-    } finally {
-      setIsVerifying(false);
-    }
-  };
-
-  // const handleResendVerification = async () => {
-  //   if (!emailForResend) {
-  //     toast.error('Please enter your email address');
-  //     return;
-  //   }
-
-  //   setIsResending(true);
-  //   try {
-  //     const response = await fetch('http://127.0.0.1:8000/api/v1/auth/resend-verification/', {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //       body: JSON.stringify({
-  //         email: emailForResend
-  //       })
-  //     });
-
-  //     const data = await response.json();
-
-  //     if (response.ok) {
-  //       toast.success('A new verification link has been sent to your email. Check your mailbox.');
-  //       setShowResendButton(false);
-  //       setShowEmailModal(false);
-  //       setEmailForResend('');
-  //       navigate('/login?message=verification_sent');
-  //     } else {
-  //       toast.error(data.error || 'Error sending new verification link');
-  //     }
-  //   } catch (err) {
-  //     console.error('Resend error:', err);
-  //     toast.error('Error connecting to server');
-  //   } finally {
-  //     setIsResending(false);
-  //   }
-  // };
-
   const handleResendVerification = async () => {
     try {
-      const response = await axiosConfig.post('/auth/resend-verification/', {
+      await axiosConfig.post('/auth/resend-verification/', {
         email: emailForResend
       });
       toast.success('A new verification link has been sent to your email.');
