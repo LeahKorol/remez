@@ -11,6 +11,8 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery }) => {
 
   console.log("Rendering QueryDetailsView for:", currentQuery);
 
+  const isQueryLocked = currentQuery?.result?.status !== "completed" && currentQuery?.result?.status !== "failed";
+
   const hasResults =
     currentQuery?.result?.status === "completed" &&
     Array.isArray(currentQuery?.result?.ror_values) &&
@@ -207,16 +209,27 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery }) => {
           <h3>Statistical Analysis Results</h3>
           {hasResults && (
             <div className="chart-actions">
-              <button className="download-button" onClick={downloadChart}>
+              <button
+                className="download-button"
+                onClick={downloadChart}
+                disabled={isQueryLocked}
+                title={isQueryLocked ? "Query is still processing. Download disabled." : "Download Chart"}
+              >
                 <FaFileImage style={{ marginRight: "6px" }} /> Download Chart
               </button>
-              <button className="download-button" onClick={downloadData}>
+              <button
+                className="download-button"
+                onClick={downloadData}
+                disabled={isQueryLocked}
+                title={isQueryLocked ? "Query is still processing. Download disabled." : "Download CSV"}
+              >
                 <FaFileCsv style={{ marginRight: "6px" }} /> Download CSV
               </button>
               <button
                 className="download-button"
                 onClick={() => setShowCsvModal(true)}
-                title="View CSV"
+                title={isQueryLocked ? "Query is still processing. View CSV disabled." : "View CSV"}
+                disabled={isQueryLocked}
               >
                 <FaArrowDown style={{ marginRight: "6px" }} /> View CSV
               </button>

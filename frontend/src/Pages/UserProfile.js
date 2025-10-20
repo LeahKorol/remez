@@ -87,6 +87,14 @@ const UserProfile = () => {
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [resetFormTrigger, setResetFormTrigger] = useState(0);
 
+    // Lock editing/deleting for queries that are in progress
+    const isQueryLocked = (query) => {
+        const status = query?.result?.status;
+        // if this is the query being edited, allow editing
+        if (editingQueryId && query.id === editingQueryId) return false;
+        return status && status !== "completed" && status !== "failed";
+    };    
+
     const navigate = useNavigate();
     const location = useLocation();
     const { userId } = useUser();
@@ -405,6 +413,13 @@ const UserProfile = () => {
     const handleSubmitQuery = async (e, FormData) => {
         e.preventDefault();
         const { queryName, yearStart, yearEnd, quarterStart, quarterEnd, drugs, reactions } = FormData;
+
+        if (isEditing && isQueryLocked({ result: { status: viewingQuery?.result?.status } })) {
+            showToastMessage("Cannot update query while processing.");
+            setIsSubmitting(false);
+            setGlobalLoading(false);
+            return;
+        }
 
         setIsSubmitting(true);
         setGlobalLoading(true);
@@ -809,6 +824,7 @@ const UserProfile = () => {
                                 drugSearchResults={drugSearchResults}
                                 reactionSearchResults={reactionSearchResults}
                                 resetTrigger={resetFormTrigger}
+                                isLocked={isEditing && viewingQuery && isQueryLocked(viewingQuery)}
                             />
 
                         </>
@@ -820,13 +836,16 @@ const UserProfile = () => {
                 user={user}
                 savedQueries={savedQueries}
                 onViewQuery={handleViewQuery}
-                onEditQuery={handleEditQuery}
-                onDeleteQuery={handleDeleteQuery}
+                onEditQuery={(query) => handleEditQuery(query)}
+                onDeleteQuery={(query) => handleDeleteQuery(query)}
                 onNewQuery={handleNewQuery}
                 showLogoutConfirm={showLogoutConfirm}
                 showLogoutPopup={showLogoutPopup}
                 handleLogoutClick={handleLogoutClick}
                 handleLogout={handleLogout}
+                editingQueryId={editingQueryId}
+                isEditing={isEditing}
+                editingQueryLoading={loading && viewMode === 'edit'} 
             />
 
             <button

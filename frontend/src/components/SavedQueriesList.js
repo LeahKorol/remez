@@ -6,8 +6,19 @@ const SavedQueriesList = ({
   savedQueries = [],
   onViewQuery,
   onEditQuery,
-  onDeleteQuery
+  onDeleteQuery,
+  editingQueryId,
+  isEditing,
+  editingQueryLoading
 }) => {
+
+  const isQueryLocked = (query) => {
+    const status = query?.result?.status;
+    // if this is the query being edited, allow editing
+    if (editingQueryId && query.id === editingQueryId) return false;
+    return status && status !== "completed" && status !== "failed";
+  };
+
   if (savedQueries.length === 0) {
     return <p className="no-queries">No Queries</p>;
   }
@@ -29,19 +40,26 @@ const SavedQueriesList = ({
               </button>
 
               <button
-                type="button"
+                disabled={isQueryLocked(item)}
+                title={
+                  isQueryLocked(item)
+                    ? "Query is still processing. Edit disabled."
+                    : editingQueryLoading
+                      ? "Loading query..."
+                      : "Edit query"
+                }
                 className="action-button edit-button"
                 onClick={() => onEditQuery(item)}
-                title="Edit Query"
               >
                 <FaEdit />
               </button>
 
               <button
                 type="button"
+                disabled={isQueryLocked(item)}
                 className="action-button delete-button"
                 onClick={() => onDeleteQuery(item.id)}
-                title="Delete Query"
+                title={isQueryLocked(item) ? "Query is still processing. Delete disabled." : "Delete Query"}
               >
                 <FaTrash />
               </button>
