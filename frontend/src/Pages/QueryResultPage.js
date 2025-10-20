@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Line } from "react-chartjs-2";
 import axios from "../axiosConfig";
 import RorChart from "../components/RorChart";
@@ -29,12 +29,17 @@ ChartJS.register(
 
 export default function QueryResultPage() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { queryId } = useParams();
 
-    const [queryData, setQueryData] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [queryData, setQueryData] = useState(location.state?.queryData || null);
+    const [loading, setLoading] = useState(!queryData);
+
+    console.log(queryData);
 
     useEffect(() => {
+        if (queryData) return;
+
         const token = localStorage.getItem("token");
         if (!token) {
             navigate("/login", { state: { from: `/queries/${queryId}/` } });
@@ -49,20 +54,19 @@ export default function QueryResultPage() {
                 });
                 const elapsed = Date.now() - startTime;
                 const minLoadingTime = 1000; // Minimum loading time in ms
-                setTimeout(() => setQueryData(res.data), Math.max(0, minLoadingTime - elapsed));
-                setQueryData(res.data);
+                setTimeout(() => {
+                    setQueryData(res.data);
+                    setLoading(false);
+                }, Math.max(0, minLoadingTime - elapsed));
             } catch (err) {
                 console.error("Error fetching query:", err);
                 if (err.response?.status === 404) navigate("/404");
                 else if (err.response?.status === 500) navigate("/500");
-            } finally {
-                setTimeout(() => setLoading(false), 1000);
-                setLoading(false);
             }
         };
 
         fetchQueryData();
-    }, [queryId, navigate]);
+    }, [queryData, queryId, navigate]);
 
     if (loading) {
         return (
@@ -75,13 +79,13 @@ export default function QueryResultPage() {
 
     if (!queryData) return <p>No query data found.</p>;
 
-    const labels = queryData.ror_values?.map((_, queryIdx) => `Q${queryIdx + 1}`) || [];
+    const labels = queryData.result?.ror_values?.map((_, queryIdx) => `Q${queryIdx + 1}`) || [];
     const chartData = {
         labels,
         datasets: [
             {
                 label: "ROR",
-                data: queryData.ror_values || [],
+                data: queryData.result?.ror_values || [],
                 fill: false,
                 borderColor: "rgb(75, 192, 192)",
                 tension: 0.3,
@@ -89,7 +93,7 @@ export default function QueryResultPage() {
             },
             {
                 label: "ConfqueryIdence Interval Upper",
-                data: queryData.ror_upper || [],
+                data: queryData.result?.ror_upper || [],
                 borderColor: "rgba(0,0,0,0)",
                 backgroundColor: "rgba(75,192,192,0.2)",
                 pointRadius: 0,
@@ -98,7 +102,7 @@ export default function QueryResultPage() {
             },
             {
                 label: "ConfqueryIdence Interval Lower",
-                data: queryData.ror_lower || [],
+                data: queryData.result?.ror_lower || [],
                 borderColor: "rgba(0,0,0,0)",
                 backgroundColor: "rgba(75,192,192,0.2)",
                 pointRadius: 0,
@@ -130,13 +134,13 @@ export default function QueryResultPage() {
 
                 <div className="query-info-card">
                     <div><strong>Period:</strong> {queryData.year_start} Q{queryData.quarter_start} → {queryData.year_end} Q{queryData.quarter_end}</div>
-                    <div><strong>Drugs:</strong> {queryData.drugs?.length || 0}</div>
-                    <div><strong>Reactions:</strong> {queryData.reactions?.length || 0}</div>
+                    <div><strong>Drugs:</strong> {queryData.drugs_details?.length || 0}</div>
+                    <div><strong>Reactions:</strong> {queryData.reactions_details?.length || 0}</div>
                     <div><strong>Created:</strong> {new Date(queryData.created_at).toLocaleDateString()}</div>
                 </div>
 
                 <div className="chart-container-query-result">
-                    <RorChart query={queryData} />
+                    <RorChart query={queryData.result} />
                 </div>
             </main>
 
