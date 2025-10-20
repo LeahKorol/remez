@@ -233,14 +233,21 @@ const UserProfile = () => {
 
 
     // Handle viewing a saved query
-    const handleViewQuery = (query) => {
+    const handleViewQuery = async (query) => {
         setViewMode('view');
-        setViewingQuery(query);
-        setIsEditing(false);
-        setEditingQueryId(null);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setViewingQuery(null);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/queries/${query.id}/`);
+            if (!res.ok) throw new Error('Failed to fetch full query');
+            const fullQuery = await res.json();
+            setViewingQuery(fullQuery);
+        } catch (err) {
+            console.error('Error fetching full query:', err);
+            alert('Failed to load query details. Please try again.');
+            setViewMode('new');
+        }
     };
-
 
     const createLabelsForActualData = (query) => {
         const dataLength = query.ror_values ? query.ror_values.length : 0;
@@ -455,7 +462,7 @@ const UserProfile = () => {
             }
 
             const newQuery = response.data;
-            console.log("newQuery: " , newQuery);
+            console.log("newQuery: ", newQuery);
 
             if (editingQueryId) {
                 setSavedQueries(savedQueries.map(q => q.id === newQuery.id ? newQuery : q));
@@ -537,74 +544,6 @@ const UserProfile = () => {
     const handleDeleteQuery = async (queryId) => {
         setDeleteQueryId(queryId);
         setShowDeletePopup(true);
-        // if (!window.confirm('Are you sure you want to delete this query?')) {
-        //     return;
-        // }
-
-        // try {
-        //     const token = localStorage.getItem('token');
-
-        //     if (!token) {
-        //         alert('You are not logged in. Please log in first.');
-        //         navigate('/session-expired');
-        //         return;
-        //     }
-
-        //     console.log('Deleting query with ID:', queryId);
-
-        //     const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`, {
-        //         method: 'DELETE'
-        //     });
-
-        //     if (!response) {
-        //         // fetchWithRefresh handles redirect to login on auth failure
-        //         return;
-        //     }
-
-        //     console.log('Delete response status:', response.status);
-
-        //     if (response.status === 403) {
-        //         alert('You do not have permission to delete this query.');
-        //         return;
-        //     }
-
-        //     if (response.status === 404) {
-        //         alert('Query not found. It may have already been deleted.');
-        //         // Refresh queries to sync with server state
-        //         await fetchQueries();
-        //         return;
-        //     }
-
-        //     if (response.ok || response.status === 204) {
-        //         // Successfully deleted
-        //         setSavedQueries(savedQueries.filter(q => q.id !== queryId));
-        //         showToastMessage('Query deleted successfully!');
-
-        //         // If we were editing this query, reset the form
-        //         if (editingQueryId === queryId) {
-        //             resetForm();
-        //         }
-        //     } else {
-        //         // Handle other error responses
-        //         let errorMessage = 'Failed to delete query';
-        //         try {
-        //             const errorData = await response.json();
-        //             errorMessage = errorData.detail || errorData.message || errorMessage;
-        //         } catch (parseError) {
-        //             errorMessage = `Server error (${response.status})`;
-        //         }
-
-        //         console.error('Error deleting query:', errorMessage);
-        //         alert(`Failed to delete query: ${errorMessage}`);
-        //     }
-        // } catch (error) {
-        //     console.error('Network error during delete:', error);
-        //     if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        //         alert('Network error: Unable to connect to server. Please check your connection.');
-        //     } else {
-        //         alert(`Failed to delete query: ${error.message || 'Network error'}`);
-        //     }
-        // }
     };
 
     const confirmDeleteQuery = async () => {
@@ -799,12 +738,36 @@ const UserProfile = () => {
         return <div className="not-logged-in">Log in to view your profile</div>;
     }
 
+    const refreshQuery = async (queryId) => {
+        try {
+            const response = await fetchWithRefresh(
+                `http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`,
+                { method: 'GET' }
+            );
+
+            if (!response.ok) {
+                console.error("Failed to refresh query:", response.status);
+                return null;
+            }
+
+            const data = await response.json();
+            return data;
+        } catch (err) {
+            console.error("Error refreshing query:", err);
+            return null;
+        }
+    };
+
     return (
         <div className="user-profile-container">
             <div className="main-content">
                 <div className="prompt-container">
                     {viewMode === 'view' && viewingQuery ? (
-                        <QueryDetailsView query={viewingQuery} handleNewQuery={handleNewQuery} />
+                        <QueryDetailsView
+                            query={viewingQuery}
+                            handleNewQuery={handleNewQuery}
+                            refreshQuery={refreshQuery}
+                        />
                     ) : (
                         <>
                             <div className="form-header">

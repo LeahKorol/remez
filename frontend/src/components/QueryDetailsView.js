@@ -4,18 +4,38 @@ import RorChart from "./RorChart";
 import "../Pages/UserProfile.css";
 import { showToastMessage } from "../utils/toast";
 
-const QueryDetailsView = ({ query, handleNewQuery }) => {
+const QueryDetailsView = ({ query, handleNewQuery, refreshQuery }) => {
   const chartRef = useRef(null);
   const [showCsvModal, setShowCsvModal] = useState(false);
+  const [currentQuery, setCurrentQuery] = useState(query);
 
-  console.log("Rendering QueryDetailsView for:", query);
+  console.log("Rendering QueryDetailsView for:", currentQuery);
 
   const hasResults =
-    query.result &&
-    query.result.ror_values &&
-    query.result.ror_values.length > 0 &&
-    query.result.ror_lower &&
-    query.result.ror_upper;
+    currentQuery?.result?.status === "completed" &&
+    Array.isArray(currentQuery?.result?.ror_values) &&
+    currentQuery.result.ror_values.length > 0;
+
+  const handleRefreshStatus = async () => {
+    if (!refreshQuery) return;
+    try {
+      const fullQuery = await refreshQuery(currentQuery.id);
+      console.log("Refreshed query:", fullQuery);
+
+      const mergedQuery = {
+        ...fullQuery,
+        ror_values: fullQuery.result?.ror_values || [],
+        ror_lower: fullQuery.result?.ror_lower || [],
+        ror_upper: fullQuery.result?.ror_upper || [],
+      };
+
+      console.log("mergedQuery: ", mergedQuery);
+      setCurrentQuery(mergedQuery);
+    } catch (err) {
+      console.error("Error refreshing query:", err);
+      alert("Failed to refresh query. Please try again.");
+    }
+  };
 
   const csvHeaders = [
     "Time Period",
@@ -26,12 +46,12 @@ const QueryDetailsView = ({ query, handleNewQuery }) => {
   ];
 
   const csvRows =
-    query.result?.ror_values?.map((rorValue, index) => {
+    currentQuery?.result.ror_values?.map((rorValue, index) => {
       const logValue = Math.log10(rorValue || 0.1);
-      const lowerCI = query.result.ror_lower[index] || "";
-      const upperCI = query.result.ror_upper[index] || "";
-      let currentYear = query.year_start;
-      let currentQuarter = query.quarter_start + index;
+      const lowerCI = currentQuery.result.ror_lower[index] || "";
+      const upperCI = currentQuery.result.ror_upper[index] || "";
+      let currentYear = currentQuery.year_start;
+      let currentQuarter = currentQuery.quarter_start + index;
       while (currentQuarter > 4) {
         currentQuarter -= 4;
         currentYear++;
@@ -52,7 +72,7 @@ const QueryDetailsView = ({ query, handleNewQuery }) => {
     if (chart) {
       const url = chart.toBase64Image("image/png", 1.0);
       const link = document.createElement("a");
-      link.download = `${query.name.replace(/[^a-z0-9]/gi, "_")}_analysis.png`;
+      link.download = `${currentQuery.name.replace(/[^a-z0-9]/gi, "_")}_analysis.png`;
       link.href = url;
       document.body.appendChild(link);
       link.click();
@@ -68,10 +88,10 @@ const QueryDetailsView = ({ query, handleNewQuery }) => {
     const csvData = [headers.join(",")];
 
     const labels = (() => {
-      const actualDataLength = query.result.ror_values ? query.result.ror_values.length : 0;
+      const actualDataLength = currentQuery.result.ror_values ? currentQuery.result.ror_values.length : 0;
       const labels = [];
-      let currentYear = query.year_start;
-      let currentQuarter = query.quarter_start;
+      let currentYear = currentQuery.year_start;
+      let currentQuarter = currentQuery.quarter_start;
 
       for (let i = 0; i < actualDataLength; i++) {
         labels.push(`${currentYear} Q${currentQuarter}`);
@@ -84,10 +104,10 @@ const QueryDetailsView = ({ query, handleNewQuery }) => {
       return labels;
     })();
 
-    query.result.ror_values.forEach((rorValue, index) => {
+    currentQuery.result.ror_values.forEach((rorValue, index) => {
       const logValue = Math.log10(rorValue || 0.1);
-      const lowerCI = query.result.ror_lower[index] || "";
-      const upperCI = query.result.ror_upper[index] || "";
+      const lowerCI = currentQuery.result.ror_lower[index] || "";
+      const upperCI = currentQuery.result.ror_upper[index] || "";
       const timePeriod = labels[index] || `Period ${index + 1}`;
 
       csvData.push(
@@ -108,7 +128,7 @@ const QueryDetailsView = ({ query, handleNewQuery }) => {
     link.setAttribute("href", url);
     link.setAttribute(
       "download",
-      `${query.name.replace(/[^a-z0-9]/gi, "_")}_data.csv`
+      `${currentQuery.name.replace(/[^a-z0-9]/gi, "_")}_data.csv`
     );
     link.style.visibility = "hidden";
     document.body.appendChild(link);
@@ -122,7 +142,7 @@ const QueryDetailsView = ({ query, handleNewQuery }) => {
   return (
     <div className="query-details-container">
       <div className="form-header">
-        <h2>{query.name}</h2>
+        <h2>{currentQuery.name}</h2>
         <div className="query-details-actions">
           {hasResults && <span className="results-badge">✓ Results Ready</span>}
           <button type="button" className="cancel-button" onClick={handleNewQuery}>
@@ -138,14 +158,14 @@ const QueryDetailsView = ({ query, handleNewQuery }) => {
           <div className="info-item">
             <span className="info-label">Time Period:</span>
             <span className="info-value">
-              {query.year_start} Q{query.quarter_start} - {query.year_end} Q
-              {query.quarter_end}
+              {currentQuery.year_start} Q{currentQuery.quarter_start} - {currentQuery.year_end} Q
+              {currentQuery.quarter_end}
             </span>
           </div>
           <div className="info-item">
             <span className="info-label">Created:</span>
             <span className="info-value">
-              {new Date(query.created_at).toLocaleDateString()}
+              {new Date(currentQuery.created_at).toLocaleDateString()}
             </span>
           </div>
           <div className="info-item">
@@ -159,9 +179,9 @@ const QueryDetailsView = ({ query, handleNewQuery }) => {
 
       {/* Drugs */}
       <div className="query-section">
-        <h3>Drugs ({query.drugs_details?.length || 0})</h3>
-        {query.drugs_details && query.drugs_details.length > 0 ? (
-          query.drugs_details.map((drug, index) => (
+        <h3>Drugs ({currentQuery.drugs_details?.length || 0})</h3>
+        {currentQuery.drugs_details && currentQuery.drugs_details.length > 0 ? (
+          currentQuery.drugs_details.map((drug, index) => (
             <div key={index} className="item-tag drug-tag">{drug.name}</div>
           ))
         ) : (
@@ -171,9 +191,9 @@ const QueryDetailsView = ({ query, handleNewQuery }) => {
 
       {/* Reactions */}
       <div className="query-section">
-      <h3>Reactions ({query.reactions_details?.length || 0})</h3>
-        {query.reactions_details && query.reactions_details.length > 0 ? (
-          query.reactions_details.map((reaction, index) => (
+        <h3>Reactions ({currentQuery.reactions_details?.length || 0})</h3>
+        {currentQuery.reactions_details && currentQuery.reactions_details.length > 0 ? (
+          currentQuery.reactions_details.map((reaction, index) => (
             <div key={index} className="item-tag reaction-tag">{reaction.name}</div>
           ))
         ) : (
@@ -209,7 +229,7 @@ const QueryDetailsView = ({ query, handleNewQuery }) => {
           <div className="csv-modal-overlay">
             <div className="csv-modal">
               <div className="csv-modal-header">
-                <h3>CSV Preview - {query.name}</h3>
+                <h3>CSV Preview - {currentQuery.name}</h3>
                 <button
                   className="close-button"
                   onClick={() => setShowCsvModal(false)}
@@ -246,7 +266,12 @@ const QueryDetailsView = ({ query, handleNewQuery }) => {
         <div className="chart-placeholder">
           <div className="chart-container">
             {hasResults ? (
-              <RorChart query={query} ref={chartRef} />
+              <RorChart
+                query={currentQuery.result}
+                year_start={currentQuery.year_start}
+                quarter_start={currentQuery.quarter_start}
+                ref={chartRef}
+              />
             ) : (
               <div className="placeholder-content">
                 <div className="placeholder-icon">⏳</div>
@@ -257,7 +282,7 @@ const QueryDetailsView = ({ query, handleNewQuery }) => {
                 <div className="refresh-button">
                   <button
                     className="secondary-button"
-                    onClick={() => window.location.reload()}
+                    onClick={handleRefreshStatus}
                   >
                     Refresh Status
                   </button>
