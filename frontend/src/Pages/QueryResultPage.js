@@ -56,6 +56,14 @@ export default function QueryResultPage() {
 
     if (!queryData) return <p>No query data found.</p>;
 
+    const drugs = Array.isArray(queryData.drugs_details)
+        ? queryData.drugs_details
+        : queryData.drugs_details?.split(",").map(d => ({ name: d.trim() })) || [];
+
+    const reactions = Array.isArray(queryData.reactions_details)
+        ? queryData.reactions_details
+        : queryData.reactions_details?.split(",").map(r => ({ name: r.trim() })) || [];
+
     return (
         <div className="query-result-page">
             <header className="query-header">
@@ -76,8 +84,8 @@ export default function QueryResultPage() {
 
                     <div>
                         <strong>Drugs:</strong>{" "}
-                        {queryData.drugs_details?.slice(0, 3).map(d => d.name).join(", ")}
-                        {queryData.drugs_details?.length > 3 && (
+                        {drugs?.slice(0, 3).map(d => d.name).join(", ")}
+                        {drugs?.length > 3 && (
                             <button
                                 className="view-more-btn"
                                 onClick={() => setShowDrugsModal(true)}
@@ -89,8 +97,8 @@ export default function QueryResultPage() {
 
                     <div>
                         <strong>Reactions:</strong>{" "}
-                        {queryData.reactions_details?.slice(0, 3).map(r => r.name).join(", ")}
-                        {queryData.reactions_details?.length > 3 && (
+                        {reactions?.slice(0, 3).map(r => r.name).join(", ")}
+                        {reactions?.length > 3 && (
                             <button
                                 className="view-more-btn"
                                 onClick={() => setShowReactionsModal(true)}
@@ -131,7 +139,7 @@ export default function QueryResultPage() {
                         >
                             <h2>Drugs Used in Analysis</h2>
                             <ul>
-                                {queryData.drugs_details.map((d, idx) => (
+                                {drugs.map((d, idx) => (
                                     <li key={idx}>{d.name}</li>
                                 ))}
                             </ul>
@@ -155,7 +163,7 @@ export default function QueryResultPage() {
                         >
                             <h2>Reactions Analyzed</h2>
                             <ul>
-                                {queryData.reactions_details.map((r, idx) => (
+                                {reactions.map((r, idx) => (
                                     <li key={idx}>{r.name}</li>
                                 ))}
                             </ul>

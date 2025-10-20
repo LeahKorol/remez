@@ -255,7 +255,7 @@ export default function QueryForm({
                                 id={errObj.id}
                                 message={errObj.message}
                                 type="error"
-                                index={idx}            // לצורך z-index / סדר
+                                index={idx}          
                                 duration={8000}
                                 onClose={(id) => setLocalErrors(prev => prev.filter(e => e.id !== id))}
                             />
