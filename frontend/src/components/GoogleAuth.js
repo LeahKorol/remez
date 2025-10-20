@@ -111,13 +111,6 @@ class GoogleAuthService {
         verified_email: googleUser.verified_email,
       });
 
-      // const data = await response.json();
-      // if (response.ok) return data;
-
-      // if (response.status === 404) throw new Error('User not found. Please register first.');
-      // if (response.status === 409) throw new Error('Account already exists. Please try logging in instead.');
-      // throw new Error(data.error || data.detail || data.message || 'Authentication failed');
-
       return response.data;
 
     } catch (error) {
@@ -145,34 +138,6 @@ export const useGoogleAuth = () => {
   const signInWithGoogle = async (isRegistration = false) => {
     setIsLoading(true);
     setError(null);
-    // try {
-    //   const loadingToast = toast.loading('Login with Google...');
-    //   const googleUser = await googleAuthService.signInWithPopup();
-
-    //   toast.update(loadingToast, { render: 'Data Validator...', type: 'loading' });
-    //   const authResult = await googleAuthService.authenticateWithBackend(googleUser, isRegistration);
-
-    //   if (authResult.access) localStorage.setItem('token', authResult.access);
-
-    //   toast.update(loadingToast, {
-    //     render: isRegistration ? 'You have successfully registered!' : 'You have successfully logged in!',
-    //     type: 'success',
-    //     isLoading: false,
-    //     autoClose: 2000
-    //   });
-
-    //   setTimeout(() => navigate('/profile'), 1000);
-    // } catch (err) {
-    //   console.error('Google auth error:', err);
-    //   setError(err.message);
-    //   let msg = 'Error login to Google';
-    //   if (err.message.includes('User not found')) msg = 'User not found. Please register first.';
-    //   else if (err.message.includes('already exists')) msg = 'The account already exists. Try logging in instead of signing up.';
-    //   else if (err.message.includes('Network error')) msg = 'Network problem. Check your internet connection.';
-    //   toast.error(msg, { autoClose: 5000 });
-    // } finally {
-    //   setIsLoading(false);
-    // }
 
     try {
       const loadingToast = toast.loading('Login with Google...');
