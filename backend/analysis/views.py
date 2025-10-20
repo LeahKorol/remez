@@ -18,6 +18,7 @@ from analysis.serializers import (
     ResultSerializer,
 )
 from analysis.services.pipeline_service import pipeline_service
+from analysis.email_service import EmailService
 
 logger = logging.getLogger(__name__)
 
@@ -29,26 +30,26 @@ def is_ror_field_changed(old_query: Query, request_data: dict) -> bool:
     recalculate_ror_fields = [
         "year_start",
         "year_end",
-        "quarter_start", 
+        "quarter_start",
         "quarter_end",
         "drugs",
         "reactions",
     ]
-    
+
     for field in recalculate_ror_fields:
         old_value = getattr(old_query, field)
         new_value = request_data.get(field, None)
 
-        if new_value is None: # patch request might not include all fields
+        if new_value is None:  # patch request might not include all fields
             continue
 
-        logger.debug(f"Comparing field '{field}': old_value={old_value}, new_value={new_value}")
+        logger.debug(
+            f"Comparing field '{field}': old_value={old_value}, new_value={new_value}"
+        )
 
         if field in ["drugs", "reactions"]:
             # list fields need special handling
-            new_value = set(
-                int(pk) for pk in request_data.get(field, [])
-            )
+            new_value = set(int(pk) for pk in request_data.get(field, []))
             old_value = set(obj.pk for obj in old_value.all())
             if old_value != new_value:
                 logger.debug(f"Field '{field}' changed from {old_value} to {new_value}")
@@ -58,7 +59,7 @@ def is_ror_field_changed(old_query: Query, request_data: dict) -> bool:
             if old_value != new_value:
                 logger.debug(f"Field '{field}' changed from {old_value} to {new_value}")
                 return True
-                
+
     return False
 
 
@@ -125,7 +126,7 @@ class QueryViewSet(viewsets.ModelViewSet):
         If settings.NUM_DEMO_QUARTERS is set to a value between 0 and 4, use demo data for the results.
         """
         logger.debug(f"perform_update called with method: {self.request.method}")
-        
+
         if not is_ror_field_changed(serializer.instance, self.request.data):
             # No relevant fields updated, skip recalculation
             logger.info(
@@ -134,7 +135,9 @@ class QueryViewSet(viewsets.ModelViewSet):
             serializer.save()
             return
 
-        logger.info(f"Query {serializer.instance.id} updated with ROR-related fields; triggering recalculation.")
+        logger.info(
+            f"Query {serializer.instance.id} updated with ROR-related fields; triggering recalculation."
+        )
         # Save the query first
         query = serializer.save()
 
@@ -303,6 +306,25 @@ class ResultViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = self.get_serializer(result, data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+
+        # send email notification to user according to result status
+        email_service = EmailService()
+        user_email = result.query.user.email
+        query_name = result.query.name
+        chart_url = f"{settings.FRONTEND_URL}/queries/{result.query.id}"
+
+        if result.status == ResultStatus.COMPLETED:
+            email_service.send_query_completion_email(
+                user_email=user_email, query_name=query_name, chart_url=chart_url
+            )
+        elif result.status == ResultStatus.FAILED:
+            error_message = getattr(result, "error_message", "Unknown error occurred")
+            email_service.send_query_error_email(
+                user_email=user_email,
+                query_name=query_name,
+                error_message=error_message,
+                chart_url=chart_url,
+            )
 
         logger.info(f"Result {result.id} is updated by task_id {task_id}")
 

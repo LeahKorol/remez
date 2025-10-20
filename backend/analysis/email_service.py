@@ -38,7 +38,7 @@ class EmailService:
             }
             
             # Render HTML email template
-            html_content = render_to_string('emails/query_completion.html', context)
+            html_content = render_to_string('account/email/email_query_completion.html', context)
             text_content = strip_tags(html_content)  # Plain text version
             
             # Create email message
@@ -71,7 +71,7 @@ class EmailService:
             logger.error(f"Failed to send email to {user_email}: {str(e)}")
             return False
     
-    def send_query_error_email(self, user_email, query_name, error_message):
+    def send_query_error_email(self, user_email, query_name, error_message, chart_url=None):
         """
         Send email notification when query processing fails
         """
@@ -83,10 +83,11 @@ class EmailService:
                 'error_message': error_message,
                 'user_email': user_email,
                 'support_email': settings.DEFAULT_FROM_EMAIL,
-                'site_name': getattr(settings, 'SITE_NAME', 'Drug Analysis Platform')
+                'site_name': getattr(settings, 'SITE_NAME', 'Drug Analysis Platform'),
+                'chart_url': chart_url  # if chart_url exists 
             }
             
-            html_content = render_to_string('emails/query_error.html', context)
+            html_content = render_to_string('account/email/email_query_error.html', context)
             text_content = strip_tags(html_content)
             
             email = EmailMultiAlternatives(

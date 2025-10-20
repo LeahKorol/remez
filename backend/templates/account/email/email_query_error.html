@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,33 +14,39 @@
       background-color: #f5f5f5;
       color: #333;
     }
+
     .container {
       max-width: 650px;
       margin: 0 auto;
       background: #fff;
       border-radius: 12px;
-      box-shadow: 0 0 18px rgba(0,0,0,0.08);
+      box-shadow: 0 0 18px rgba(0, 0, 0, 0.08);
       overflow: hidden;
     }
+
     .header {
       background: linear-gradient(90deg, #ff6b6b 0%, #ee5a24 100%);
       color: #fff;
       text-align: center;
       padding: 30px 20px;
     }
+
     .header h1 {
       margin: 0;
       font-size: 28px;
       font-weight: 600;
     }
+
     .content {
       padding: 40px 30px;
     }
+
     .error-icon {
       font-size: 48px;
       text-align: center;
       margin-bottom: 20px;
     }
+
     .query-name {
       background-color: #fff3cd;
       border-left: 4px solid #ffc107;
@@ -48,6 +55,7 @@
       border-radius: 6px;
       font-size: 15px;
     }
+
     .error-details {
       background: #f8d7da;
       border: 1px solid #f5c6cb;
@@ -56,6 +64,7 @@
       margin: 25px 0;
       font-size: 15px;
     }
+
     .cta-button {
       display: inline-block;
       background-color: #111827;
@@ -64,12 +73,14 @@
       padding: 14px 32px;
       border-radius: 6px;
       font-weight: 600;
-      box-shadow: 0 3px 12px rgba(0,0,0,0.15);
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
       transition: background 0.3s ease;
     }
+
     .cta-button:hover {
       background-color: #000;
     }
+
     .footer {
       background-color: #fafafa;
       padding: 20px;
@@ -77,12 +88,14 @@
       font-size: 13px;
       color: #888;
     }
+
     .footer a {
       color: #7b42e0;
       text-decoration: none;
     }
   </style>
 </head>
+
 <body>
   <div class="container">
     <div class="header">
@@ -113,11 +126,14 @@
         <li>Contact our support team for assistance</li>
       </ul>
 
+      {% if chart_url %}
       <p style="text-align:center;">
         <a href="{{ chart_url }}" class="cta-button">Try Again</a>
       </p>
+      {% endif %}
 
-      <p>Our team has been notified of this issue and will work to resolve it. If you continue experiencing problems, please contact support.</p>
+      <p>Our team has been notified of this issue and will work to resolve it. If you continue experiencing problems,
+        please contact support.</p>
     </div>
 
     <div class="footer">
@@ -126,4 +142,5 @@
     </div>
   </div>
 </body>
+
 </html>
