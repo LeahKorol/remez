@@ -42,7 +42,7 @@ const AnalysisEmailNotification = () => {
             <div className="summary-item">
               <span className="label">Drugs:</span>
               <span className="value">
-                {queryData?.displayDrugs?.length ||
+                {queryData?.drugs_details?.length ||
                   queryData?.drugs?.length ||
                   0}{" "}
                 selected
@@ -51,7 +51,7 @@ const AnalysisEmailNotification = () => {
             <div className="summary-item">
               <span className="label">Reactions:</span>
               <span className="value">
-                {queryData?.displayReactions?.length ||
+                {queryData?.reactions_details?.length ||
                   queryData?.reactions?.length ||
                   0}{" "}
                 selected
@@ -64,7 +64,7 @@ const AnalysisEmailNotification = () => {
           <button
             className="primary-button"
             onClick={() =>
-              navigate(`/queries/${queryData?.query}`, { state: { queryData } })
+              navigate(`/queries/${queryData?.id}`, { state: { queryData } })
             }
           >
             View Results Now
