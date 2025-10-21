@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     PIPELINE_THREADS: int = 7
     PIPELINE_CLEAN_INTERNAL_DIRS: bool = True
     PIPELINE_MAX_WORKERS: int = 20
+    PIPELINE_MAX_RESULTS: int = 100
+    PIPELINE_MIN_RESULT_RETENTION_MINUTES: int = 30
     PIPELINE_CALLBACK_URL: str = (
         "http://localhost:8000/api/v1/analysis/results/update-by-task"
     )

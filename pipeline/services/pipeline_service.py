@@ -8,12 +8,13 @@ from pathlib import Path
 import httpx
 from constants import RorFields, TaskStatus
 from core.config import get_settings
-from database import create_session
+
 from errors import DataFilesNotFoundError
 from mark_data import main as mark_data_main
 from models.models import TaskResults
 from models.schemas import AvailableDataResponse, PipelineRequest, QuarterData
 from report import main as report_main
+from services.task_repository import TaskRepository
 from utils import get_ror_fields, normalise_empty_ror_fields
 
 # Global static settings
@@ -76,7 +77,7 @@ def handle_task_failure(task: TaskResults, error_message: str, send_callback: bo
     """Handle task failures by updating task status in DB and sending callback."""
     # Mark task as failed and update database
     try:
-        update_task_status(task, TaskStatus.FAILED)
+        TaskRepository.update_status(task, TaskStatus.FAILED)
     except Exception as db_error:
         task_logger.error(f"Failed to update task {task.id} status in database: {str(db_error)}")
     
@@ -91,22 +92,7 @@ def handle_task_failure(task: TaskResults, error_message: str, send_callback: bo
     task_logger.info(f"Pipeline task {task.id} failure handling completed")
 
 
-def update_task_status(task: TaskResults, status: TaskStatus):
-    now = datetime.now()
-    if status == TaskStatus.RUNNING:
-        task.created_at = now
-    else:
-        task.completed_at = now
-    task.status = status
 
-    with create_session() as session:
-        task_db = session.get(TaskResults, task.id)
-        if task_db:
-            task_db.sqlmodel_update(task.model_dump(exclude_unset=True))
-            session.add(task_db)
-            session.commit()
-            session.refresh(task_db)
-    task_logger.info(f"Task {task.id} status updated to {status}")
 
 
 def verify_data_files_exist(request: PipelineRequest, dir_external):
@@ -180,6 +166,7 @@ def generate_reports(marked_data_dir, dir_external, config_dict, dir_reports):
 
 
 def save_results_to_db(task: TaskResults, results_file):
+    """Save pipeline results to database using TaskRepository."""
     ror_fields = get_ror_fields(results_file)
     task.status = TaskStatus.COMPLETED
     task.completed_at = datetime.now()
@@ -187,14 +174,7 @@ def save_results_to_db(task: TaskResults, results_file):
     task.ror_lower = ror_fields[RorFields.ROR_LOWER]
     task.ror_upper = ror_fields[RorFields.ROR_UPPER]
 
-    with create_session() as session:
-        task_db = session.get(TaskResults, task.id)
-        if task_db:
-            task_db.sqlmodel_update(task.model_dump(exclude_unset=True))
-            session.add(task_db)
-            session.commit()
-            session.refresh(task_db)
-
+    TaskRepository.save_task_results(task)
     task_logger.info(f"Results for task {task.id} saved to DB")
 
 
@@ -256,7 +236,7 @@ def run_pipeline(request: PipelineRequest, task: TaskResults):
     global task_logger
     task_logger = configure_task_logger(task.id)
     try:
-        update_task_status(task, TaskStatus.RUNNING)
+        TaskRepository.update_status(task, TaskStatus.RUNNING)
 
         year_q_from = f"{request.year_start}q{request.quarter_start}"
         year_q_to = f"{request.year_end}q{request.quarter_end}"

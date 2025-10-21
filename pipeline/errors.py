@@ -3,6 +3,11 @@ Custom exception classes for the pipeline module.
 """
 
 
+class PipelineCapacityExceededError(Exception):
+    """Raised when pipeline capacity is exceeded and no task slots can be reused."""
+    pass
+
+
 class DataFilesNotFoundError(Exception):
     """Raised when required FAERS data files are not found for the requested quarters"""
 
