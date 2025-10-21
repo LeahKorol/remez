@@ -9,42 +9,11 @@ from constants import TaskStatus
 from errors import PipelineCapacityExceededError
 from models.models import TaskResults
 from services.task_repository import TaskRepository, task_creation_mutex
-from sqlmodel import Session, SQLModel, create_engine, select
-from sqlmodel.pool import StaticPool
+from sqlmodel import select
 
 # ============================================================================
 # FIXTURES
 # ============================================================================
-
-
-@pytest.fixture(scope="session")
-def test_engine():
-    """Create a single test database engine for the entire test session."""
-    engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    SQLModel.metadata.create_all(engine)
-
-    yield engine  # each test gets this engine
-
-    engine.dispose()  # Cleanup: Dispose engine after all tests
-
-
-@pytest.fixture
-def test_session(test_engine):
-    """Create a fresh test database session for each test with automatic cleanup."""
-    connection = test_engine.connect()
-    transaction = connection.begin()
-    session = Session(bind=connection)
-
-    yield session
-
-    # Cleanup: Rollback transaction and close connection after each test
-    session.close()
-    transaction.rollback()
-    connection.close()
 
 
 @pytest.fixture(autouse=True)
@@ -349,6 +318,7 @@ def test_save_task_results_nonexistent_task(test_session):
 
     # Assert: Task should still have the values set locally
     assert task.ror_values == [1.0]
+
 
 def test_save_task_results_with_large_dataset(test_session, create_test_task):
     """Test saving task with large result dataset."""

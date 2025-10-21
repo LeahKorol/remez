@@ -4,6 +4,7 @@ Pipeline API routes
 
 import logging
 
+from constants import TaskStatus
 from database import SessionDep
 from errors import PipelineCapacityExceededError
 from fastapi import APIRouter, HTTPException, status
@@ -12,10 +13,14 @@ from models.schemas import (
     AvailableDataResponse,
     ErrorResponse,
     PipelineRequest,
+    TaskListResponse,
+    TaskSummary,
 )
 from services import pipeline_service
 from services.task_repository import TaskRepository
+from sqlmodel import select
 from starlette.status import (
+    HTTP_200_OK,
     HTTP_201_CREATED,
     HTTP_404_NOT_FOUND,
     HTTP_429_TOO_MANY_REQUESTS,
@@ -88,6 +93,44 @@ async def get_pipeline_status(task_id: int, session: SessionDep) -> TaskResults:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve task status",
+        )
+
+
+@router.get(
+    "/status/{status}",
+    response_model=TaskListResponse,
+    status_code=HTTP_200_OK,
+    summary="Get tasks by status",
+    description="Get all tasks that have a specific status",
+    responses={400: {"model": ErrorResponse, "description": "Invalid status"}},
+)
+async def get_tasks_by_status(
+    status: TaskStatus, session: SessionDep
+) -> TaskListResponse:
+    """Get all tasks with a specific status"""
+    try:
+        logger.debug(f"Retrieving tasks with status: {status}")
+
+        # Query tasks with the specified status
+        statement = select(TaskResults).where(TaskResults.status == status)
+        tasks = session.exec(statement).all()
+
+        # Convert to TaskSummary objects
+        task_summaries = [
+            TaskSummary(id=task.id, external_id=task.external_id) for task in tasks
+        ]
+
+        logger.debug(f"Found {len(task_summaries)} tasks with status {status}")
+
+        return TaskListResponse(tasks=task_summaries, count=len(task_summaries))
+
+    except Exception as e:
+        logger.error(
+            f"Error retrieving tasks by status {status}: {str(e)}", exc_info=True
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve tasks by status",
         )
 
 

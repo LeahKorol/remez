@@ -82,6 +82,22 @@ class AvailableDataResponse(BaseModel):
     )
 
 
+class TaskSummary(BaseModel):
+    """Summary model for task information"""
+
+    id: int = Field(..., description="Task ID")
+    external_id: str = Field(..., description="External system ID")
+
+
+class TaskListResponse(BaseModel):
+    """Response model for task list by status"""
+
+    tasks: List[TaskSummary] = Field(
+        ..., description="List of tasks with the specified status"
+    )
+    count: int = Field(..., description="Total number of tasks found")
+
+
 class ErrorResponse(BaseModel):
     """Error response model"""
 
