@@ -7,6 +7,18 @@ const AnalysisEmailNotification = () => {
   const location = useLocation();
   const queryData = location.state?.queryData;
 
+  if (!queryData) {
+    return <div>Redirecting...</div>;
+  }
+
+  const handleViewResults = () => {
+    navigate(`/queries/${queryData.id}`, { state: { queryData } });
+  };
+
+  const handleReturnToProfile = () => {
+    navigate("/profile", { state: { updatedQuery: queryData } });
+  };
+
   return (
     <div className="analysis-notification-page">
       <div className="analysis-card">
@@ -61,19 +73,11 @@ const AnalysisEmailNotification = () => {
         </div>
 
         <div className="actions-section">
-          <button
-            className="primary-button"
-            onClick={() =>
-              navigate(`/queries/${queryData?.id}`, { state: { queryData } })
-            }
-          >
+          <button className="primary-button" onClick={handleViewResults}>
             View Results Now
           </button>
 
-          <button
-            className="secondary-button"
-            onClick={() => navigate("/profile")}
-          >
+          <button className="secondary-button" onClick={handleReturnToProfile}>
             Back to Profile
           </button>
         </div>
