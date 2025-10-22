@@ -8,11 +8,13 @@ from pathlib import Path
 import httpx
 from constants import RorFields, TaskStatus
 from core.config import get_settings
-from database import create_session
+
+from errors import DataFilesNotFoundError
 from mark_data import main as mark_data_main
 from models.models import TaskResults
 from models.schemas import AvailableDataResponse, PipelineRequest, QuarterData
 from report import main as report_main
+from services.task_repository import TaskRepository
 from utils import get_ror_fields, normalise_empty_ror_fields
 
 # Global static settings
@@ -71,30 +73,36 @@ def configure_task_logger(task_id: int) -> logging.Logger:
 # -----------------------------
 # Pipeline helper functions
 # -----------------------------
-def update_task_status(task: TaskResults, status: TaskStatus):
-    now = datetime.now()
-    if status == TaskStatus.RUNNING:
-        task.created_at = now
-    else:
-        task.completed_at = now
-    task.status = status
+def handle_task_failure(task: TaskResults, error_message: str, send_callback: bool = True):
+    """Handle task failures by updating task status in DB and sending callback."""
+    # Mark task as failed and update database
+    try:
+        TaskRepository.update_status(task, TaskStatus.FAILED)
+    except Exception as db_error:
+        task_logger.error(f"Failed to update task {task.id} status in database: {str(db_error)}")
+    
+    # Send failure notification via callback if requested
+    if send_callback:
+        try:
+            send_results_to_callback(task)
+            task_logger.info(f"Failure notification sent via callback for task {task.id}")
+        except Exception as callback_error:
+            task_logger.error(f"Failed to send callback for task {task.id}: {str(callback_error)}")
+    
+    task_logger.info(f"Pipeline task {task.id} failure handling completed")
 
-    with create_session() as session:
-        task_db = session.get(TaskResults, task.id)
-        if task_db:
-            task_db.sqlmodel_update(task.model_dump(exclude_unset=True))
-            session.add(task_db)
-            session.commit()
-            session.refresh(task_db)
-    task_logger.info(f"Task {task.id} status updated to {status}")
 
 
-def verify_data_files_exists(request: PipelineRequest, dir_external):
+
+
+def verify_data_files_exist(request: PipelineRequest, dir_external):
     available_quarters = []
+    requested_quarters = []
     file_types = ["demo", "drug", "outc", "reac"]
 
     for q in range(request.quarter_start, request.quarter_end + 1):
         quarter = f"{request.year_start}q{q}"
+        requested_quarters.append(quarter)
         has_all_files = True
         for file_type in file_types:
             expected_file = dir_external / f"{file_type}{quarter}.csv.zip"
@@ -106,10 +114,13 @@ def verify_data_files_exists(request: PipelineRequest, dir_external):
             task_logger.info(f"Found complete data for quarter: {quarter}")
 
     if not available_quarters:
-        year_q_from = f"{request.year_start}q{request.quarter_start}"
-        year_q_to = f"{request.year_end}q{request.quarter_end}"
-        raise ValueError(
-            f"No complete data found for requested quarters {year_q_from} to {year_q_to}"
+        raise DataFilesNotFoundError(
+            year_start=request.year_start,
+            quarter_start=request.quarter_start,
+            year_end=request.year_end,
+            quarter_end=request.quarter_end,
+            requested_quarters=requested_quarters,
+            available_quarters=available_quarters
         )
 
     return available_quarters
@@ -155,6 +166,7 @@ def generate_reports(marked_data_dir, dir_external, config_dict, dir_reports):
 
 
 def save_results_to_db(task: TaskResults, results_file):
+    """Save pipeline results to database using TaskRepository."""
     ror_fields = get_ror_fields(results_file)
     task.status = TaskStatus.COMPLETED
     task.completed_at = datetime.now()
@@ -162,14 +174,7 @@ def save_results_to_db(task: TaskResults, results_file):
     task.ror_lower = ror_fields[RorFields.ROR_LOWER]
     task.ror_upper = ror_fields[RorFields.ROR_UPPER]
 
-    with create_session() as session:
-        task_db = session.get(TaskResults, task.id)
-        if task_db:
-            task_db.sqlmodel_update(task.model_dump(exclude_unset=True))
-            session.add(task_db)
-            session.commit()
-            session.refresh(task_db)
-
+    TaskRepository.save_task_results(task)
     task_logger.info(f"Results for task {task.id} saved to DB")
 
 
@@ -231,7 +236,7 @@ def run_pipeline(request: PipelineRequest, task: TaskResults):
     global task_logger
     task_logger = configure_task_logger(task.id)
     try:
-        update_task_status(task, TaskStatus.RUNNING)
+        TaskRepository.update_status(task, TaskStatus.RUNNING)
 
         year_q_from = f"{request.year_start}q{request.quarter_start}"
         year_q_to = f"{request.year_end}q{request.quarter_end}"
@@ -259,7 +264,7 @@ def run_pipeline(request: PipelineRequest, task: TaskResults):
             "control": request.control,
         }
 
-        verify_data_files_exists(request, dir_external)
+        verify_data_files_exist(request, dir_external)
         mark_data(
             year_q_from,
             year_q_to,
@@ -278,20 +283,15 @@ def run_pipeline(request: PipelineRequest, task: TaskResults):
 
         task_logger.info(f"Pipeline task {task.id} completed successfully")
 
+    except DataFilesNotFoundError as e:
+        error_msg = f"Data files not found for task {task.id}: {str(e)}"
+        task_logger.error(error_msg, exc_info=True)
+        handle_task_failure(task, error_msg, send_callback=True)
+        
     except Exception as e:
-        task_logger.error(
-            f"Error in pipeline for task {task.id}: {str(e)}", exc_info=True
-        )
-        task.status = TaskStatus.FAILED
-        task.completed_at = datetime.now()
-        with create_session() as session:
-            task_db = session.get(TaskResults, task.id)
-            if task_db:
-                task_db.sqlmodel_update(task.model_dump(exclude_unset=True))
-                session.add(task_db)
-                session.commit()
-                session.refresh(task_db)
-        task_logger.info(f"Pipeline task {task.id} marked as failed")
+        error_msg = f"Error in pipeline for task {task.id}: {str(e)}"
+        task_logger.error(error_msg, exc_info=True)
+        handle_task_failure(task, error_msg, send_callback=True)
 
 
 # -----------------------------
