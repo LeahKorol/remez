@@ -34,21 +34,6 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery }) => {
       } else {
         showToastMessage("⏳ Query still processing, try again soon.");
       }
-
-      // const mergedQuery = {
-      //   ...currentQuery,
-      //   ...fullQuery,
-      //   result: {
-      //     ...currentQuery.result,
-      //     ...fullQuery.result,
-      //     ror_values: fullQuery.result?.ror_values || [],
-      //     ror_lower: fullQuery.result?.ror_lower || [],
-      //     ror_upper: fullQuery.result?.ror_upper || [],
-      //   },
-      // };
-
-      // console.log("mergedQuery: ", mergedQuery);
-      // setCurrentQuery(mergedQuery);
     } catch (err) {
       console.error("Error refreshing query:", err);
       alert("Failed to refresh query. Please try again.");

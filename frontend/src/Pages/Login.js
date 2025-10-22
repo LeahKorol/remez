@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { GoogleAuthButton, GoogleOneTap } from '../components/GoogleAuth';
+import { GoogleAuthButton } from '../components/GoogleAuth';
 import { fetchWithRefresh } from '../utils/tokenService';
 import { useUser } from '../utils/UserContext';
 import axios from "../axiosConfig";
@@ -194,7 +194,7 @@ function Login() {
 
   return (
     <div className="login-container">
-      <GoogleOneTap />
+      {/* <GoogleOneTap /> */}
 
       <div className="login-header"><div className="logo">REMEZ</div></div>
 
