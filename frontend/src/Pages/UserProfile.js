@@ -414,11 +414,14 @@ const UserProfile = () => {
         e.preventDefault();
         const { queryName, yearStart, yearEnd, quarterStart, quarterEnd, drugs, reactions } = FormData;
 
-        if (isEditing && isQueryLocked({ result: { status: viewingQuery?.result?.status } })) {
-            showToastMessage("Cannot update query while processing.");
-            setIsSubmitting(false);
-            setGlobalLoading(false);
-            return;
+        if (isEditing) {
+            const original = savedQueries.find(q => q.id === editingQueryId);
+            if(original && isQueryLocked(original)) {
+                showToastMessage("Cannot update query while processing.");
+                setIsSubmitting(false);
+                setGlobalLoading(false);
+                return;
+            }
         }
 
         setIsSubmitting(true);
@@ -479,14 +482,13 @@ const UserProfile = () => {
             console.log("newQuery: ", newQuery);
 
             if (editingQueryId) {
-                setSavedQueries(savedQueries.map(q => q.id === newQuery.id ? newQuery : q));
+                setSavedQueries(prev => prev.map(q => q.id === newQuery.id ? newQuery : q));
                 showToastMessage('Query updated successfully!');
             } else {
-                setSavedQueries([newQuery, ...savedQueries]);
+                setSavedQueries(prev => [newQuery, ...prev]);
                 showToastMessage('Query saved successfully!');
+                resetForm();
             }
-
-            resetForm();
 
             navigate('/loading', {
                 state: { queryData: newQuery, isUpdate: !!editingQueryId }

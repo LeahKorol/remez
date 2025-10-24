@@ -404,8 +404,8 @@
 
 .secondary-button {
   background: #fff;
-  border: 2px solid #2196f3;
-  color: #2196f3;
+  border: 2px solid #7b42e0;
+  color: #7b42e0;
   padding: 8px 16px;
   border-radius: 6px;
   cursor: pointer;
@@ -414,7 +414,8 @@
 }
 
 .secondary-button:hover {
-  background: #2196f3;
+  background: #7b42e0;
+  border: #7b42e0;
   color: white;
 }
 
@@ -642,6 +643,18 @@
 
 .query-status-icon.processing {
   color: #ff9800;
+}
+
+.status-completed {
+  color: #2ecc71;
+  font-weight: 600;
+}
+.status-failed {
+  color: #e74c3c;
+  font-weight: 600;
+}
+.status-pending {
+  color: #f1c40f;
 }
 
 /* Chart container */

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import axios from '../axiosConfig';
@@ -213,11 +213,11 @@ export const useGoogleAuth = () => {
     }
   };
 
-  const initializeOneTap = () => {
-    googleAuthService.initializeOneTap(handleOneTapCallback);
-  };
+  // const initializeOneTap = () => {
+  //   googleAuthService.initializeOneTap(handleOneTapCallback);
+  // };
 
-  return { signInWithGoogle, initializeOneTap, isLoading, error };
+  return { signInWithGoogle, isLoading, error };
 };
 
 // Google Auth Button
@@ -245,15 +245,15 @@ export const GoogleAuthButton = ({ isRegistration = false, className = '', disab
   );
 };
 
-// One Tap Component
-export const GoogleOneTap = () => {
-  const { initializeOneTap } = useGoogleAuth();
-  useEffect(() => {
-    const timer = setTimeout(() => initializeOneTap(), 1000);
-    return () => clearTimeout(timer);
-  }, []);
-  return null;
-};
+// // One Tap Component
+// export const GoogleOneTap = () => {
+//   const { initializeOneTap } = useGoogleAuth();
+//   useEffect(() => {
+//     const timer = setTimeout(() => initializeOneTap(), 1000);
+//     return () => clearTimeout(timer);
+//   }, []);
+//   return null;
+// };
 
 // Default export
 export default GoogleAuthService;

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { fetchWithRefresh } from '../utils/tokenService';
+import { toast } from "react-toastify";
 import "./LoadingPage.css";
 
 const LoadingPage = () => {
@@ -13,6 +14,9 @@ const LoadingPage = () => {
     const [progress, setProgress] = useState(10);
     const [statusText, setStatusText] = useState("Analysis submitted to server...");
     const [resultId, setResultId] = useState(queryData?.result?.id || null);
+
+    const isPollingCancelled = useRef(false);
+    const timeoutRef = useRef(null);
 
     useEffect(() => {
         // if there is no queryData, redirect back to profile
@@ -34,7 +38,19 @@ const LoadingPage = () => {
             // start the polling process
             pollForResultCreation(queryData.id);
         }
+
+        // if the user navigates away, cancel polling
+        return () => {
+            console.log("🛑 Cancelling polling and clearing timeout");
+            isPollingCancelled.current = true;
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        };
     }, [queryData, navigate]);
+
+    const safeSetTimeout = (fn, delay) => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        timeoutRef.current = setTimeout(fn, delay);
+    };
 
     // Stage 1: Poll until the Result is created
     const pollForResultCreation = (queryId) => {
@@ -43,6 +59,8 @@ const LoadingPage = () => {
         const intervalTime = 5000;
 
         const poll = async () => {
+            if (isPollingCancelled.current) return;
+
             attempts++;
             console.log(`Checking if Result exists (attempt ${attempts})...`);
 
@@ -75,10 +93,10 @@ const LoadingPage = () => {
                 }
 
                 setStatusText("Waiting for server to start processing...");
-                setTimeout(poll, intervalTime);
+                if (!isPollingCancelled.current) safeSetTimeout(poll, intervalTime);
             } catch (error) {
                 console.error("Error checking query:", error);
-                setTimeout(poll, intervalTime);
+                if (!isPollingCancelled.current) safeSetTimeout(poll, intervalTime);
             }
         };
 
@@ -92,6 +110,8 @@ const LoadingPage = () => {
         let intervalTime = 5000;
 
         const poll = async () => {
+            if (isPollingCancelled.current) return;
+
             attempts++;
             console.log(`Polling result ${resId}, attempt ${attempts}`);
 
@@ -100,25 +120,59 @@ const LoadingPage = () => {
                     `http://127.0.0.1:8000/api/v1/analysis/results/${resId}/`
                 );
 
+                if (response.status === 500) {
+                    console.log("Server error (500) while polling...");
+                    setStatusText("Server encountered an error processing your analysis.");
+                    isPollingCancelled.current = true;
+                    clearTimeout(timeoutRef.current);
+                    navigate("/500", {
+                        state: {
+                            message: "Server error occurred during analysis. Please try again later.",
+                            type: "error"
+                        }
+                    });
+                    return;
+                }
+
                 if (response.status === 404) {
                     console.log("Result not ready yet (404)...");
                     setStatusText("Waiting for analysis to start on server...");
-                    setTimeout(poll, intervalTime);
+                    if (!isPollingCancelled.current) safeSetTimeout(poll, intervalTime);
                     return;
                 }
 
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
                 const data = await response.json();
+                console.log("query status : ", data?.status);
 
                 // Simulate progress
                 const progressValue = Math.min(90, 10 + attempts * 1.5);
                 setProgress(progressValue);
 
+                if (data?.status === "failed") {
+                    console.log("❌ Analysis failed.");
+                    setStatusText("Analysis failed on server.");
+
+                    // stop the polling 
+                    isPollingCancelled.current = true;
+                    clearTimeout(timeoutRef.current);
+                    toast.error("❌ Analysis failed. Please try again later.");
+                    navigate("/profile", {
+                        state: {
+                            message: "Analysis failed. Please try again later.",
+                            type: "error"
+                        }
+                    }, 1500);
+                    return;
+                }
+
                 if (data?.status === "completed" && data?.ror_values) {
                     console.log("✅ Analysis complete!");
                     setProgress(100);
                     setStatusText("Analysis complete!");
+                    isPollingCancelled.current = true;
+                    clearTimeout(timeoutRef.current);
 
                     // get the full query data with results
                     const fullQueryResponse = await fetchWithRefresh(
@@ -126,7 +180,7 @@ const LoadingPage = () => {
                     );
                     const fullQueryData = await fullQueryResponse.json();
 
-                    setTimeout(() => {
+                    safeSetTimeout(() => {
                         navigate("/analysis-email-notification", {
                             state: { queryData: fullQueryData, isUpdate }
                         });
@@ -136,6 +190,8 @@ const LoadingPage = () => {
 
                 if (attempts >= maxAttempts) {
                     setStatusText("Analysis is taking longer than expected...");
+                    isPollingCancelled.current = true;
+                    clearTimeout(timeoutRef.current);
                     navigate("/profile", {
                         state: {
                             message: "Analysis is still in progress. Check again later.",
@@ -150,10 +206,10 @@ const LoadingPage = () => {
                     intervalTime += 5000;
                 }
 
-                setTimeout(poll, intervalTime);
+                if (!isPollingCancelled.current) safeSetTimeout(poll, intervalTime);
             } catch (err) {
                 console.error("Polling error:", err);
-                setTimeout(poll, intervalTime);
+                if (!isPollingCancelled.current) safeSetTimeout(poll, intervalTime);
             }
         };
 

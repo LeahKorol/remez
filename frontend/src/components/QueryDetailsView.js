@@ -1,8 +1,8 @@
 import React, { useRef, useState } from "react";
 import { FaTimes, FaFileImage, FaFileCsv, FaArrowDown } from "react-icons/fa";
 import RorChart from "./RorChart";
-import "../Pages/UserProfile.css";
 import { showToastMessage } from "../utils/toast";
+import "../Pages/UserProfile.css";
 
 const QueryDetailsView = ({ query, handleNewQuery, refreshQuery }) => {
   const chartRef = useRef(null);
@@ -10,6 +10,7 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery }) => {
   const [currentQuery, setCurrentQuery] = useState(query);
 
   console.log("Rendering QueryDetailsView for:", currentQuery);
+  console.log("status: ", currentQuery.result.status);
 
   const isQueryLocked = currentQuery?.result?.status !== "completed" && currentQuery?.result?.status !== "failed";
 
@@ -24,15 +25,15 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery }) => {
       const fullQuery = await refreshQuery(currentQuery.id);
       console.log("Refreshed query:", fullQuery);
 
-      const mergedQuery = {
-        ...fullQuery,
-        ror_values: fullQuery.result?.ror_values || [],
-        ror_lower: fullQuery.result?.ror_lower || [],
-        ror_upper: fullQuery.result?.ror_upper || [],
-      };
+      setCurrentQuery(fullQuery);
 
-      console.log("mergedQuery: ", mergedQuery);
-      setCurrentQuery(mergedQuery);
+      if (fullQuery.result?.status === "completed") {
+        showToastMessage("✅ Analysis completed! Results are now available.");
+      } else if (fullQuery.result?.status === "failed") {
+        showToastMessage("⚠️ Query failed during processing. Please try again.", "error");
+      } else {
+        showToastMessage("⏳ Query still processing, try again soon.");
+      }
     } catch (err) {
       console.error("Error refreshing query:", err);
       alert("Failed to refresh query. Please try again.");
@@ -172,8 +173,19 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery }) => {
           </div>
           <div className="info-item">
             <span className="info-label">Status:</span>
-            <span className="info-value">
-              {hasResults ? "Analysis Complete" : "Processing..."}
+            <span
+              className={`info-value ${currentQuery.result.status === "completed"
+                ? "status-completed"
+                : currentQuery.result.status === "failed"
+                  ? "status-failed"
+                  : "status-pending"
+                }`}
+            >
+              {currentQuery.result.status === "completed"
+                ? "Analysis Complete"
+                : currentQuery.result.status === "failed"
+                  ? "Analysis Failed"
+                  : "Processing..."}
             </span>
           </div>
         </div>
@@ -278,13 +290,29 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery }) => {
 
         <div className="chart-placeholder">
           <div className="chart-container">
-            {hasResults ? (
+            {currentQuery?.result?.status === "completed" && hasResults ? (
               <RorChart
                 query={currentQuery.result}
                 year_start={currentQuery.year_start}
                 quarter_start={currentQuery.quarter_start}
                 ref={chartRef}
               />
+            ) : currentQuery?.result?.status === "failed" ? (
+              <div className="placeholder-content error-state">
+                <div className="placeholder-icon">❌</div>
+                <h4>Analysis Failed</h4>
+                <p>
+                  Unfortunately, your query processing failed. You can try refreshing the status,
+                  or go back and re-run the query with different parameters.
+                </p>
+                <div className="refresh-button">
+                  <button
+                    className="secondary-button" onClick={handleRefreshStatus}
+                  >
+                    Retry Refresh
+                  </button>
+                </div>
+              </div>
             ) : (
               <div className="placeholder-content">
                 <div className="placeholder-icon">⏳</div>
@@ -293,10 +321,7 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery }) => {
                   Your query is being processed. Results will appear here when ready.
                 </p>
                 <div className="refresh-button">
-                  <button
-                    className="secondary-button"
-                    onClick={handleRefreshStatus}
-                  >
+                  <button className="secondary-button" onClick={handleRefreshStatus}>
                     Refresh Status
                   </button>
                 </div>

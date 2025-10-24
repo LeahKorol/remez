@@ -318,7 +318,7 @@ class ResultViewSet(viewsets.ReadOnlyModelViewSet):
                 user_email=user_email, query_name=query_name, chart_url=chart_url
             )
         elif result.status == ResultStatus.FAILED:
-            error_message = getattr(result, "error_message", "Unknown error occurred")
+            error_message = getattr(result, "error_message", "pipeline error running")
             email_service.send_query_error_email(
                 user_email=user_email,
                 query_name=query_name,
