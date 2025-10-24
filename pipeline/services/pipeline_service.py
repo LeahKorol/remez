@@ -4,6 +4,7 @@ import shutil
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
 from pathlib import Path
+from utils import Quarter, generate_quarters
 
 import httpx
 from constants import RorFields, TaskStatus
@@ -99,21 +100,21 @@ def verify_data_files_exist(request: PipelineRequest, dir_external):
     available_quarters = []
     requested_quarters = []
     file_types = ["demo", "drug", "outc", "reac"]
+    quarters = generate_quarters(Quarter(request.year_start, request.quarter_start), Quarter(request.year_end, request.quarter_end))
 
-    for q in range(request.quarter_start, request.quarter_end + 1):
-        quarter = f"{request.year_start}q{q}"
-        requested_quarters.append(quarter)
+    for q in quarters:
+        requested_quarters.append(q.__str__())
         has_all_files = True
         for file_type in file_types:
-            expected_file = dir_external / f"{file_type}{quarter}.csv.zip"
+            expected_file = dir_external / f"{file_type}{q.__str__()}.csv.zip"
             if not expected_file.exists():
                 task_logger.warning(f"Missing file: {expected_file}")
                 has_all_files = False
         if has_all_files:
-            available_quarters.append(quarter)
-            task_logger.info(f"Found complete data for quarter: {quarter}")
+            available_quarters.append(q.__str__())
+            task_logger.info(f"Found complete data for quarter: {q}")
 
-    if not available_quarters:
+    if not available_quarters or len(available_quarters) < len(requested_quarters):
         raise DataFilesNotFoundError(
             year_start=request.year_start,
             quarter_start=request.quarter_start,

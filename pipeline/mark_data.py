@@ -262,11 +262,12 @@ def main(
         q_to = Quarter(year_q_to)
         logger.info(f"Quarter from: {q_from}, Quarter to: {q_to}")
 
-        # Check if data files exist for the specified quarters
-        for q in [q_from, q_to]:
-            demo_file = os.path.join(dir_in, f"demo{q}.csv.zip")
-            drug_file = os.path.join(dir_in, f"drug{q}.csv.zip")
-            reac_file = os.path.join(dir_in, f"reac{q}.csv.zip")
+        # Check if data files exist for the specified quarters (exclusive of q_to)
+        for q in generate_quarters(q_from, q_to):
+            logger.debug(f"Checking files for quarter: {q.__str__()}")
+            demo_file = os.path.join(dir_in, f"demo{q.__str__()}.csv.zip")
+            drug_file = os.path.join(dir_in, f"drug{q.__str__()}.csv.zip")
+            reac_file = os.path.join(dir_in, f"reac{q.__str__()}.csv.zip")
 
             if not os.path.exists(demo_file):
                 logger.warning(f"Demo file not found: {demo_file}")
