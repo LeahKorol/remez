@@ -9,7 +9,8 @@ const SavedQueriesList = ({
   onDeleteQuery,
   editingQueryId,
   isEditing,
-  editingQueryLoading
+  editingQueryLoading,
+  viewingQueryId
 }) => {
 
   const isQueryLocked = (query) => {
@@ -28,7 +29,14 @@ const SavedQueriesList = ({
       {savedQueries.map((item) => (
         <div key={item.id} className="query-card">
           <div className="query-item">
-            <span className="query-name">{item.name}</span>
+            <span
+              className="query-name"
+              style={{
+                color: item.id === viewingQueryId ? "#7b5dc7" : "inherit" 
+              }}
+            >
+              {item.name}
+            </span>
             <div className="query-actions">
               <button
                 type="button"

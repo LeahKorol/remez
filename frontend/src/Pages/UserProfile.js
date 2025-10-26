@@ -77,6 +77,7 @@ const UserProfile = () => {
 
     const [viewMode, setViewMode] = useState('new');
     const [viewingQuery, setViewingQuery] = useState(null);
+    const [viewingQueryId, setViewingQueryId] = useState(null);
 
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState('');
@@ -242,7 +243,9 @@ const UserProfile = () => {
     // Handle viewing a saved query
     const handleViewQuery = async (query) => {
         setViewMode('view');
+        setViewingQueryId(query.id); 
         setViewingQuery(null);
+
         try {
             const token = localStorage.getItem('token');
             const res = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/queries/${query.id}/`);
@@ -253,6 +256,7 @@ const UserProfile = () => {
             console.error('Error fetching full query:', err);
             alert('Failed to load query details. Please try again.');
             setViewMode('new');
+            setViewingQueryId(null);
         }
     };
 
@@ -848,6 +852,7 @@ const UserProfile = () => {
                 editingQueryId={editingQueryId}
                 isEditing={isEditing}
                 editingQueryLoading={loading && viewMode === 'edit'} 
+                viewingQueryId={viewingQueryId}
             />
 
             <button
