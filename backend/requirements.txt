@@ -12,6 +12,7 @@ colorlog==6.9.0 # for colored terminal output
 requests==2.32.4
 oauthlib==3.2.2
 pytest_mock==3.15.1
+pytest-cov==7.0.0
 
 # FAERS analysis requirements: https://github.com/bgbg/faers_analysis/blob/main/requirements.txt
 tqdm==4.67.1

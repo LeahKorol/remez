@@ -17,3 +17,6 @@ test_settings.py
 
 # Log files
 **/*.log*
+
+# Tests Coverage files
+/*.coverage
