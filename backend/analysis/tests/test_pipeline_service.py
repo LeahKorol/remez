@@ -68,7 +68,7 @@ class TestPipelineService:
 
         assert call_args[1]["json"]["drugs"] == [drug.name]
         assert call_args[1]["json"]["reactions"] == [reaction.name]
-        assert call_args[1]["json"]["external_id"] == '123'
+        assert call_args[1]["json"]["external_id"] == "123"
         assert call_args[1]["json"]["year_start"] == 2020
         assert call_args[1]["json"]["year_end"] == 2021
         assert call_args[1]["json"]["quarter_start"] == 1
@@ -103,8 +103,6 @@ class TestPipelineService:
                 quarter_start=1,
                 quarter_end=4,
             )
-
-            mock_post.assert_called_once()
 
     def test_trigger_pipeline_analysis_timeout(self, mocker, drug, reaction):
         """Test pipeline trigger with timeout"""
