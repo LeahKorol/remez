@@ -5,40 +5,49 @@ title REMEZ System - Component Diagram
 !theme plain
 skinparam monochrome false
 skinparam defaultFontName Arial
-skinparam roundcorner 5
-skinparam shadowing true
+skinparam roundcorner 3
+skinparam shadowing false
 
-' Force reasonable dimensions
-!define MAXSIZE 1200
-skinparam dpi 96
+' High resolution for clarity
+skinparam dpi 400
+skinparam padding 3
+skinparam nodesep 50
+skinparam ranksep 60
+skinparam componentStyle rectangle
 
-' Force reasonable width
-skinparam maxMessageSize 80
-skinparam linetype ortho
+' Clear readable fonts
+skinparam defaultFontSize 20
 
-' Colors
 skinparam component {
     BackgroundColor #F8F8FF
     BorderColor #000000
+    FontSize 20
 }
 
 skinparam node {
     BackgroundColor #E8DAFF
     BorderColor #000000
+    FontSize 20
 }
 
 skinparam database {
     BackgroundColor #E0CFFC
     BorderColor #000000
+    FontSize 20
 }
 
 skinparam cloud {
     BackgroundColor #C9CDFF
     BorderColor #000000
+    FontSize 20
+}
+
+skinparam package {
+    FontSize 20
 }
 
 ' ==========================================
-' External Services
+' Layer 1: External Services (Top)
 ' ==========================================
 cloud "External Services" as External {
     component Google_OAuth
@@ -46,8 +55,13 @@ cloud "External Services" as External {
     component FAERS_Source
 }
 
+note top of External
+    **External Services**
+    Google OAuth • SMTP • FAERS
+end note
+
 ' ==========================================
-' Frontend Server
+' Layer 2: Frontend (Second)
 ' ==========================================
 node "Frontend Server :3000" as FrontendNode {
     package React_App {
@@ -63,8 +77,13 @@ node "Frontend Server :3000" as FrontendNode {
     }
 }
 
+note right of FrontendNode
+    **Frontend - React**
+    Chart.js • JWT • Axios
+end note
+
 ' ==========================================
-' Backend Server
+' Layer 3: Backend (Middle)
 ' ==========================================
 node "Backend Server :8000" as BackendNode {
     package Django_App {
@@ -84,8 +103,13 @@ node "Backend Server :8000" as BackendNode {
     component Django_ORM
 }
 
+note right of BackendNode
+    **Backend - Django**
+    PostgreSQL • OAuth • Email
+end note
+
 ' ==========================================
-' Pipeline Server
+' Layer 4: Pipeline (Fourth)
 ' ==========================================
 node "Pipeline Server :8001" as PipelineNode {
     package FastAPI_App {
@@ -108,55 +132,42 @@ node "Pipeline Server :8001" as PipelineNode {
     }
 }
 
+note right of PipelineNode
+    **Pipeline - FastAPI**
+    Async • Process Pool • ROR
+end note
+
 ' ==========================================
-' Data Stores
+' Layer 5: Data Stores (Bottom)
 ' ==========================================
 database "PostgreSQL\n(Supabase)" as Postgres
 database "SQLite" as SQLite
 folder "File System" as FileSystem
 
-' ==========================================
-' Connections
-' ==========================================
-FrontendNode --> BackendNode : HTTP+REST
-BackendNode --> Postgres : SQL
-BackendNode --> Google_OAuth : OAuth
-BackendNode --> SMTP_Server : Email
-BackendNode --> PipelineNode : POST
-PipelineNode --> SQLite : Store
-PipelineNode --> FileSystem : Files
-PipelineNode --> BackendNode : PUT
-FAERS_Source --> FileSystem : Download
-
-' ==========================================
-' Notes - All at top to avoid cutoff
-' ==========================================
-note top of External
-    **External Services**
-    Google OAuth • SMTP • FAERS
-end note
-
-note top of FrontendNode
-    **Frontend - React**
-    Chart.js • JWT • Axios
-end note
-
-note top of BackendNode
-    **Backend - Django**
-    PostgreSQL • OAuth • Email
-end note
-
-note top of PipelineNode
-    **Pipeline - FastAPI**
-    Async • Process Pool • ROR
-end note
-
-note top of Postgres
+note bottom of Postgres
     **Database Models**
     User • Query • Result
 end note
 
-legend right
+' ==========================================
+' Vertical Connections - Top to Bottom
+' ==========================================
+External -down-> FrontendNode : OAuth/SMTP
+FrontendNode -down-> BackendNode : HTTP+REST
+BackendNode -down-> PipelineNode : POST
+PipelineNode -down-> SQLite : Store
+PipelineNode -down-> FileSystem : Files
+BackendNode -down-> Postgres : SQL
+PipelineNode -up-> BackendNode : PUT\nCallback
+FAERS_Source -down-> FileSystem : Download
+
+' ==========================================
+' Horizontal Connections
+' ==========================================
+BackendNode -up-> Google_OAuth : OAuth
+BackendNode -up-> SMTP_Server : Email
+
+legend bottom right
 |= Symbol |= Meaning |
 | node | Server |
 | component | Module |
@@ -165,8 +176,6 @@ legend right
 endlegend
 
 hide footbox
-' Prevent horizontal overflow
-scale max 1920 width
+scale 700 width
 
 @enduml
-
