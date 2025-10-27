@@ -13,8 +13,6 @@ __pycache__/
 # FAERS data files
 **/output
 
-test_settings.py
-
 # Log files
 **/*.log*
 

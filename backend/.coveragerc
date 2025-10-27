@@ -1,0 +1,11 @@
+[run]
+omit =
+    */migrations/*
+    backend/**
+    analysis/management/commands/download_faers_data.py
+    analysis/email_service.py
+    analysis/django_setup.py
+    users/google_auth.py     
+    users/middleware.py
+    users/forms.py
+    manage.py
