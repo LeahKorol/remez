@@ -1,0 +1,313 @@
+@startuml REMEZ_Authentication_Sequence_Diagram
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 20
+skinparam maxmessagesize 60
+skinparam sequenceParticipant underline
+
+title REMEZ Authentication Sequence Diagram
+note top : **REMEZ - Drug Safety Analysis System**\nAuthentication Flow Sequence Diagram
+
+' ==========================================
+' Participants
+' ==========================================
+
+actor "User" as user
+participant "Frontend\n(React)" as frontend
+participant "Backend API\n(Django)" as backend
+participant "Google OAuth\nService" as google
+participant "Database\n(PostgreSQL)" as db
+participant "Email Service\n(SMTP)" as email
+
+' ==========================================
+' Registration Flow
+' ==========================================
+
+== Registration Flow ==
+
+user -> frontend: Fill registration form
+note right: Email, Name, Password, Confirm Password
+
+frontend -> frontend: Client-side validation
+note right: Password strength, email format, name length
+
+frontend -> backend: POST /api/v1/auth/check-email/
+note right: Check if email exists
+
+backend -> db: Query User table
+db --> backend: Email exists status
+backend --> frontend: Email availability response
+
+alt Email already exists
+    frontend -> user: Show error & redirect to login
+else Email available
+    frontend -> backend: POST /api/v1/auth/registration/
+    note right: {email, password1, password2, name}
+    
+    backend -> backend: Validate registration data
+    backend -> db: Create new User record
+    db --> backend: User created with ID
+    
+    backend -> email: Send verification email
+    note right: EmailAddress record created
+    
+    backend -> backend: Generate JWT tokens
+    note right: Access & Refresh tokens
+    
+    backend --> frontend: Registration success + tokens
+    note right: {user_id, email, access, refresh}
+    
+    frontend -> frontend: Store tokens in localStorage
+    frontend -> frontend: Update user context
+    frontend -> user: Show success message
+    frontend -> frontend: Navigate to email verification page
+end
+
+' ==========================================
+' Email Verification Flow
+' ==========================================
+
+== Email Verification Flow ==
+
+user -> email: Click verification link
+email -> backend: GET /api/v1/auth/verify-email/{key}/
+backend -> db: Verify email key
+db --> backend: Verification result
+
+alt Verification successful
+    backend -> db: Mark email as verified
+    backend --> frontend: Redirect to login with success
+    frontend -> user: Show verification success
+else Verification failed
+    backend --> frontend: Redirect to login with error
+    frontend -> user: Show verification error
+end
+
+' ==========================================
+' Login Flow (Email/Password)
+' ==========================================
+
+== Login Flow (Email/Password) ==
+
+user -> frontend: Enter credentials
+note right: Email and password
+
+frontend -> frontend: Client-side validation
+note right: Email format, password not empty
+
+frontend -> backend: POST /api/v1/auth/login/
+note right: {email, password}
+
+backend -> backend: Authenticate user
+backend -> db: Query User by email
+db --> backend: User data
+
+alt Authentication successful
+    backend -> backend: Generate JWT tokens
+    backend --> frontend: Login success + tokens
+    note right: {access, refresh, user_id}
+    
+    frontend -> frontend: Store tokens in localStorage
+    frontend -> frontend: Update user context
+    frontend -> user: Show success message
+    frontend -> frontend: Navigate to profile page
+else Authentication failed
+    backend --> frontend: Authentication error
+    frontend -> user: Show error message
+end
+
+' ==========================================
+' Google OAuth Login Flow
+' ==========================================
+
+== Google OAuth Login Flow ==
+
+user -> frontend: Click "Login with Google"
+frontend -> frontend: Load Google API script
+frontend -> google: Initialize OAuth popup
+note right: Google One Tap or Popup
+
+google -> user: Show Google login dialog
+user -> google: Enter Google credentials
+google -> google: Authenticate user
+google --> frontend: Return access token
+
+frontend -> google: GET /oauth2/v2/userinfo
+note right: Fetch user profile with access token
+google --> frontend: User profile data
+note right: {id, email, name, picture, verified_email}
+
+frontend -> backend: POST /api/v1/auth/google/login/
+note right: {google_id, email, name, picture, verified_email}
+
+backend -> db: Query User by google_id or email
+db --> backend: User data
+
+alt User exists
+    backend -> backend: Link Google account if needed
+    backend -> backend: Generate JWT tokens
+    backend --> frontend: Login success + tokens
+    note right: {access, refresh, user}
+    
+    frontend -> frontend: Store tokens in localStorage
+    frontend -> frontend: Update user context
+    frontend -> user: Show success message
+    frontend -> frontend: Navigate to profile page
+else User not found
+    backend --> frontend: User not found error
+    frontend -> user: Show "Please register first" message
+end
+
+' ==========================================
+' Google OAuth Registration Flow
+' ==========================================
+
+== Google OAuth Registration Flow ==
+
+user -> frontend: Click "Register with Google"
+frontend -> frontend: Load Google API script
+frontend -> google: Initialize OAuth popup
+
+google -> user: Show Google login dialog
+user -> google: Enter Google credentials
+google -> google: Authenticate user
+google --> frontend: Return access token
+
+frontend -> google: GET /oauth2/v2/userinfo
+google --> frontend: User profile data
+
+frontend -> backend: POST /api/v1/auth/google/register/
+note right: {google_id, email, name, picture, verified_email}
+
+backend -> db: Check if user exists
+db --> backend: User existence status
+
+alt User already exists
+    backend --> frontend: Conflict error
+    frontend -> user: Show "Account exists, please login" message
+else User available
+    backend -> db: Create new User with Google ID
+    db --> backend: User created
+    
+    backend -> db: Mark email as verified
+    note right: If Google email is verified
+    
+    backend -> backend: Generate JWT tokens
+    backend --> frontend: Registration success + tokens
+    note right: {access, refresh, user}
+    
+    frontend -> frontend: Store tokens in localStorage
+    frontend -> frontend: Update user context
+    frontend -> user: Show success message
+    frontend -> frontend: Navigate to profile page
+end
+
+' ==========================================
+' Token Refresh Flow
+' ==========================================
+
+== Token Refresh Flow ==
+
+frontend -> backend: API request with expired token
+backend -> backend: Validate JWT token
+backend --> frontend: 401 Unauthorized
+
+frontend -> frontend: Check for refresh token
+frontend -> backend: POST /api/v1/auth/token/refresh/
+note right: {refresh: refresh_token}
+
+backend -> backend: Validate refresh token
+backend -> backend: Generate new access token
+
+alt Refresh successful
+    backend --> frontend: New access token
+    frontend -> frontend: Update stored token
+    frontend -> backend: Retry original request
+    backend --> frontend: Original request response
+else Refresh failed
+    backend --> frontend: Refresh token invalid
+    frontend -> frontend: Clear all tokens
+    frontend -> frontend: Redirect to login page
+end
+
+' ==========================================
+' Password Reset Flow
+' ==========================================
+
+== Password Reset Flow ==
+
+user -> frontend: Click "Forgot Password"
+frontend -> user: Show password reset form
+user -> frontend: Enter email address
+
+frontend -> backend: POST /api/v1/auth/password/reset/
+note right: {email}
+
+backend -> db: Find user by email
+db --> backend: User data
+
+alt User exists
+    backend -> email: Send password reset email
+    backend --> frontend: Reset email sent confirmation
+    frontend -> user: Show "Check your email" message
+    
+    user -> email: Click reset link
+    email -> backend: GET /reset-password/{uidb64}/{token}/
+    backend -> backend: Validate reset token
+    backend --> frontend: Redirect to reset form
+    
+    user -> frontend: Enter new password
+    frontend -> backend: POST /api/v1/auth/password/reset/confirm/
+    note right: {uid, token, new_password1, new_password2}
+    
+    backend -> backend: Validate reset data
+    backend -> db: Update user password
+    backend --> frontend: Password reset success
+    frontend -> user: Show success & redirect to login
+else User not found
+    backend --> frontend: User not found
+    frontend -> user: Show "Email not found" message
+end
+
+' ==========================================
+' Logout Flow
+' ==========================================
+
+== Logout Flow ==
+
+user -> frontend: Click logout
+frontend -> frontend: Clear localStorage tokens
+frontend -> frontend: Clear user context
+frontend -> frontend: Redirect to login page
+frontend -> user: Show logout confirmation
+
+' ==========================================
+' Session Validation Flow
+' ==========================================
+
+== Session Validation Flow ==
+
+frontend -> frontend: Check for stored token
+alt Token exists
+    frontend -> backend: GET /api/v1/auth/user/
+    note right: Validate current session
+    
+    backend -> backend: Validate JWT token
+    backend -> db: Get user data
+    db --> backend: User information
+    
+    alt Token valid
+        backend --> frontend: User data
+        frontend -> frontend: Update user context
+        frontend -> frontend: Allow access to protected routes
+    else Token invalid
+        backend --> frontend: 401 Unauthorized
+        frontend -> frontend: Clear tokens
+        frontend -> frontend: Redirect to login
+    end
+else No token
+    frontend -> frontend: Redirect to login page
+end
+
+@enduml
