@@ -7,9 +7,12 @@ This directory contains documentation files for the REMEZ project, including UML
 ### Component Diagram
 
 The main component diagram is available in:
-- **`REMEZ_Component_Diagram_FINAL.puml`** -  **Recommended** (optimized version that fits screen)
-- `REMEZ_Component_Diagram_FIXED.puml` - Alternative version
 - `REMEZ_Component_Diagram.puml` - Original version
+
+### Deployment Diagram
+
+The deployment diagram shows the infrastructure and runtime environment:
+- **`REMEZ_Deployment_Diagram.puml`** - Shows servers, databases, and network connections
 
 ## How to View the Diagrams
 
@@ -38,19 +41,28 @@ REMEZ Project
 
 ## Diagram Contents
 
-The component diagram shows:
+### Component Diagram
+Shows the logical architecture:
 - **Frontend Server** (Port 3000) - React application
 - **Backend Server** (Port 8000) - Django application
 - **Pipeline Server** (Port 8001) - FastAPI application
 - **Databases** - PostgreSQL (Supabase) and SQLite
 - **External Services** - Google OAuth, SMTP, FAERS data
 
+### Deployment Diagram
+Shows the physical infrastructure:
+- **Port Mappings** - :3000, :8000, :8001
+- **Cloud Services** - Supabase PostgreSQL
+- **Local Storage** - SQLite and File System
+- **Artifacts** - Deployment files and executables
+
 ## Future Diagrams
 
 Potential diagrams to add:
+- [x] Component Diagrams (logical architecture) ✅
+- [x] Deployment Diagrams (infrastructure) ✅
 - [ ] Class Diagrams (detailed models)
 - [ ] Sequence Diagrams (interaction flows)
-- [ ] Deployment Diagrams (infrastructure)
 - [ ] Activity Diagrams (business processes)
 - [ ] State Diagrams (state transitions)
 

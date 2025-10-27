@@ -1,0 +1,185 @@
+@startuml REMEZ_Deployment_Diagram
+
+title REMEZ System - Deployment Diagram
+
+!theme plain
+skinparam monochrome false
+skinparam defaultFontName Arial
+skinparam roundcorner 5
+skinparam shadowing true
+
+' Force reasonable dimensions
+skinparam dpi 96
+skinparam maxMessageSize 80
+
+' Colors
+skinparam node {
+    BackgroundColor #E8DAFF
+    BorderColor #000000
+}
+
+skinparam component {
+    BackgroundColor #F8F8FF
+    BorderColor #000000
+}
+
+skinparam database {
+    BackgroundColor #E0CFFC
+    BorderColor #000000
+}
+
+skinparam cloud {
+    BackgroundColor #C9CDFF
+    BorderColor #000000
+}
+
+skinparam artifact {
+    BackgroundColor #FFF8DC
+    BorderColor #000000
+}
+
+' ==========================================
+' Deployment Nodes
+' ==========================================
+node "Web Server\n(Docker Container)" as WebServer {
+    component "React App" as ReactApp {
+        artifact "build/" as FrontendBuild
+        artifact "index.html" as FrontendIndex
+    }
+    
+    note top of WebServer
+        **Port: 3000**
+        Nginx serving
+        static files
+    end note
+}
+
+node "Backend Server\n(Docker Container)" as BackendServer {
+    component "Django App" as DjangoApp {
+        artifact "manage.py" as DjangoManage
+        artifact "settings.py" as DjangoSettings
+    }
+    
+    component "Django ORM" as ORM
+    
+    note top of BackendServer
+        **Port: 8000**
+        Gunicorn WSGI
+        Django REST API
+    end note
+}
+
+node "Pipeline Server\n(Docker Container)" as PipelineServer {
+    component "FastAPI App" as FastAPIApp {
+        artifact "main.py" as MainPy
+        artifact "pipeline_service.py" as PipelineSvc
+    }
+    
+    note top of PipelineServer
+        **Port: 8001**
+        Uvicorn ASGI
+        Process Pool
+    end note
+}
+
+' ==========================================
+' Databases
+' ==========================================
+database "PostgreSQL\n(Supabase Cloud)" as Postgres {
+    component "pg_database" as PGDB
+    artifact "queries.sql" as SQLQueries
+}
+
+database "SQLite\n(Local File)" as SQLite {
+    component "tasks.db" as TasksDB
+}
+
+cloud "Supabase Cloud" as SupabaseCloud {
+    database "PostgreSQL\n(Supabase Cloud)" as Postgres {
+        component "pg_database" as PGDB
+        artifact "queries.sql" as SQLQueries
+    }
+}
+
+' ==========================================
+' File System
+' ==========================================
+storage "File System" as FileSystem {
+    folder "FAERS Data\n/var/data/faers" as FAERSData
+    folder "Output\n/var/output/" as OutputFiles
+    folder "Logs\n/var/logs/" as LogFiles
+}
+
+' ==========================================
+' External Services
+' ==========================================
+cloud "External Services" as External {
+    component "Google OAuth" as GoogleAuth
+    component "SMTP Server" as SMTPServer
+    component "FAERS Source" as FAERSSource
+}
+
+' ==========================================
+' Connections
+' ==========================================
+WebServer --> BackendServer : "HTTP\n:8000"
+BackendServer --> Postgres : "SQL\n(Connection Pool)"
+BackendServer --> PipelineServer : "HTTP\n:8001"
+BackendServer --> GoogleAuth : "OAuth2"
+BackendServer --> SMTPServer : "SMTP\nEmail"
+PipelineServer --> SQLite : "SQL"
+PipelineServer --> FileSystem : "I/O"
+FAERSSource --> FileSystem : "Download"
+PipelineServer --> BackendServer : "HTTP PUT\nCallback"
+
+' ==========================================
+' Artifact Dependencies
+' ==========================================
+FrontendBuild --> FrontendIndex
+DjangoManage --> DjangoSettings
+DjangoApp --> ORM
+FastAPIApp --> MainPy
+FastAPIApp --> PipelineSvc
+PGDB --> SQLQueries
+TasksDB --> FileSystem
+
+' ==========================================
+' Deployment Info
+' ==========================================
+note right of WebServer
+    <b>Technology Stack</b>
+    • React 18+
+    • Nginx
+    • Docker Image
+end note
+
+note right of BackendServer
+    <b>Technology Stack</b>
+    • Django 5.1+
+    • PostgreSQL
+    • Django ORM
+    • Gunicorn
+end note
+
+note right of PipelineServer
+    <b>Technology Stack</b>
+    • FastAPI
+    • SQLite
+    • ProcessPoolExecutor
+    • Uvicorn
+end note
+
+legend right
+|= **Symbol** |= **Meaning** |
+| node | Server/Container |
+| component | Application |
+| database | Data Storage |
+| cloud | External Service |
+| artifact | Deployment File |
+| --> | Network Connection |
+endlegend
+
+hide footbox
+scale max 1920 width
+
+@enduml
