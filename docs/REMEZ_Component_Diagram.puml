@@ -1,0 +1,172 @@
+@startuml REMEZ_Component_Diagram
+
+title REMEZ System - Component Diagram
+
+!theme plain
+skinparam monochrome false
+skinparam defaultFontName Arial
+skinparam roundcorner 5
+skinparam shadowing true
+
+' Force reasonable dimensions
+!define MAXSIZE 1200
+skinparam dpi 96
+
+' Force reasonable width
+skinparam maxMessageSize 80
+skinparam linetype ortho
+
+' Colors
+skinparam component {
+    BackgroundColor #F8F8FF
+    BorderColor #000000
+}
+
+skinparam node {
+    BackgroundColor #E8DAFF
+    BorderColor #000000
+}
+
+skinparam database {
+    BackgroundColor #E0CFFC
+    BorderColor #000000
+}
+
+skinparam cloud {
+    BackgroundColor #C9CDFF
+    BorderColor #000000
+}
+
+' ==========================================
+' External Services
+' ==========================================
+cloud "External Services" as External {
+    component Google_OAuth
+    component SMTP_Server
+    component FAERS_Source
+}
+
+' ==========================================
+' Frontend Server
+' ==========================================
+node "Frontend Server :3000" as FrontendNode {
+    package React_App {
+        component Auth_Pages
+        component Query_Form
+        component Results_Viewer
+        component ROR_Chart
+    }
+    
+    package Services {
+        component HTTP_Client
+        component Token_Service
+    }
+}
+
+' ==========================================
+' Backend Server
+' ==========================================
+node "Backend Server :8000" as BackendNode {
+    package Django_App {
+        package API_Layer {
+            component Auth_API
+            component Query_API
+            component Result_API
+        }
+        
+        package Services_Layer {
+            component Pipeline_Service
+            component Email_Service
+            component JWT_Handler
+        }
+    }
+    
+    component Django_ORM
+}
+
+' ==========================================
+' Pipeline Server
+' ==========================================
+node "Pipeline Server :8001" as PipelineNode {
+    package FastAPI_App {
+        package API_Endpoints {
+            component Run_Endpoint
+            component Status_Endpoint
+        }
+        
+        package Task_Mgmt {
+            component Task_Repository
+            component Process_Pool
+        }
+        
+        package Data_Process {
+            component FAERS_Loader
+            component Data_Marker
+            component Report_Generator
+            component ROR_Calculator
+        }
+    }
+}
+
+' ==========================================
+' Data Stores
+' ==========================================
+database "PostgreSQL\n(Supabase)" as Postgres
+database "SQLite" as SQLite
+folder "File System" as FileSystem
+
+' ==========================================
+' Connections
+' ==========================================
+FrontendNode --> BackendNode : HTTP+REST
+BackendNode --> Postgres : SQL
+BackendNode --> Google_OAuth : OAuth
+BackendNode --> SMTP_Server : Email
+BackendNode --> PipelineNode : POST
+PipelineNode --> SQLite : Store
+PipelineNode --> FileSystem : Files
+PipelineNode --> BackendNode : PUT
+FAERS_Source --> FileSystem : Download
+
+' ==========================================
+' Notes - All at top to avoid cutoff
+' ==========================================
+note top of External
+    **External Services**
+    Google OAuth • SMTP • FAERS
+end note
+
+note top of FrontendNode
+    **Frontend - React**
+    Chart.js • JWT • Axios
+end note
+
+note top of BackendNode
+    **Backend - Django**
+    PostgreSQL • OAuth • Email
+end note
+
+note top of PipelineNode
+    **Pipeline - FastAPI**
+    Async • Process Pool • ROR
+end note
+
+note top of Postgres
+    **Database Models**
+    User • Query • Result
+end note
+
+legend right
+|= Symbol |= Meaning |
+| node | Server |
+| component | Module |
+| database | Storage |
+| cloud | External |
+endlegend
+
+hide footbox
+' Prevent horizontal overflow
+scale max 1920 width
+
+@enduml
+
