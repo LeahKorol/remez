@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import TutorialCarousel from "../components/TutorialCarousel";
 import './App.css'
@@ -8,10 +8,16 @@ function Home() {
     const navigate = useNavigate();
 
     const [showTutorial, setShowTutorial] = useState(false);
+    const [showCookieNotice, setShowCookieNotice] = useState(false);
 
     const handleLoginClick = () => {
         navigate('/login');
     };
+
+    useEffect(() => {
+        // when the component mounts, show the cookie notice
+        setShowCookieNotice(true);
+    }, []);
 
     return (
         <div className="App">
@@ -19,6 +25,13 @@ function Home() {
                 <div className="logo">REMEZ</div>
                 <button className="login-btn" onClick={handleLoginClick}>Login</button>
             </nav>
+
+            {showCookieNotice && (
+                <div className="cookie-notice">
+                    This website uses cookies to improve your experience.
+                    <button onClick={() => setShowCookieNotice(false)}>Got it!</button>
+                </div>
+            )}
 
             <div className="content">
                 <div className="welcome-banner">Welcome to REMEZ</div>
@@ -139,13 +152,13 @@ function Home() {
                 />
 
                 <div className="footer">
-                  <p>Created by Eng. Leah Korol and Eng. Talya Kazayof</p>
-                  <p>In collaboration with Dr. Boris Gorelik</p>
-                  <div className="footer-links">
-                    <a href="/about-research" className="footer-link">About the Research</a>
-                    <span className="separator">|</span>
-                    <a href="/privacy-policy" className="footer-link">Privacy Policy</a>
-                  </div>
+                    <p>Created by Eng. Leah Korol and Eng. Talya Kazayof</p>
+                    <p>In collaboration with Dr. Boris Gorelik</p>
+                    <div className="footer-links">
+                        <a href="/about-research" className="footer-link">About the Research</a>
+                        <span className="separator"></span>
+                        <a href="/privacy-policy" className="footer-link">Privacy Policy</a>
+                    </div>
                 </div>
             </div>
         </div>
