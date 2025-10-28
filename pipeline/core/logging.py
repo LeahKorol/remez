@@ -4,6 +4,7 @@ Logging configuration
 
 import logging
 import sys
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from core.config import get_settings
@@ -26,8 +27,12 @@ def setup_logging(log_level: str = "INFO") -> logging.Logger:
         handlers=[
             # Console handler
             logging.StreamHandler(sys.stdout),
-            # File handler
-            logging.FileHandler(logs_dir / "faers-api.log"),
+            # Rotating file handler (5MB per file, keep 3 backup files)
+            RotatingFileHandler(
+                logs_dir / "faers-api.log",
+                maxBytes=5 * 1024 * 1024,  # 5 MB
+                backupCount=3,
+            ),
         ],
     )
 
