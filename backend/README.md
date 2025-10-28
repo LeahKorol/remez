@@ -152,8 +152,13 @@ PIPELINE_TIMEOUT=30 # timeout (minutes) for sending a request to the pipeline
 
 1. **Create and activate virtual environment:**
    ```powershell
-   python -m venv venv
-   .\venv\Scripts\Activate.ps1
+   python -m venv .venv
+   
+   # On Windows
+   .venv\Scripts\activate
+   
+   # On macOS/Linux
+   source .venv/bin/activate
    ```
 
 2. **Install dependencies:**
@@ -170,7 +175,18 @@ PIPELINE_TIMEOUT=30 # timeout (minutes) for sending a request to the pipeline
    python manage.py migrate
    ```
 
-5. **Create superuser (optional):**
+5. **Download FAERS data and load terms:**
+   ```powershell
+   # Download FAERS data files
+   python manage.py download_faers_data <year_q_from> <year_q_to>
+   
+   # Load drug and reaction names into database
+   python manage.py load_faers_terms <year_q_from> <year_q_to>
+   ```
+   
+   See [Management Commands](#management-commands) section for detailed documentation of these commands.
+
+6. **Create superuser (optional):**
    ```powershell
    python manage.py createsuperuser
    ```
@@ -198,6 +214,98 @@ The API will be available at `http://localhost:8000/`
 docker build -t remez-backend .
 docker run -p 8000:8000 --env-file .env remez-backend
 ```
+
+## Management Commands
+
+The backend includes custom Django management commands for FAERS data management. These commands serve two key purposes:
+
+1. **Enable search functionality** - Provide prefix-based autocomplete for drug and reaction names
+2. **Database efficiency** - Allow the Query model to store only compact IDs instead of full names, reducing storage requirements and improving performance
+
+### Download FAERS Data
+
+*Adapted from Dr. Boris Gorelik's original script: https://github.com/bgbg/faers_analysis/blob/main/src/download_faers_data.py*
+
+Downloads quarterly FAERS data files from NBER:
+
+```powershell
+python manage.py download_faers_data <year_q_from> <year_q_to>
+```
+
+**Required Arguments:**
+- `year_q_from` - Starting quarter (format: YYYYqX, where X is 1-4)
+- `year_q_to` - Ending quarter (format: YYYYqX, where X is 1-4)
+
+**Example:**
+```powershell
+python manage.py download_faers_data 2020q1 2020q4
+```
+
+**Optional Arguments:**
+- `--dir_out` - Output directory (default: `analysis/management/commands/output`)
+- `--threads` - Number of parallel download threads (default: 4)
+- `--clean_on_failure` - Delete output directory on failure (default: True)
+
+**What it does:**
+- Downloads **drug** and **reaction** CSV files for specified quarters from NBER
+- Skips files that already exist (incremental downloads)
+- Uses multithreaded downloading with progress bar
+- Adapted from Dr. Boris Gorelik's original download script
+
+### Load FAERS Terms
+
+Extracts drug names and reaction terms from downloaded FAERS files and loads them into the database:
+
+```powershell
+python manage.py load_faers_terms <year_q_from> <year_q_to>
+```
+
+**Required Arguments:**
+- `year_q_from` - Starting quarter for processing (format: YYYYQX, where X is 1-4)
+- `year_q_to` - Ending quarter for processing (format: YYYYQX, where X is 1-4)
+
+**Example:**
+```powershell
+python manage.py load_faers_terms 2020q1 2020q4
+```
+
+**Optional Arguments:**
+- `--dir_in` - Input directory containing FAERS files (default: `analysis/management/commands/output`)
+- `--no_drugs` - Skip loading drug terms
+- `--no_reactions` - Skip loading reaction terms
+
+**What it does:**
+- Extracts and normalizes unique drug names and reaction terms from FAERS files
+- Stores them in `DrugName` and `ReactionName` models with auto-generated IDs
+
+### Usage Workflow
+
+For initial setup or when updating with new quarterly data:
+
+```powershell
+# 1. Download FAERS data for desired quarters
+python manage.py download_faers_data <year_q_from> <year_q_to>
+
+# 2. Extract and load drug/reaction terms into database
+python manage.py load_faers_terms <year_q_from> <year_q_to>
+
+# Optional: Load only drugs or only reactions
+python manage.py load_faers_terms <year_q_from> <year_q_to> --no_reactions
+python manage.py load_faers_terms <year_q_from> <year_q_to> --no_drugs
+```
+
+**Example with actual quarters:**
+```powershell
+python manage.py download_faers_data 2020q1 2020q4
+python manage.py load_faers_terms 2020q1 2020q4
+```
+
+**File Requirements:**
+The `load_faers_terms` command expects files in the format:
+- Drug files: `drug{yearquarter}.csv.zip` (e.g., `drug2020q1.csv.zip`)
+- Reaction files: `reac{yearquarter}.csv.zip` (e.g., `reac2020q1.csv.zip`)
+
+> **Note**: Run `download_faers_data` first to obtain the required CSV files, then run `load_faers_terms` to populate the database with searchable drug and reaction names.
 
 ## Testing
 
@@ -362,4 +470,10 @@ Logs are configured with:
 
 ---
 
-For more information about specific components, refer to the individual app directories and their respective documentation.
+## License
+
+This project is part of the REMEZ system. See the main project LICENSE file for details.
+
+## Contributing
+
+Please refer to the main project CONTRIBUTING.md for contribution guidelines and development practices.
