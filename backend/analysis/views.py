@@ -9,6 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from analysis.constants import PIPELINE_DEMO_DATA
+from analysis.email_service import EmailService
 from analysis.models import DrugName, Query, ReactionName, Result, ResultStatus
 from analysis.permissions import IsPipelineService
 from analysis.serializers import (
@@ -18,7 +19,6 @@ from analysis.serializers import (
     ResultSerializer,
 )
 from analysis.services.pipeline_service import pipeline_service
-from analysis.email_service import EmailService
 
 logger = logging.getLogger(__name__)
 
@@ -336,6 +336,17 @@ class TermNameSearchViewSet(viewsets.GenericViewSet):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="prefix",
+                type=str,
+                location=OpenApiParameter.PATH,
+                description="Search prefix (minimum 3 characters)",
+                required=True,
+            )
+        ]
+    )
     @action(detail=False, methods=["get"], url_path="search/(?P<prefix>[^/.]+)")
     def search_by_prefix(self, request, prefix=None):
         # Input validation
@@ -371,28 +382,14 @@ class TermNameSearchViewSet(viewsets.GenericViewSet):
         return Response(serializer.data)
 
 
-@extend_schema_view(
-    search_by_prefix=extend_schema(
-        tags=["Drug Names"],
-        parameters=[
-            OpenApiParameter(
-                name="prefix", type="string", location=OpenApiParameter.PATH
-            )
-        ],
-    )
-)
+@extend_schema_view(search_by_prefix=extend_schema(tags=["Drug Names"]))
 class DrugNameViewSet(TermNameSearchViewSet):
     serializer_class = DrugNameSerializer
     queryset = DrugName.objects.all()
     model_name = "drug name"
 
 
-@extend_schema_view(
-    search_by_prefix=extend_schema(
-        tags=["Reaction Names"],
-        parameters=[{"name": "prefix", "in": "path", "type": "string"}],
-    )
-)
+@extend_schema_view(search_by_prefix=extend_schema(tags=["Reaction Names"]))
 class ReactionNameViewSet(TermNameSearchViewSet):
     serializer_class = ReactionNameSerializer
     queryset = ReactionName.objects.all()
