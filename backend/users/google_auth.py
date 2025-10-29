@@ -4,11 +4,18 @@ from allauth.account.models import EmailAddress
 from dj_rest_auth.jwt_auth import set_jwt_cookies
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+
+from users.serializers import (
+    ErrorResponseSerializer,
+    GoogleAuthResponseSerializer,
+    GoogleLoginSerializer,
+)
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -23,6 +30,16 @@ def get_tokens_for_user(user):
     }
 
 
+@extend_schema(
+    request=GoogleLoginSerializer,
+    responses={
+        200: GoogleAuthResponseSerializer,
+        400: ErrorResponseSerializer,
+        404: ErrorResponseSerializer,
+        500: ErrorResponseSerializer,
+    },
+    description="Handle Google login for existing users",
+)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def google_login(request):
@@ -30,19 +47,14 @@ def google_login(request):
     Handle Google login for existing users.
     """
     try:
-        data = request.data
-        google_id = data.get("google_id")
-        email = data.get("email")
-        name = data.get("name")
-        picture = data.get("picture")
-        verified_email = data.get("verified_email")
+        serializer = GoogleLoginSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        # Validate required fields
-        if not google_id or not email:
-            return Response(
-                {"error": "Google ID and email are required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        validated_data = serializer.validated_data
+        google_id = validated_data["google_id"]
+        email = validated_data["email"]
+        name = validated_data.get("name")
 
         # Try to find user by google_id first, then by email
         user = None
@@ -99,6 +111,16 @@ def google_login(request):
         )
 
 
+@extend_schema(
+    request=GoogleLoginSerializer,
+    responses={
+        201: GoogleAuthResponseSerializer,
+        400: ErrorResponseSerializer,
+        409: ErrorResponseSerializer,
+        500: ErrorResponseSerializer,
+    },
+    description="Handle Google registration for new users",
+)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def google_register(request):
@@ -106,19 +128,15 @@ def google_register(request):
     Handle Google registration for new users.
     """
     try:
-        data = request.data
-        google_id = data.get("google_id")
-        email = data.get("email")
-        name = data.get("name", "")
-        picture = data.get("picture")
-        verified_email = data.get("verified_email")
+        serializer = GoogleLoginSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        # Validate required fields
-        if not google_id or not email:
-            return Response(
-                {"error": "Google ID and email are required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        validated_data = serializer.validated_data
+        google_id = validated_data["google_id"]
+        email = validated_data["email"]
+        name = validated_data.get("name", "")
+        verified_email = validated_data.get("verified_email", True)
 
         # Check if user already exists
         if User.objects.filter(email=email).exists():

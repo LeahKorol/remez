@@ -150,7 +150,7 @@ class ResendEmailVerification(TestCase):
 
         self.assertEqual(response.status_code, 400)
         response_data = response.json()
-        self.assertIn("Email is required", response_data["error"])
+        self.assertIn("required", response_data["email"][0])
 
     def test_resend_email_verification_already_verified(self):
         """Test resend verification for already verified email"""
@@ -233,7 +233,7 @@ class CheckEmailExists(TestCase):
 
         self.assertEqual(response.status_code, 400)
         response_data = response.json()
-        self.assertIn("Email is required", response_data["error"])
+        self.assertIn("required", response_data["email"][0])
 
 
 class PasswordResetConfirmRedirect(TestCase):
@@ -370,7 +370,7 @@ class ResendEmailVerificationEdgeCases(TestCase):
 
         self.assertEqual(response.status_code, 400)
         response_data = response.json()
-        self.assertIn("Email is required", response_data["error"])
+        self.assertIn("required", response_data["email"][0])
 
     def test_resend_email_verification_inactive_user(self):
         """Test resend verification for inactive user"""

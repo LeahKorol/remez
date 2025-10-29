@@ -13,7 +13,7 @@ from multiprocessing.dummy import Pool as ThreadPool
 import tqdm
 from django.core.management.base import BaseCommand, CommandError
 
-from backend.analysis.utils import Quarter, generate_quarters
+from analysis.utils import Quarter, generate_quarters
 
 from ..cli_utils import QuarterRangeArgMixin
 
@@ -77,12 +77,8 @@ class Command(QuarterRangeArgMixin, BaseCommand):
         year = quarter.year
         yearquarter = str(quarter)
         what = [
-            "demo",
             "drug",
             "reac",
-            "outc",
-            # "indi",
-            # "ther",
         ]
 
         for w in what:

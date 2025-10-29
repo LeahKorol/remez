@@ -141,10 +141,10 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": os.environ.get("DB_NAME"),
-        "USER": os.environ.get("DB_USER_POOLED"),
+        "USER": DB_USER,
         "PASSWORD": os.environ.get("DB_PASSWORD"),
-        "HOST": os.environ.get("DB_HOST_POOLED", "localhost"),
-        "PORT": os.environ.get("DB_PORT_POOLED", "5432"),
+        "HOST": DB_HOST,
+        "PORT": DB_PORT,
         # "OPTIONS": {"sslmode": "require"},  # Supabase requires SSL
         "CONN_MAX_AGE": (600 if not is_management_command else 0),
     }

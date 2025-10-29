@@ -1,48 +1,56 @@
-from dj_rest_auth.registration.views import RegisterView
-from dj_rest_auth.jwt_auth import set_jwt_cookies
-
-from django.http import JsonResponse
-from django.http import HttpResponseRedirect
-from django.utils.translation import gettext as _
-from django.conf import settings
-from django.contrib.auth import get_user_model, authenticate
-from django.shortcuts import redirect
-from django.core.exceptions import ObjectDoesNotExist
-
 import logging
-import json
 import os
 
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-from users.serializers import CustomRegisterSerializer
-from allauth.account.utils import send_email_confirmation
 from allauth.account.models import (
     EmailConfirmation,
     EmailConfirmationHMAC,
-    EmailAddress,
 )
+from allauth.account.utils import send_email_confirmation
+from dj_rest_auth.jwt_auth import set_jwt_cookies
+from dj_rest_auth.registration.views import RegisterView
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.http import HttpResponseRedirect
+from django.shortcuts import redirect
+from drf_spectacular.utils import extend_schema
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
 
+from users.serializers import (
+    CustomRegisterSerializer,
+    EmailCheckSerializer,
+    EmailExistsResponseSerializer,
+    ErrorResponseSerializer,
+    MessageResponseSerializer,
+    ResendEmailVerificationSerializer,
+)
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
+@extend_schema(
+    request=ResendEmailVerificationSerializer,
+    responses={
+        200: MessageResponseSerializer,
+        400: ErrorResponseSerializer,
+        500: ErrorResponseSerializer,
+    },
+    description="Resend email verification for a user",
+)
 @api_view(["POST"])
 def resend_email_verification(request):
     """
     Resend email verification for a user.
     """
     try:
-        data = json.loads(request.body) if request.body else {}
-        email = data.get("email", "")
+        serializer = ResendEmailVerificationSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        if not email:
-            return Response(
-                {"error": "Email is required."}, status=status.HTTP_400_BAD_REQUEST
-            )
+        email = serializer.validated_data["email"]
 
         try:
             user = User.objects.get(email=email, is_active=True)
@@ -165,18 +173,21 @@ def verify_email_api(request, key):
         return redirect(f"{frontend_url}/login?verified=false")
 
 
+@extend_schema(
+    request=EmailCheckSerializer,
+    responses={200: EmailExistsResponseSerializer},
+    description="Check if an email address exists in the system",
+)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def check_email_exists(request):
-    """
-    Check if an email exists in the DB.
-    Returns { "exists": true/false }
-    """
-    email = request.data.get("email", "").strip().lower()
-    if not email:
-        return Response(
-            {"error": "Email is required."}, status=status.HTTP_400_BAD_REQUEST
-        )
+    serializer = EmailCheckSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    email = serializer.validated_data["email"].strip().lower()
     exists = User.objects.filter(email__iexact=email).exists()
-    return Response({"exists": exists}, status=status.HTTP_200_OK)
+
+    response_data = {"exists": exists}
+    response_serializer = EmailExistsResponseSerializer(response_data)
+    return Response(response_serializer.data, status=status.HTTP_200_OK)

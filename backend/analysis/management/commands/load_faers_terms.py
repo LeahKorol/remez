@@ -122,6 +122,7 @@ class Command(QuarterRangeArgMixin, BaseCommand):
         self.stdout.write(f"Loading {term_label} terms from {len(files)} files...")
 
         for file in files:
+            self.stdout.write(f"Processing file {file.name}...")
             df = pd.read_csv(file, usecols=[column], dtype=str)
 
             for name in df[column].dropna().astype(str):
