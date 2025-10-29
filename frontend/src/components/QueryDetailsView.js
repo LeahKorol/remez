@@ -306,6 +306,20 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery }) => {
                 quarter_start={currentQuery.quarter_start}
                 ref={chartRef}
               />
+            ) : currentQuery?.result?.status === "completed" && !hasResults ? (
+              <div className="placeholder-content empty-state">
+                <div className="placeholder-icon">📊</div>
+                <h4>Analysis Completed</h4>
+                <p>
+                  The analysis finished successfully, but no statistical results were generated.
+                  This may happen when no significant data was found for the selected parameters.
+                </p>
+                <div className="refresh-button">
+                  <button className="secondary-button" onClick={handleRefreshStatus}>
+                    Refresh Again
+                  </button>
+                </div>
+              </div>
             ) : currentQuery?.result?.status === "failed" ? (
               <div className="placeholder-content error-state">
                 <div className="placeholder-icon">❌</div>

@@ -126,11 +126,39 @@ export default function QueryResultPage() {
                 </div>
 
                 <div className="chart-container-query-result">
-                    <RorChart
-                        query={queryData.result}
-                        year_start={queryData.year_start}
-                        quarter_start={queryData.quarter_start}
-                    />
+                    {queryData?.result?.status === "completed" &&
+                        Array.isArray(queryData?.result?.ror_values) &&
+                        queryData.result.ror_values.length > 0 ? (
+                        <RorChart
+                            query={queryData.result}
+                            year_start={queryData.year_start}
+                            quarter_start={queryData.quarter_start}
+                        />
+                    ) : queryData?.result?.status === "completed" ? (
+                        <div className="placeholder-content empty-state">
+                            <div className="placeholder-icon">📊</div>
+                            <h4>Analysis Completed</h4>
+                            <p>
+                                The analysis finished successfully, but no statistical results were found.
+                                Try adjusting the filters or selecting different parameters.
+                            </p>
+                        </div>
+                    ) : queryData?.result?.status === "failed" ? (
+                        <div className="placeholder-content error-state">
+                            <div className="placeholder-icon">❌</div>
+                            <h4>Analysis Failed</h4>
+                            <p>
+                                Unfortunately, this query failed to process. Please try again or modify
+                                your selection.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="placeholder-content">
+                            <div className="placeholder-icon">⏳</div>
+                            <h4>Analysis in Progress</h4>
+                            <p>Results will appear here once analysis is complete.</p>
+                        </div>
+                    )}
                 </div>
             </main>
 
