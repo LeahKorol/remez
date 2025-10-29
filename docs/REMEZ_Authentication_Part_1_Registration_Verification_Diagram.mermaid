@@ -1,0 +1,66 @@
+sequenceDiagram
+    title REMEZ Authentication - Part 1: Registration & Email Verification
+    
+    participant User as 👤 User
+    participant Frontend as 🖥️ Frontend<br/>(React)
+    participant Backend as 🔧 Backend API<br/>(Django)
+    participant DB as 💾 Database<br/>(PostgreSQL)
+    participant Email as 📧 Email Service
+
+    %% ==========================================
+    %% Registration Flow
+    %% ==========================================
+    
+    rect rgb(230, 245, 255)
+        Note over User,Email: Registration Flow
+        
+        User->>Frontend: Fill registration form<br/>(Email, Name, Password)
+        Frontend->>Frontend: Client-side validation<br/>(Password strength, format)
+        
+        Frontend->>Backend: POST /api/v1/auth/check-email/
+        Backend->>DB: Query User table
+        DB-->>Backend: Email exists status
+        Backend-->>Frontend: Email availability response
+        
+        alt Email already exists
+            Frontend-->>User: Show error & redirect to login
+        else Email available
+            Frontend->>Backend: POST /api/v1/auth/registration/<br/>{email, password1, password2, name}
+            Backend->>Backend: Validate registration data
+            Backend->>DB: Create new User record
+            DB-->>Backend: User created with ID
+            
+            Backend->>Email: Send verification email
+            Note right of Backend: EmailAddress record created
+            
+            Backend->>Backend: Generate JWT tokens<br/>(Access & Refresh)
+            Backend-->>Frontend: Registration success + tokens<br/>{user_id, email, access, refresh}
+            
+            Frontend->>Frontend: Store tokens in localStorage
+            Frontend->>Frontend: Update user context
+            Frontend-->>User: Show success message
+            Frontend->>Frontend: Navigate to verification page
+        end
+    end
+
+    %% ==========================================
+    %% Email Verification Flow
+    %% ==========================================
+    
+    rect rgb(245, 255, 230)
+        Note over User,Email: Email Verification Flow
+        
+        User->>Email: Click verification link
+        Email->>Backend: GET /api/v1/auth/verify-email/{key}/
+        Backend->>DB: Verify email key
+        DB-->>Backend: Verification result
+        
+        alt Verification successful
+            Backend->>DB: Mark email as verified
+            Backend-->>Frontend: Redirect to login with success
+            Frontend-->>User: Show verification success
+        else Verification failed
+            Backend-->>Frontend: Redirect to login with error
+            Frontend-->>User: Show verification error
+        end
+    end
