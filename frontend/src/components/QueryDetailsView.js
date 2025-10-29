@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { FaTimes, FaFileImage, FaFileCsv, FaArrowDown } from "react-icons/fa";
 import RorChart from "./RorChart";
 import { showToastMessage } from "../utils/toast";
@@ -8,6 +8,10 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery }) => {
   const chartRef = useRef(null);
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [currentQuery, setCurrentQuery] = useState(query);
+
+  useEffect(() => {
+    setCurrentQuery(query);
+  }, [query]);
 
   console.log("Rendering QueryDetailsView for:", currentQuery);
   console.log("status: ", currentQuery.result.status);
@@ -28,7 +32,12 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery }) => {
       setCurrentQuery(fullQuery);
 
       if (fullQuery.result?.status === "completed") {
-        showToastMessage("✅ Analysis completed! Results are now available.");
+        if (Array.isArray(fullQuery.result?.ror_values) && fullQuery.result.ror_values.length > 0) {
+          showToastMessage("✅ Analysis completed! Results are now available.");
+        }
+        else {
+          showToastMessage("⚠️ Analysis completed but no results found.", "warning");
+        }
       } else if (fullQuery.result?.status === "failed") {
         showToastMessage("⚠️ Query failed during processing. Please try again.", "error");
       } else {
