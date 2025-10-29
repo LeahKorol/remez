@@ -14,6 +14,7 @@ const LoadingPage = () => {
     const [progress, setProgress] = useState(10);
     const [statusText, setStatusText] = useState("Analysis submitted to server...");
     const [resultId, setResultId] = useState(queryData?.result?.id || null);
+    const [videoLoaded, setVideoLoaded] = useState(false);
 
     const isPollingCancelled = useRef(false);
     const timeoutRef = useRef(null);
@@ -225,8 +226,26 @@ const LoadingPage = () => {
             <div className="loading-container">
                 <div className="loading-header">
                     <div className="loading-icon">
-                        <div className="spinner"></div>
-                        <div className="spinner-ring"></div>
+                        <div className="video-wrapper">
+                            <video
+                                src="REMEZ_animation.mp4"
+                                autoPlay
+                                loop
+                                muted
+                                onCanPlay={() => setVideoLoaded(true)} // video is readiy
+                                onError={() => setVideoLoaded(false)}  // if not loaded
+                                className={videoLoaded ? "visible" : "hidden"}
+                            />
+                        </div>
+                        {/* if animation not loaded --> view spinner-ring */}
+                        {!videoLoaded && (
+                            <>
+                                <div className="spinner-wrapper" style={{ display: videoLoaded ? "none" : "flex" }}>
+                                    <div className="spinner"></div>
+                                    <div className="spinner-ring"></div>
+                                </div>
+                            </>
+                        )}
                     </div>
                     <h1 className="loading-title">
                         Processing Your Analysis
