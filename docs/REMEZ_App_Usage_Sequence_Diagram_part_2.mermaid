@@ -1,0 +1,190 @@
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#fff','primaryTextColor':'#333','primaryBorderColor':'#333','lineColor':'#333','secondaryColor':'#f4f4f4','tertiaryColor':'#fff'}}}%%
+
+sequenceDiagram
+    title REMEZ Application - Part 2: Results Display, Query Management & Error Handling
+    
+    participant User
+    participant Frontend as Frontend<br/>(React)
+    participant Backend as Backend API<br/>(Django)
+    participant Pipeline as Pipeline Service<br/>(FastAPI)
+    participant DB as Database<br/>(PostgreSQL)
+    participant PipelineDB as Pipeline DB<br/>(SQLite)
+
+    %% ==========================================
+    %% Results Display Flow
+    %% ==========================================
+    
+    rect rgb(240, 255, 255)
+        Note over User,DB: Results Display Flow
+        
+        Frontend->>Backend: GET /api/v1/analysis/queries/{query_id}/
+        Backend->>DB: Query Query with Result data
+        DB-->>Backend: Complete query data with results
+        Backend-->>Frontend: Query data with ROR results
+        
+        Frontend->>Frontend: Render ROR chart
+        Note right of Frontend: Chart.js visualization<br/>with ROR values
+        
+        Frontend-->>User: Display analysis results
+        Note right of User: Interactive chart,<br/>query details, export options
+        
+        User->>Frontend: View detailed results
+        Frontend-->>User: Show chart with confidence intervals
+        Note right of User: ROR values over time periods
+        
+        User->>Frontend: Export results
+        Frontend->>Frontend: Generate CSV data
+        Frontend-->>User: Download CSV file
+    end
+
+    %% ==========================================
+    %% Query Management Flow
+    %% ==========================================
+    
+    rect rgb(255, 250, 240)
+        Note over User,DB: Query Management Flow
+        
+        User->>Frontend: View saved queries
+        Frontend->>Backend: GET /api/v1/analysis/queries/
+        Backend->>DB: Query user's queries
+        DB-->>Backend: List of user queries
+        Backend-->>Frontend: Queries list
+        
+        Frontend-->>User: Display queries list
+        Note right of User: Query name, status,<br/>creation date
+        
+        User->>Frontend: Click on query
+        Frontend->>Backend: GET /api/v1/analysis/queries/{query_id}/
+        Backend->>DB: Query specific query data
+        DB-->>Backend: Query details with results
+        Backend-->>Frontend: Query details
+        
+        Frontend-->>User: Show query details view
+        Note right of User: Results chart,<br/>query parameters
+        
+        alt Query status is COMPLETED
+            Frontend-->>User: Show interactive chart
+            Frontend-->>User: Show export options
+        else Query status is RUNNING or PENDING
+            Frontend-->>User: Show "Processing..." message
+            Frontend-->>User: Show refresh button
+        else Query status is FAILED
+            Frontend-->>User: Show error message
+            Frontend-->>User: Show retry option
+        end
+    end
+
+    %% ==========================================
+    %% Query Editing Flow
+    %% ==========================================
+    
+    rect rgb(240, 248, 255)
+        Note over User,PipelineDB: Query Editing Flow
+        
+        User->>Frontend: Click "Edit Query"
+        Frontend->>Frontend: Load query data into form
+        Frontend-->>User: Show pre-filled form
+        
+        User->>Frontend: Modify query parameters
+        Note right of User: Change drugs, reactions,<br/>time period
+        
+        User->>Frontend: Submit updated query
+        Frontend->>Backend: PUT /api/v1/analysis/queries/{query_id}/
+        Note right of Frontend: Updated query parameters
+        
+        Backend->>Backend: Check if ROR fields changed
+        
+        alt ROR-related fields changed
+            Backend->>DB: Update Query record
+            Backend->>DB: Reset Result status to PENDING
+            Backend->>Pipeline: POST /api/v1/pipeline/run
+            Note right of Backend: Trigger recalculation
+            Pipeline->>PipelineDB: Create new task
+            PipelineDB-->>Pipeline: Task created
+            Pipeline-->>Backend: New task created
+            Backend-->>Frontend: Query updated, recalculation started
+            Frontend->>Frontend: Navigate to loading page
+        else No ROR fields changed
+            Backend->>DB: Update Query record only
+            DB-->>Backend: Update successful
+            Backend-->>Frontend: Query updated
+            Frontend-->>User: Show success message
+        end
+    end
+
+    %% ==========================================
+    %% Query Deletion Flow
+    %% ==========================================
+    
+    rect rgb(255, 240, 240)
+        Note over User,DB: Query Deletion Flow
+        
+        User->>Frontend: Click "Delete Query"
+        Frontend-->>User: Show confirmation dialog
+        
+        User->>Frontend: Confirm deletion
+        Frontend->>Backend: DELETE /api/v1/analysis/queries/{query_id}/
+        Backend->>DB: Delete Query and Result records
+        Note right of DB: CASCADE delete removes<br/>related data
+        DB-->>Backend: Records deleted
+        Backend-->>Frontend: Deletion successful
+        
+        Frontend->>Frontend: Remove query from list
+        Frontend-->>User: Show success message
+    end
+
+    %% ==========================================
+    %% Error Handling Flow
+    %% ==========================================
+    
+    rect rgb(255, 245, 245)
+        Note over Pipeline,User: Error Handling Flow
+        
+        alt Pipeline processing fails
+            Pipeline->>PipelineDB: Update task status to FAILED
+            Pipeline->>Backend: PUT /api/v1/analysis/results/{result_id}/
+            Note right of Pipeline: Update with error status
+            Backend->>DB: Update Result status to FAILED
+            DB-->>Backend: Update successful
+            Backend-->>Frontend: Error status in polling
+            Frontend-->>User: Show error message
+            Frontend-->>User: Offer retry option
+        else Network error during polling
+            Frontend->>Frontend: Handle network timeout
+            Frontend-->>User: Show "Connection lost" message
+            Frontend->>Frontend: Retry polling with backoff
+        else Server error (500)
+            Frontend->>Frontend: Handle server error
+            Frontend-->>User: Show "Server error" message
+            Frontend->>Frontend: Navigate to error page
+        end
+    end
+
+    %% ==========================================
+    %% Session Management Flow
+    %% ==========================================
+    
+    rect rgb(250, 250, 255)
+        Note over Frontend,Backend: Session Management Flow
+        
+        loop During app usage
+            Frontend->>Backend: API request with JWT token
+            Backend->>Backend: Validate JWT token
+            
+            alt Token valid
+                Backend-->>Frontend: API response
+            else Token expired
+                Backend-->>Frontend: 401 Unauthorized
+                Frontend->>Backend: POST /api/v1/auth/token/refresh/
+                Note right of Frontend: Refresh token
+                Backend->>Backend: Generate new access token
+                Backend-->>Frontend: New access token
+                Frontend->>Frontend: Update stored token
+                Frontend->>Backend: Retry original request
+            else Refresh token expired
+                Backend-->>Frontend: Refresh failed
+                Frontend->>Frontend: Clear all tokens
+                Frontend-->>User: Redirect to login page
+            end
+        end
+    end

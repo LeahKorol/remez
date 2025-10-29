@@ -1,0 +1,182 @@
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#fff','primaryTextColor':'#333','primaryBorderColor':'#333','lineColor':'#333','secondaryColor':'#f4f4f4','tertiaryColor':'#fff'}}}%%
+
+sequenceDiagram
+    title REMEZ Application - Part 1: User Login, Query Creation & Pipeline Processing
+    
+    participant User
+    participant Frontend as Frontend<br/>(React)
+    participant Backend as Backend API<br/>(Django)
+    participant Pipeline as Pipeline Service<br/>(FastAPI)
+    participant DB as Database<br/>(PostgreSQL)
+    participant PipelineDB as Pipeline DB<br/>(SQLite)
+    participant Files as File System
+
+    %% ==========================================
+    %% User Login & Profile Access
+    %% ==========================================
+    
+    rect rgb(240, 248, 255)
+        Note over User,Frontend: User Login & Profile Access
+        
+        User->>Frontend: Access application
+        Frontend->>Frontend: Check authentication token
+        
+        alt Token exists and valid
+            Frontend->>Backend: GET /api/v1/auth/user/
+            Backend->>DB: Query User data
+            DB-->>Backend: User information
+            Backend-->>Frontend: User data
+            Frontend->>Frontend: Update user context
+            Frontend-->>User: Show profile page
+        else No token or invalid
+            Frontend-->>User: Redirect to login page
+        end
+    end
+
+    %% ==========================================
+    %% Query Creation Flow
+    %% ==========================================
+    
+    rect rgb(255, 250, 240)
+        Note over User,Files: Query Creation Flow
+        
+        User->>Frontend: Click "New Query"
+        Frontend-->>User: Show query form
+        Note right of User: Query name, time period,<br/>drugs, reactions
+        
+        User->>Frontend: Enter query parameters
+        Note right of User: Name, year range,<br/>quarter range
+        
+        User->>Frontend: Search for drugs
+        Frontend->>Backend: GET /api/v1/analysis/drug-names/search/{prefix}/
+        Backend->>DB: Query DrugName table
+        DB-->>Backend: Matching drug names
+        Backend-->>Frontend: Drug search results
+        Frontend-->>User: Show drug suggestions
+        
+        User->>Frontend: Select drugs from suggestions
+        Frontend->>Frontend: Add selected drugs to form
+        
+        User->>Frontend: Search for reactions
+        Frontend->>Backend: GET /api/v1/analysis/reaction-names/search/{prefix}/
+        Backend->>DB: Query ReactionName table
+        DB-->>Backend: Matching reaction names
+        Backend-->>Frontend: Reaction search results
+        Frontend-->>User: Show reaction suggestions
+        
+        User->>Frontend: Select reactions from suggestions
+        Frontend->>Frontend: Add selected reactions to form
+        
+        User->>Frontend: Submit query form
+        Frontend->>Frontend: Validate form data
+        Note right of Frontend: Check required fields,<br/>time ranges
+        
+        Frontend->>Backend: POST /api/v1/analysis/queries/
+        Note right of Frontend: {name, year_start, year_end,<br/>quarter_start, quarter_end,<br/>drugs, reactions}
+        
+        Backend->>Backend: Validate query data
+        Backend->>DB: Create Query record
+        DB-->>Backend: Query created with ID
+        
+        Backend->>DB: Create Result record (PENDING)
+        DB-->>Backend: Result created
+        
+        Backend->>Backend: Trigger pipeline analysis
+        Note right of Backend: Call pipeline service
+        
+        Backend-->>Frontend: Query created successfully
+        Note right of Backend: {query_id, result_id}
+        
+        Frontend->>Frontend: Update saved queries list
+        Frontend->>Frontend: Navigate to loading page
+        Frontend-->>User: Show loading page with progress
+    end
+
+    %% ==========================================
+    %% Pipeline Processing Flow
+    %% ==========================================
+    
+    rect rgb(240, 255, 240)
+        Note over Backend,Files: Pipeline Processing Flow
+        
+        Backend->>Pipeline: POST /api/v1/pipeline/run
+        Note right of Backend: {external_id, year_start, year_end,<br/>quarter_start, quarter_end,<br/>drugs, reactions}
+        
+        Pipeline->>PipelineDB: Create TaskResults record
+        PipelineDB-->>Pipeline: Task created with ID
+        
+        Pipeline->>Pipeline: Start background process
+        Note right of Pipeline: Submit to ProcessPoolExecutor
+        
+        Pipeline-->>Backend: Task created (immediate response)
+        Backend->>Backend: Update Result status to RUNNING
+    end
+
+    %% ==========================================
+    %% Background Pipeline Execution
+    %% ==========================================
+    
+    rect rgb(255, 240, 245)
+        Note over Pipeline,Files: Background Pipeline Execution
+        
+        Pipeline->>Pipeline: Update task status to RUNNING
+        Pipeline->>Files: Create output directories
+        Note right of Files: /pipeline_output/{task_id}/
+        
+        Pipeline->>Files: Verify FAERS data files exist
+        Note right of Files: Check external data directory
+        
+        Pipeline->>Pipeline: Step 1 - Mark Data
+        Note right of Pipeline: Process FAERS data with<br/>drug/reaction filters
+        Pipeline->>Files: Read FAERS data files
+        Pipeline->>Files: Apply drug/reaction filters
+        Pipeline->>Files: Save marked data
+        
+        Pipeline->>Pipeline: Step 2 - Generate Reports
+        Note right of Pipeline: Calculate ROR values and<br/>confidence intervals
+        Pipeline->>Files: Process marked data
+        Pipeline->>Pipeline: Calculate ROR statistics
+        Pipeline->>Files: Generate report files
+        
+        Pipeline->>Pipeline: Step 3 - Save Results
+        Pipeline->>PipelineDB: Update TaskResults with ROR data
+        Note right of PipelineDB: {ror_values, ror_lower,<br/>ror_upper, completed_at}
+        
+        Pipeline->>Pipeline: Step 4 - Send Callback
+        Pipeline->>Backend: PUT /api/v1/analysis/results/{result_id}/
+        Note right of Pipeline: Update Django Result with<br/>pipeline results
+        
+        Backend->>DB: Update Result record
+        Note right of DB: {status: COMPLETED,<br/>ror_values, ror_lower, ror_upper}
+        DB-->>Backend: Result updated
+        
+        Pipeline->>Pipeline: Step 5 - Cleanup
+        Pipeline->>Files: Remove temporary files
+    end
+
+    %% ==========================================
+    %% Real-time Status Polling
+    %% ==========================================
+    
+    rect rgb(245, 245, 255)
+        Note over User,DB: Real-time Status Polling
+        
+        loop Every 5 seconds until completed
+            Frontend->>Backend: GET /api/v1/analysis/results/{result_id}/
+            Backend->>DB: Query Result status
+            DB-->>Backend: Result data
+            Backend-->>Frontend: Result status
+            
+            alt Status is PENDING or RUNNING
+                Frontend->>Frontend: Update progress bar
+                Frontend-->>User: Show "Processing..." message
+            else Status is COMPLETED
+                Frontend->>Frontend: Stop polling
+                Frontend->>Frontend: Navigate to results page
+            else Status is FAILED
+                Frontend->>Frontend: Stop polling
+                Frontend-->>User: Show error message
+                Frontend->>Frontend: Navigate back to profile
+            end
+        end
+    end
