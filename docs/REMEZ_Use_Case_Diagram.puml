@@ -1,0 +1,98 @@
+graph LR
+    %% Styling
+    classDef actor fill:#E3F2FD,stroke:#1E88E5,stroke-width:2px
+    classDef usecase fill:#FFF,stroke:#333,stroke-width:2px,rx:20,ry:20
+    classDef external fill:#EEEEEE,stroke:#666,stroke-width:2px
+    classDef auth fill:#E8F5E9,stroke:#4CAF50,stroke-width:1px
+    classDef profile fill:#FFF3E0,stroke:#FF9800,stroke-width:1px
+    classDef workflow fill:#F3E5F5,stroke:#9C27B0,stroke-width:1px
+    classDef admin fill:#FFEBEE,stroke:#F44336,stroke-width:1px
+
+    %% Title
+    title[REMEZ Use Case Diagram - Drug Safety Analysis System]
+    
+    %% Actors
+    Visitor[👤 Visitor]:::actor
+    User[👤 Registered User]:::actor
+    
+    %% External Systems
+    Google[🔐 Google OAuth]:::external
+    Email[📧 Email Service]:::external
+    Pipeline[⚙️ Pipeline Service]:::external
+    
+    %% Authentication Use Cases
+    subgraph Authentication
+        UC_Register[Register]:::auth
+        UC_VerifyEmail[Verify Email]:::auth
+        UC_Login[Login Email/Password]:::auth
+        UC_GoogleLogin[Login with Google]:::auth
+        UC_ResetPwd[Reset Password]:::auth
+        UC_Logout[Logout]:::auth
+    end
+    
+    %% Profile & Onboarding Use Cases
+    subgraph Profile_Onboarding[Profile & Onboarding]
+        UC_ViewProfile[View Profile]:::profile
+        UC_UpdateProfile[Update Profile]:::profile
+        UC_Tutorial[View Tutorial]:::profile
+    end
+    
+    %% Analysis Workflow Use Cases
+    subgraph Analysis_Workflow[Analysis Workflow]
+        UC_SearchDrugs[Search Drug Names]:::workflow
+        UC_SearchReactions[Search Reaction Names]:::workflow
+        UC_CreateQuery[Create Query]:::workflow
+        UC_EditQuery[Edit Query]:::workflow
+        UC_DeleteQuery[Delete Query]:::workflow
+        UC_ViewQueries[View Saved Queries]:::workflow
+        UC_PollStatus[Poll Query Status]:::workflow
+        UC_ViewResult[View Query Result]:::workflow
+        UC_Export[Export Results CSV]:::workflow
+        UC_EmailNotify[Receive Email Notification]:::workflow
+    end
+    
+    %% Administration Use Cases
+    subgraph Administration
+        UC_ManageUsers[Manage Users]:::admin
+        UC_Health[View System Health]:::admin
+    end
+    
+    %% Visitor Associations
+    Visitor --> UC_Register
+    Visitor --> UC_Login
+    Visitor --> UC_GoogleLogin
+    Visitor --> UC_ResetPwd
+    Visitor --> UC_Tutorial
+    
+    %% User Associations
+    User --> UC_ViewProfile
+    User --> UC_UpdateProfile
+    User --> UC_Logout
+    User --> UC_SearchDrugs
+    User --> UC_SearchReactions
+    User --> UC_CreateQuery
+    User --> UC_EditQuery
+    User --> UC_DeleteQuery
+    User --> UC_ViewQueries
+    User --> UC_PollStatus
+    User --> UC_ViewResult
+    User --> UC_Export
+    
+    %% Admin Associations
+    Admin --> UC_ManageUsers
+    Admin --> UC_Health
+    
+    %% External Interactions
+    UC_GoogleLogin -.->|uses| Google
+    UC_VerifyEmail -.->|sends| Email
+    UC_ResetPwd -.->|sends| Email
+    UC_CreateQuery -.->|triggers| Pipeline
+    UC_EditQuery -.->|re-triggers| Pipeline
+    UC_PollStatus -.->|reads status| Pipeline
+    Email -.->|delivers| UC_EmailNotify
+    
+    %% Internal Relationships
+    UC_Register -.->|includes| UC_VerifyEmail
+    UC_CreateQuery -.->|includes| UC_PollStatus
+    UC_PollStatus -.->|leads to| UC_ViewResult
+    UC_ViewResult -.->|extends| UC_Export
