@@ -37,8 +37,17 @@ export default function QueryResultPage() {
                 }, Math.max(0, minLoadingTime - elapsed));
             } catch (err) {
                 console.error("Error fetching query:", err);
-                if (err.response?.status === 404) navigate("/404");
-                else if (err.response?.status === 500) navigate("/500");
+                if (err.response?.status === 401) {
+                    // Token expired or invalid - redirect to login
+                    localStorage.removeItem("token");
+                    navigate("/login", { state: { from: `/queries/${queryId}/` } });
+                } else if (err.response?.status === 404) {
+                    navigate("/404");
+                } else if (err.response?.status === 500) {
+                    navigate("/500");
+                } else {
+                    setLoading(false);
+                }
             }
         };
 
