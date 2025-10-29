@@ -9,12 +9,14 @@ const LoadingPage = () => {
     const location = useLocation();
 
     const queryData = location.state?.queryData;
+    console.log("LoadingPage received queryData:", queryData);
     const isUpdate = location.state?.isUpdate || false;
 
     const [progress, setProgress] = useState(10);
     const [statusText, setStatusText] = useState("Analysis submitted to server...");
     const [resultId, setResultId] = useState(queryData?.result?.id || null);
     const [videoLoaded, setVideoLoaded] = useState(false);
+    const [fullQuery, setFullQuery] = useState(queryData);
 
     const isPollingCancelled = useRef(false);
     const timeoutRef = useRef(null);
@@ -47,6 +49,25 @@ const LoadingPage = () => {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
         };
     }, [queryData, navigate]);
+
+    useEffect(() => {
+        const loadQueryDetails = async () => {
+            if (!queryData?.id) return;
+            try {
+                const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/queries/${queryData.id}/`);
+                if (response.ok) {
+                    const fullData = await response.json();
+                    setFullQuery(fullData);
+                }
+            } catch (err) {
+                console.error("Error fetching query details:", err);
+            }
+        };
+
+        if (!queryData?.displayDrugs && !queryData?.displayReactions) {
+            loadQueryDetails();
+        }
+    }, [queryData]);
 
     const safeSetTimeout = (fn, delay) => {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -293,12 +314,20 @@ const LoadingPage = () => {
                         </div>
                         <div className="summary-item">
                             <span className="label">Drugs</span>
-                            <span className="value">{queryData?.displayDrugs?.length || queryData?.drugs?.length || 0} selected</span>
+                            <span className="value">
+                                {fullQuery?.displayDrugs?.length || 
+                                fullQuery?.drugs_details?.length || 
+                                fullQuery?.drugs?.length ||
+                                0} selected
+                            </span>
                         </div>
                         <div className="summary-item">
                             <span className="label">Reactions</span>
                             <span className="value">
-                                {queryData?.displayReactions?.length || queryData?.reactions?.length || 0} selected
+                                {fullQuery?.displayReactions?.length || 
+                                fullQuery?.reactions_details?.length ||
+                                fullQuery?.reactions?.length || 
+                                0} selected
                             </span>
                         </div>
                     </div>
