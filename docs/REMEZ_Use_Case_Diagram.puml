@@ -1,98 +1,77 @@
-graph LR
-    %% Styling
-    classDef actor fill:#E3F2FD,stroke:#1E88E5,stroke-width:2px
-    classDef usecase fill:#FFF,stroke:#333,stroke-width:2px,rx:20,ry:20
-    classDef external fill:#EEEEEE,stroke:#666,stroke-width:2px
-    classDef auth fill:#E8F5E9,stroke:#4CAF50,stroke-width:1px
-    classDef profile fill:#FFF3E0,stroke:#FF9800,stroke-width:1px
-    classDef workflow fill:#F3E5F5,stroke:#9C27B0,stroke-width:1px
-    classDef admin fill:#FFEBEE,stroke:#F44336,stroke-width:1px
+@startuml REMEZ Use Case Diagram
 
-    %% Title
-    title[REMEZ Use Case Diagram - Drug Safety Analysis System]
-    
-    %% Actors
-    Visitor[👤 Visitor]:::actor
-    User[👤 Registered User]:::actor
-    
-    %% External Systems
-    Google[🔐 Google OAuth]:::external
-    Email[📧 Email Service]:::external
-    Pipeline[⚙️ Pipeline Service]:::external
-    
-    %% Authentication Use Cases
-    subgraph Authentication
-        UC_Register[Register]:::auth
-        UC_VerifyEmail[Verify Email]:::auth
-        UC_Login[Login Email/Password]:::auth
-        UC_GoogleLogin[Login with Google]:::auth
-        UC_ResetPwd[Reset Password]:::auth
-        UC_Logout[Logout]:::auth
-    end
-    
-    %% Profile & Onboarding Use Cases
-    subgraph Profile_Onboarding[Profile & Onboarding]
-        UC_ViewProfile[View Profile]:::profile
-        UC_UpdateProfile[Update Profile]:::profile
-        UC_Tutorial[View Tutorial]:::profile
-    end
-    
-    %% Analysis Workflow Use Cases
-    subgraph Analysis_Workflow[Analysis Workflow]
-        UC_SearchDrugs[Search Drug Names]:::workflow
-        UC_SearchReactions[Search Reaction Names]:::workflow
-        UC_CreateQuery[Create Query]:::workflow
-        UC_EditQuery[Edit Query]:::workflow
-        UC_DeleteQuery[Delete Query]:::workflow
-        UC_ViewQueries[View Saved Queries]:::workflow
-        UC_PollStatus[Poll Query Status]:::workflow
-        UC_ViewResult[View Query Result]:::workflow
-        UC_Export[Export Results CSV]:::workflow
-        UC_EmailNotify[Receive Email Notification]:::workflow
-    end
-    
-    %% Administration Use Cases
-    subgraph Administration
-        UC_ManageUsers[Manage Users]:::admin
-        UC_Health[View System Health]:::admin
-    end
-    
-    %% Visitor Associations
-    Visitor --> UC_Register
-    Visitor --> UC_Login
-    Visitor --> UC_GoogleLogin
-    Visitor --> UC_ResetPwd
-    Visitor --> UC_Tutorial
-    
-    %% User Associations
-    User --> UC_ViewProfile
-    User --> UC_UpdateProfile
-    User --> UC_Logout
-    User --> UC_SearchDrugs
-    User --> UC_SearchReactions
-    User --> UC_CreateQuery
-    User --> UC_EditQuery
-    User --> UC_DeleteQuery
-    User --> UC_ViewQueries
-    User --> UC_PollStatus
-    User --> UC_ViewResult
-    User --> UC_Export
-    
-    %% Admin Associations
-    Admin --> UC_ManageUsers
-    Admin --> UC_Health
-    
-    %% External Interactions
-    UC_GoogleLogin -.->|uses| Google
-    UC_VerifyEmail -.->|sends| Email
-    UC_ResetPwd -.->|sends| Email
-    UC_CreateQuery -.->|triggers| Pipeline
-    UC_EditQuery -.->|re-triggers| Pipeline
-    UC_PollStatus -.->|reads status| Pipeline
-    Email -.->|delivers| UC_EmailNotify
-    
-    %% Internal Relationships
-    UC_Register -.->|includes| UC_VerifyEmail
-    UC_CreateQuery -.->|includes| UC_PollStatus
-    UC_PollStatus -.->|leads to| UC_ViewResult
-    UC_ViewResult -.->|extends| UC_Export
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Visitor" as Visitor
+actor "Registered User" as User
+
+rectangle "REMEZ System" {
+  
+  ' Authentication Use Cases
+  usecase "Register" as UC_Register
+  usecase "Verify Email" as UC_VerifyEmail
+  usecase "Login Email/Password" as UC_LoginEmail
+  usecase "Login with Google" as UC_LoginGoogle
+  usecase "Reset Password" as UC_ResetPassword
+  usecase "Logout" as UC_Logout
+  
+  ' Search Use Cases
+  usecase "Search Drug Names" as UC_SearchDrugs
+  usecase "Search Reaction Names" as UC_SearchReactions
+  
+  ' Query Management Use Cases
+  usecase "Create Query" as UC_CreateQuery
+  usecase "Edit Query" as UC_EditQuery
+  usecase "Delete Query" as UC_DeleteQuery
+  usecase "View Saved Queries" as UC_ViewQueries
+  
+  ' Results Use Cases
+  usecase "Poll Query Status" as UC_PollStatus
+  usecase "View Query Result" as UC_ViewResult
+  usecase "Export Results CSV" as UC_ExportCSV
+  usecase "Email Notification" as UC_EmailNotify
+}
+
+' External Systems
+database "Google OAuth" as Google
+database "Email Service" as EmailService
+database "Pipeline Service" as Pipeline
+
+' Visitor Associations
+Visitor --> UC_Register
+Visitor --> UC_LoginEmail
+Visitor --> UC_LoginGoogle
+Visitor --> UC_ResetPassword
+
+' User Associations
+User --> UC_Logout
+User --> UC_SearchDrugs
+User --> UC_SearchReactions
+User --> UC_CreateQuery
+User --> UC_EditQuery
+User --> UC_DeleteQuery
+User --> UC_ViewQueries
+User --> UC_PollStatus
+User --> UC_ViewResult
+User --> UC_ExportCSV
+
+' Include Relationships
+UC_Register .> UC_VerifyEmail : <<include>>
+UC_CreateQuery .> UC_PollStatus : <<include>>
+UC_EditQuery .> UC_PollStatus : <<include>>
+
+' Extend Relationships
+UC_ViewResult .> UC_ExportCSV : <<extend>>
+UC_PollStatus .> UC_EmailNotify : <<extend>>
+
+' External System Connections
+UC_LoginGoogle --> Google
+UC_VerifyEmail --> EmailService
+UC_ResetPassword --> EmailService
+UC_EmailNotify --> EmailService
+UC_CreateQuery --> Pipeline
+UC_EditQuery --> Pipeline
+UC_PollStatus --> Pipeline
+
+@enduml
