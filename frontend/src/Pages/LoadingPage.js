@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { fetchWithRefresh } from '../utils/tokenService';
+import { API_BASE } from '../utils/apiBase';
 import { toast } from "react-toastify";
 import "./LoadingPage.css";
 
@@ -88,7 +89,7 @@ const LoadingPage = () => {
 
             try {
                 const response = await fetchWithRefresh(
-                    `http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`
+                    `${API_BASE}/analysis/queries/${queryId}/`
                 );
 
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -139,7 +140,7 @@ const LoadingPage = () => {
 
             try {
                 const response = await fetchWithRefresh(
-                    `http://127.0.0.1:8000/api/v1/analysis/results/${resId}/`
+                    `${API_BASE}/analysis/results/${resId}/`
                 );
 
                 if (response.status === 500) {
@@ -198,7 +199,7 @@ const LoadingPage = () => {
 
                     // get the full query data with results
                     const fullQueryResponse = await fetchWithRefresh(
-                        `http://127.0.0.1:8000/api/v1/analysis/queries/${queryData.id}/`
+                        `${API_BASE}/analysis/queries/${queryData.id}/`
                     );
                     const fullQueryData = await fullQueryResponse.json();
 

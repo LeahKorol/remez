@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import axios from '../axiosConfig';
+import { API_BASE } from '../utils/apiBase';
 
 // Google OAuth Configuration
 const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
@@ -100,8 +101,8 @@ class GoogleAuthService {
   async authenticateWithBackend(googleUser, isRegistration = false) {
     try {
       const endpoint = isRegistration
-        ? 'http://127.0.0.1:8000/api/v1/auth/google/register/'
-        : 'http://127.0.0.1:8000/api/v1/auth/google/login/';
+        ? `${API_BASE}/auth/google/register/`
+        : `${API_BASE}/auth/google/login/`;
 
       const response = await axios.post(endpoint, {
         google_id: googleUser.id,

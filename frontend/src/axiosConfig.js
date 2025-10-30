@@ -1,10 +1,11 @@
 import axios from "axios";
 import { createBrowserHistory } from "history";
+import { API_BASE } from "./utils/apiBase";
 
 const history = createBrowserHistory();
 
 const axiosInstance = axios.create({
-  baseURL: "http://127.0.0.1:8000/api/v1",
+  baseURL: API_BASE,
 });
 
 // interceptor for handling 500 errors globally

@@ -25,13 +25,14 @@ class TokenService {
     }
 
     async refreshAccessToken() {
+        const API_BASE = (process && process.env && process.env.REACT_APP_API_BASE) || "http://127.0.0.1:8000/api/v1";
         const refreshToken = this.getRefreshToken();
         if (!refreshToken) {
             throw new Error('No refresh token available');
         }
 
         try {
-            const response = await fetch('http://127.0.0.1:8000/api/v1/auth/token/refresh/', {
+            const response = await fetch(`${API_BASE}/auth/token/refresh/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
