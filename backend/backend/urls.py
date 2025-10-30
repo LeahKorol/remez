@@ -17,6 +17,7 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import include, path
+from backend import frontend_fallback
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularSwaggerView,
@@ -42,4 +43,6 @@ urlpatterns = [
     ),
     path("api/v1/auth/", include("users.urls")),
     path("api/v1/analysis/", include("analysis.urls")),
+    path("frontend-down/", frontend_fallback.frontend_down, name="frontend_down"),
+    path("", frontend_fallback.serve_main, name="main_index"),
 ]
