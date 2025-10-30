@@ -21,44 +21,47 @@ import QueryResultPage from './QueryResultPage';
 import AnalysisEmailNotification from './AnalysisEmailNotification';
 import PrivacyPolicy from './PrivacyPolicy';
 import AboutResearch from './AboutResearch';
+import ErrorBoundary from "../components/ErrorBoundary";
 
 
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/password-reset" element={<PasswordReset />} />
-        <Route path="/reset-password/:uidb64/:token" element={<PasswordResetConfirm />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/email-verify/:key" element={<EmailVerify />} />
-        <Route path="/email-verification-sent" element={<EmailVerificationSent />} />
-        <Route path="/profile" element={<UserProfile />} />
-        <Route path="/loading" element={<LoadingPage />} />
-        <Route path="/queries/:queryId" element={<QueryResultPage />} />
-        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-        <Route path="/about" element={<AboutResearch />} />
-        <Route path="*" element={<NotFoundPage />} />
-        <Route path="/404" element={<NotFoundPage />} />
-        <Route path="/500" element={<ServerErrorPage />} />
-        <Route path="/maintenance" element={<MaintenancePage />} />
-        <Route path="/session-expired" element={<SessionExpiredPage />} />
-        <Route path="/analysis-email-notification" element={<AnalysisEmailNotification />} />
-      </Routes>
+      <ErrorBoundary>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/password-reset" element={<PasswordReset />} />
+          <Route path="/reset-password/:uidb64/:token" element={<PasswordResetConfirm />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/email-verify/:key" element={<EmailVerify />} />
+          <Route path="/email-verification-sent" element={<EmailVerificationSent />} />
+          <Route path="/profile" element={<UserProfile />} />
+          <Route path="/loading" element={<LoadingPage />} />
+          <Route path="/queries/:queryId" element={<QueryResultPage />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/about" element={<AboutResearch />} />
+          <Route path="*" element={<NotFoundPage />} />
+          <Route path="/404" element={<NotFoundPage />} />
+          <Route path="/500" element={<ServerErrorPage />} />
+          <Route path="/maintenance" element={<MaintenancePage />} />
+          <Route path="/session-expired" element={<SessionExpiredPage />} />
+          <Route path="/analysis-email-notification" element={<AnalysisEmailNotification />} />
+        </Routes>
 
-      <ToastContainer
-        position="top-center"
-        autoClose={7000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss={false}
-        draggable
-        pauseOnHover
-        theme="light"
-      />
+        <ToastContainer
+          position="top-center"
+          autoClose={7000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss={false}
+          draggable
+          pauseOnHover
+          theme="light"
+        />
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }

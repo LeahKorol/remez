@@ -82,105 +82,17 @@ export default function RorChart({ query, year_start, quarter_start }) {
         ],
     };
 
-    // Chart configuration
-    // const options = {
-    //     responsive: true,
-    //     maintainAspectRatio: false,
-    //     layout: {
-    //         padding: {
-    //             left: 0,
-    //             right: 20,
-    //             top: 20,
-    //             bottom: 0
-    //         }
-    //     },
-    //     animation: {
-    //         duration: 500,
-    //         easing: 'easeOutCubic'
-    //     },
-    //     plugins: {
-    //         legend: {
-    //             position: 'top',
-    //             labels: { usePointStyle: true, padding: 12 },
-    //         },
-    //         tooltip: {
-    //             mode: 'index',
-    //             intersect: false,
-    //             callbacks: {
-    //                 label: ctx => {
-    //                     const raw = Math.pow(10, ctx.parsed.y);
-    //                     return `${ctx.dataset.label}: ${raw.toFixed(3)} (log₁₀: ${ctx.parsed.y.toFixed(3)})`;
-    //                 },
-    //             },
-    //         },
-    //         zoom: {
-    //             pan: {
-    //                 enabled: true,
-    //                 mode: 'x',
-    //                 modifierKey: 'shift', // have to click + drag with shift key
-    //             },
-    //             zoom: {
-    //                 wheel: {
-    //                     enabled: true, // enable zoom on wheel scroll
-    //                     speed: 0.05,
-    //                 },
-    //                 pinch: {
-    //                     enabled: true, // enable pinch in mobile devices
-    //                 },
-    //                 drag: {
-    //                     enabled: true, // enable to drag square zoom selection
-    //                     backgroundColor: 'rgba(123, 97, 255, 0.2)',
-    //                     borderColor: '#7b61ff',
-    //                     borderWidth: 1,
-    //                 },
-    //                 mode: 'x',
-    //                 scaleMode: 'x',
-    //                 overScaleMode: 'x',
-    //                 // enable to focus zoom around cursor
-    //                 wheelZoomSpeed: 0.05,
-    //                 onZoom: ({ chart }) => {
-    //                     chart.update('none');
-    //                 },
-    //             },
-    //             limits: {
-    //                 x: { minRange: 2 }, // unable infinity zoom-in
-    //             },
-    //         },
-    //     },
-    //     scales: {
-    //         x: {
-    //             title: { display: true, text: 'Time Period' },
-    //             ticks: { font: { size: 11 } },
-    //             offset: false,
-    //             grid: {
-    //                 offset: false,
-    //                 drawOnChartArea: true,
-    //             },
-    //             border: {
-    //                 display: true,
-    //             },
-    //         },
-    //         y: {
-    //             title: { display: true, text: 'ROR (log₁₀)' },
-    //             ticks: {
-    //                 callback: v => {
-    //                     const val = Math.pow(10, v);
-    //                     return val.toFixed(2);
-    //                 },
-    //             },
-    //             grid: {
-    //                 offset: false,
-    //                 drawOnChartArea: true,
-    //             },
-    //             border: {
-    //                 display: true,
-    //             },
-    //         },
-    //     },
-    // };
     const options = {
         responsive: true,
         maintainAspectRatio: false,
+        layout: {
+            padding: {
+                top: 30,
+                right: 30,
+                bottom: 10,
+                left: 10
+            }
+        },
         plugins: {
             legend: {
                 position: 'top',
@@ -192,24 +104,28 @@ export default function RorChart({ query, year_start, quarter_start }) {
             zoom: {
                 pan: {
                     enabled: true,
-                    mode: 'xy',  
+                    mode: 'xy',
                 },
                 zoom: {
                     wheel: {
-                        enabled: true,  
+                        enabled: true,
                     },
                     pinch: {
-                        enabled: true,  
+                        enabled: true,
                     },
-                    mode: 'xy',     
+                    mode: 'xy',
                 },
             },
         },
         scales: {
             x: {
+                beginAtZero: false,
+                grace: '50%',
                 title: { display: true, text: 'Time Period' },
             },
             y: {
+                beginAtZero: false,
+                grace: '5%',
                 title: { display: true, text: 'ROR (log₁₀)' },
                 ticks: {
                     callback: v => (Math.pow(10, v)).toFixed(2),
