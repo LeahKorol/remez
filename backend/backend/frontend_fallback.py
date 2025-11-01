@@ -3,7 +3,6 @@ from django.conf import settings
 from django.shortcuts import render
 from datetime import datetime
 from django.http import HttpResponse
-import requests
 
 FRONTEND_URL = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
 
