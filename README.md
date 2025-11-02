@@ -2,18 +2,15 @@
 
 **License:** MIT | **Python:** 3.9+ | **React:** 18+
 
-REMEZ is a comprehensive web platform for pharmaceutical safety analysis that enables researchers and healthcare professionals to identify and visualize adverse drug reaction signals using FDA Adverse Event Reporting System (FAERS) data.
+**REMEZ** (**R**isk **E**valuation & **M**onitoring of **E**merging **S**ignals) is a comprehensive web platform designed for pharmaceutical safety analysis. The platform empowers researchers and healthcare professionals to systematically identify, evaluate, and visualize adverse drug reaction signals using data from the FDA Adverse Event Reporting System (FAERS).
+
+By transforming complex post-marketing surveillance data into actionable insights, REMEZ bridges the gap between raw adverse event reports and evidence-based safety decisions in pharmaceutical research and clinical practice.
 
 ## Research Attribution
 
-This project builds upon a research by **Dr. Boris Gorelik**. The core statistical algorithm and FAERS data processing are adapted from his original work.
+This project builds upon the foundational research by **Dr. Boris Gorelik**. We adapt his core statistical algorithms and FAERS data processing methodology from his [original implementation](https://github.com/bgbg/faers_analysis). His [Nature publication (2020)](https://www.nature.com/articles/s41366-020-0544-4) *"The cardiovascular safety of antiobesity drugs-analysis of signals in the FDA Adverse Event Report System Database"* provides detailed background on the research methodology.
 
-### Academic Foundation
-- **Research Paper**: [*"The cardiovascular safety of antiobesity drugs-analysis of signals in the FDA Adverse Event Report System Database"*](https://www.nature.com/articles/s41366-020-0544-4) - Nature (2020)
-- **Original Implementation**: [faers-analysis repository](https://github.com/bgbg/faers_analysis) by Dr. Boris Gorelik
-
-### Data Sources
-**FAERS Database**: [FDA Adverse Event Reporting System](https://data.nber.org/fda/faers/) via NBER. It includes quarterly data files: demographic, drug, reaction, and outcome data from FDA post-marketing surveillance
+REMEZ processes data from the [FDA Adverse Event Reporting System (FAERS)](https://data.nber.org/fda/faers/) via NBER, utilizing quarterly data files containing demographic, drug, reaction, and outcome information from FDA post-marketing surveillance to identify potential safety signals.
 
 ## Project Goals
 
