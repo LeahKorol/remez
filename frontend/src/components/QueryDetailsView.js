@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { FaTimes, FaFileImage, FaFileCsv, FaArrowDown } from "react-icons/fa";
 import RorChart from "./RorChart";
 import { showToastMessage } from "../utils/toast";
@@ -8,6 +8,10 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery }) => {
   const chartRef = useRef(null);
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [currentQuery, setCurrentQuery] = useState(query);
+
+  useEffect(() => {
+    setCurrentQuery(query);
+  }, [query]);
 
   console.log("Rendering QueryDetailsView for:", currentQuery);
   console.log("status: ", currentQuery.result.status);
@@ -28,7 +32,12 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery }) => {
       setCurrentQuery(fullQuery);
 
       if (fullQuery.result?.status === "completed") {
-        showToastMessage("✅ Analysis completed! Results are now available.");
+        if (Array.isArray(fullQuery.result?.ror_values) && fullQuery.result.ror_values.length > 0) {
+          showToastMessage("✅ Analysis completed! Results are now available.");
+        }
+        else {
+          showToastMessage("⚠️ Analysis completed but no results found.", "warning");
+        }
       } else if (fullQuery.result?.status === "failed") {
         showToastMessage("⚠️ Query failed during processing. Please try again.", "error");
       } else {
@@ -297,6 +306,20 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery }) => {
                 quarter_start={currentQuery.quarter_start}
                 ref={chartRef}
               />
+            ) : currentQuery?.result?.status === "completed" && !hasResults ? (
+              <div className="placeholder-content empty-state">
+                <div className="placeholder-icon">📊</div>
+                <h4>Analysis Completed</h4>
+                <p>
+                  The analysis finished successfully, but no statistical results were generated.
+                  This may happen when no significant data was found for the selected parameters.
+                </p>
+                <div className="refresh-button">
+                  <button className="secondary-button" onClick={handleRefreshStatus}>
+                    Refresh Again
+                  </button>
+                </div>
+              </div>
             ) : currentQuery?.result?.status === "failed" ? (
               <div className="placeholder-content error-state">
                 <div className="placeholder-icon">❌</div>

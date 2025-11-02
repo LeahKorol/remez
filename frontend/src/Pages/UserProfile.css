@@ -657,6 +657,19 @@
   color: #f1c40f;
 }
 
+.empty-state .placeholder-icon {
+  font-size: 2rem;
+  color: #888;
+}
+.empty-state h4 {
+  color: #555;
+}
+.empty-state p {
+  color: #666;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
 /* Chart container */
 .chart-container {
   min-height: 400px;

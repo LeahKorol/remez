@@ -37,8 +37,17 @@ export default function QueryResultPage() {
                 }, Math.max(0, minLoadingTime - elapsed));
             } catch (err) {
                 console.error("Error fetching query:", err);
-                if (err.response?.status === 404) navigate("/404");
-                else if (err.response?.status === 500) navigate("/500");
+                if (err.response?.status === 401) {
+                    // Token expired or invalid - redirect to login
+                    localStorage.removeItem("token");
+                    navigate("/login", { state: { from: `/queries/${queryId}/` } });
+                } else if (err.response?.status === 404) {
+                    navigate("/404");
+                } else if (err.response?.status === 500) {
+                    navigate("/500");
+                } else {
+                    setLoading(false);
+                }
             }
         };
 
@@ -117,11 +126,39 @@ export default function QueryResultPage() {
                 </div>
 
                 <div className="chart-container-query-result">
-                    <RorChart
-                        query={queryData.result}
-                        year_start={queryData.year_start}
-                        quarter_start={queryData.quarter_start}
-                    />
+                    {queryData?.result?.status === "completed" &&
+                        Array.isArray(queryData?.result?.ror_values) &&
+                        queryData.result.ror_values.length > 0 ? (
+                        <RorChart
+                            query={queryData.result}
+                            year_start={queryData.year_start}
+                            quarter_start={queryData.quarter_start}
+                        />
+                    ) : queryData?.result?.status === "completed" ? (
+                        <div className="placeholder-content empty-state">
+                            <div className="placeholder-icon">📊</div>
+                            <h4>Analysis Completed</h4>
+                            <p>
+                                The analysis finished successfully, but no statistical results were found.
+                                Try adjusting the filters or selecting different parameters.
+                            </p>
+                        </div>
+                    ) : queryData?.result?.status === "failed" ? (
+                        <div className="placeholder-content error-state">
+                            <div className="placeholder-icon">❌</div>
+                            <h4>Analysis Failed</h4>
+                            <p>
+                                Unfortunately, this query failed to process. Please try again or modify
+                                your selection.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="placeholder-content">
+                            <div className="placeholder-icon">⏳</div>
+                            <h4>Analysis in Progress</h4>
+                            <p>Results will appear here once analysis is complete.</p>
+                        </div>
+                    )}
                 </div>
             </main>
 

@@ -1,0 +1,92 @@
+erDiagram
+    USER {
+        BIGINT id PK
+        VARCHAR email "UNIQUE"
+        VARCHAR name
+        VARCHAR password
+        VARCHAR google_id "UNIQUE, NULL"
+        BOOLEAN is_active
+        BOOLEAN is_staff
+        BOOLEAN is_superuser
+        DATETIME last_login
+    }
+
+    DRUGNAME {
+        BIGINT id PK
+        TEXT name "UNIQUE, MAX_LENGTH=255"
+    }
+
+    REACTIONNAME {
+        BIGINT id PK
+        TEXT name "UNIQUE, MAX_LENGTH=255"
+    }
+
+    QUERY {
+        BIGINT id PK
+        TEXT name "MAX_LENGTH=255"
+        BIGINT user_id FK
+        INTEGER quarter_start "1–4"
+        INTEGER quarter_end "1–4"
+        INTEGER year_start
+        INTEGER year_end
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    RESULT {
+        BIGINT id PK
+        BIGINT query_id "FK, UNIQUE"
+        TEXT status "pending|running|completed|failed"
+        JSON ror_values
+        JSON ror_lower
+        JSON ror_upper
+    }
+
+    TASKRESULTS {
+        INTEGER id PK
+        VARCHAR external_id INDEX
+        TEXT status INDEX
+        DATETIME created_at
+        DATETIME completed_at "NULL"
+        JSON ror_values
+        JSON ror_lower
+        JSON ror_upper
+    }
+
+    QUERY_DRUGS {
+        BIGINT id PK
+        BIGINT query_id FK
+        BIGINT drugname_id FK
+    }
+
+    QUERY_REACTIONS {
+        BIGINT id PK
+        BIGINT query_id FK
+        BIGINT reactionname_id FK
+    }
+
+    %% =========================
+    %% Relationships
+    %% =========================
+    USER ||--o{ QUERY : creates
+    QUERY ||--|| RESULT : has_one
+    QUERY ||--o{ QUERY_DRUGS : contains
+    QUERY ||--o{ QUERY_REACTIONS : contains
+    DRUGNAME ||--o{ QUERY_DRUGS : referenced_by
+    REACTIONNAME ||--o{ QUERY_REACTIONS : referenced_by
+    RESULT ||--|| TASKRESULTS : external_id
+
+    %% =========================
+    %% Notes
+    %% =========================
+    %% QUERY Constraints:
+    %% - year_start ≤ year_end
+    %% - quarter_start, quarter_end ∈ [1,4]
+    %% - Many-to-many with drugs/reactions
+
+    %% RESULT Status:
+    %% - pending, running, completed, failed
+
+    %% TASKRESULTS:
+    %% - Async task processing
+    %% - external_id links to Django Result

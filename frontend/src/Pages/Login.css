@@ -438,8 +438,7 @@
 
 /* Icons */
 .error-icon,
-.success-icon,
-.loading-icon {
+.success-icon {
   font-size: 60px;
   margin-bottom: 20px;
   width: 80px;
@@ -459,12 +458,6 @@
 .error-icon {
   background-color: #fef2f2;
   color: #dc2626;
-}
-
-.loading-icon {
-  background-color: #f5f0ff;
-  color: #7b42e0;
-  animation: pulse 2s infinite;
 }
 
 @keyframes pulse {
@@ -660,7 +653,6 @@
   }
   
   .success-icon,
-  .loading-icon,
   .error-icon {
     font-size: 50px;
     width: 70px;

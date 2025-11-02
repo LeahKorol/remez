@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { fetchWithRefresh } from '../utils/tokenService';
+import { API_BASE } from '../utils/apiBase';
 import { toast } from "react-toastify";
 import "./LoadingPage.css";
 
@@ -9,11 +10,14 @@ const LoadingPage = () => {
     const location = useLocation();
 
     const queryData = location.state?.queryData;
+    console.log("LoadingPage received queryData:", queryData);
     const isUpdate = location.state?.isUpdate || false;
 
     const [progress, setProgress] = useState(10);
     const [statusText, setStatusText] = useState("Analysis submitted to server...");
     const [resultId, setResultId] = useState(queryData?.result?.id || null);
+    const [videoLoaded, setVideoLoaded] = useState(false);
+    const [fullQuery, setFullQuery] = useState(queryData);
 
     const isPollingCancelled = useRef(false);
     const timeoutRef = useRef(null);
@@ -47,6 +51,25 @@ const LoadingPage = () => {
         };
     }, [queryData, navigate]);
 
+    useEffect(() => {
+        const loadQueryDetails = async () => {
+            if (!queryData?.id) return;
+            try {
+                const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/queries/${queryData.id}/`);
+                if (response.ok) {
+                    const fullData = await response.json();
+                    setFullQuery(fullData);
+                }
+            } catch (err) {
+                console.error("Error fetching query details:", err);
+            }
+        };
+
+        if (!queryData?.displayDrugs && !queryData?.displayReactions) {
+            loadQueryDetails();
+        }
+    }, [queryData]);
+
     const safeSetTimeout = (fn, delay) => {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         timeoutRef.current = setTimeout(fn, delay);
@@ -66,7 +89,7 @@ const LoadingPage = () => {
 
             try {
                 const response = await fetchWithRefresh(
-                    `http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`
+                    `${API_BASE}/analysis/queries/${queryId}/`
                 );
 
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -117,7 +140,7 @@ const LoadingPage = () => {
 
             try {
                 const response = await fetchWithRefresh(
-                    `http://127.0.0.1:8000/api/v1/analysis/results/${resId}/`
+                    `${API_BASE}/analysis/results/${resId}/`
                 );
 
                 if (response.status === 500) {
@@ -176,7 +199,7 @@ const LoadingPage = () => {
 
                     // get the full query data with results
                     const fullQueryResponse = await fetchWithRefresh(
-                        `http://127.0.0.1:8000/api/v1/analysis/queries/${queryData.id}/`
+                        `${API_BASE}/analysis/queries/${queryData.id}/`
                     );
                     const fullQueryData = await fullQueryResponse.json();
 
@@ -225,8 +248,26 @@ const LoadingPage = () => {
             <div className="loading-container">
                 <div className="loading-header">
                     <div className="loading-icon">
-                        <div className="spinner"></div>
-                        <div className="spinner-ring"></div>
+                        <div className="video-wrapper">
+                            <video
+                                src="REMEZ_animation.mp4"
+                                autoPlay
+                                loop
+                                muted
+                                onCanPlay={() => setVideoLoaded(true)} // video is readiy
+                                onError={() => setVideoLoaded(false)}  // if not loaded
+                                className={videoLoaded ? "visible" : "hidden"}
+                            />
+                        </div>
+                        {/* if animation not loaded --> view spinner-ring */}
+                        {!videoLoaded && (
+                            <>
+                                <div className="spinner-wrapper" style={{ display: videoLoaded ? "none" : "flex" }}>
+                                    <div className="spinner"></div>
+                                    <div className="spinner-ring"></div>
+                                </div>
+                            </>
+                        )}
                     </div>
                     <h1 className="loading-title">
                         Processing Your Analysis
@@ -274,12 +315,20 @@ const LoadingPage = () => {
                         </div>
                         <div className="summary-item">
                             <span className="label">Drugs</span>
-                            <span className="value">{queryData?.displayDrugs?.length || queryData?.drugs?.length || 0} selected</span>
+                            <span className="value">
+                                {fullQuery?.displayDrugs?.length || 
+                                fullQuery?.drugs_details?.length || 
+                                fullQuery?.drugs?.length ||
+                                0} selected
+                            </span>
                         </div>
                         <div className="summary-item">
                             <span className="label">Reactions</span>
                             <span className="value">
-                                {queryData?.displayReactions?.length || queryData?.reactions?.length || 0} selected
+                                {fullQuery?.displayReactions?.length || 
+                                fullQuery?.reactions_details?.length ||
+                                fullQuery?.reactions?.length || 
+                                0} selected
                             </span>
                         </div>
                     </div>

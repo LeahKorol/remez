@@ -1,0 +1,77 @@
+@startuml REMEZ Use Case Diagram
+
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Visitor" as Visitor
+actor "Registered User" as User
+
+rectangle "REMEZ System" {
+  
+  ' Authentication Use Cases
+  usecase "Register" as UC_Register
+  usecase "Verify Email" as UC_VerifyEmail
+  usecase "Login Email/Password" as UC_LoginEmail
+  usecase "Login with Google" as UC_LoginGoogle
+  usecase "Reset Password" as UC_ResetPassword
+  usecase "Logout" as UC_Logout
+  
+  ' Search Use Cases
+  usecase "Search Drug Names" as UC_SearchDrugs
+  usecase "Search Reaction Names" as UC_SearchReactions
+  
+  ' Query Management Use Cases
+  usecase "Create Query" as UC_CreateQuery
+  usecase "Edit Query" as UC_EditQuery
+  usecase "Delete Query" as UC_DeleteQuery
+  usecase "View Saved Queries" as UC_ViewQueries
+  
+  ' Results Use Cases
+  usecase "Poll Query Status" as UC_PollStatus
+  usecase "View Query Result" as UC_ViewResult
+  usecase "Export Results CSV" as UC_ExportCSV
+  usecase "Email Notification" as UC_EmailNotify
+}
+
+' External Systems
+database "Google OAuth" as Google
+database "Email Service" as EmailService
+database "Pipeline Service" as Pipeline
+
+' Visitor Associations
+Visitor --> UC_Register
+Visitor --> UC_LoginEmail
+Visitor --> UC_LoginGoogle
+Visitor --> UC_ResetPassword
+
+' User Associations
+User --> UC_Logout
+User --> UC_SearchDrugs
+User --> UC_SearchReactions
+User --> UC_CreateQuery
+User --> UC_EditQuery
+User --> UC_DeleteQuery
+User --> UC_ViewQueries
+User --> UC_PollStatus
+User --> UC_ViewResult
+User --> UC_ExportCSV
+
+' Include Relationships
+UC_Register .> UC_VerifyEmail : <<include>>
+UC_CreateQuery .> UC_PollStatus : <<include>>
+UC_EditQuery .> UC_PollStatus : <<include>>
+
+' Extend Relationships
+UC_ViewResult .> UC_ExportCSV : <<extend>>
+UC_PollStatus .> UC_EmailNotify : <<extend>>
+
+' External System Connections
+UC_LoginGoogle --> Google
+UC_VerifyEmail --> EmailService
+UC_ResetPassword --> EmailService
+UC_EmailNotify --> EmailService
+UC_CreateQuery --> Pipeline
+UC_EditQuery --> Pipeline
+UC_PollStatus --> Pipeline
+
+@enduml

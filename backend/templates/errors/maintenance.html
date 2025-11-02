@@ -1,3 +1,5 @@
+{% load static %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -29,6 +31,7 @@
       font-size: 24px;
       background: linear-gradient(90deg, #7b42e0 0%, #5e68f1 100%);
       -webkit-background-clip: text;
+      background-clip: text;
       -webkit-text-fill-color: transparent;
     }
     .content {
@@ -39,8 +42,14 @@
       align-items: center;
       padding: 40px 20px;
     }
+    .content img {
+      width: 350px;
+      max-width: 90%;
+      margin-bottom: 30px;
+      display: block;
+    }
     h1 {
-      font-size: 42px;
+      font-size: 48px;
       margin: 0 0 20px;
       background: linear-gradient(90deg, #7b42e0 0%, #5e68f1 100%);
       -webkit-background-clip: text;
@@ -49,8 +58,7 @@
     p {
       font-size: 18px;
       color: #666;
-      max-width: 500px;
-      margin: 0 auto 30px;
+      margin-bottom: 30px;
     }
     .home-btn {
       background-color: #111827;
@@ -75,19 +83,24 @@
   </style>
 </head>
 <body>
+  <!-- Navbar -->
   <header class="navbar">
     <div class="logo">REMEZ</div>
   </header>
 
+  <!-- Main Content -->
   <main class="content">
-    <h1>We’ll Be Back Soon!</h1>
-    <p>We’re currently performing scheduled maintenance.<br>
-       Thank you for your patience and understanding.</p>
+    <!-- Image -->
+    <img src="https://via.placeholder.com/350x300/7b42e0/ffffff?text=Maintenance" alt="Maintenance illustration">
+
+    <h1>We'll be back soon!</h1>
+    <p>Our platform is currently undergoing scheduled maintenance. Thank you for your patience!</p>
     <a href="/" class="home-btn">Back to Home</a>
   </main>
 
+  <!-- Footer -->
   <footer class="footer">
-    <p>&copy; {{ year|default:2025 }} REMEZ. All rights reserved.</p>
+    &copy; {{ year|default:2025 }} REMEZ. All rights reserved.
   </footer>
 </body>
 </html>

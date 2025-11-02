@@ -15,12 +15,16 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularSwaggerView,
 )
+
+from backend import frontend_fallback
 
 spectacular_settings = {
     "TITLE": "My API",
@@ -42,4 +46,12 @@ urlpatterns = [
     ),
     path("api/v1/auth/", include("users.urls")),
     path("api/v1/analysis/", include("analysis.urls")),
+    path("frontend-down/", frontend_fallback.frontend_down, name="frontend_down"),
+    path("", frontend_fallback.serve_main, name="main_index"),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(
+        settings.STATIC_URL, 
+        document_root= settings.STATIC_ROOT
+    )
