@@ -1,8 +1,6 @@
 # REMEZ - Pharmaceutical Safety Analysis Platform
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.9+-blue.svg)](https://python.org)
-[![React](https://img.shields.io/badge/react-18+-61dafb.svg)](https://reactjs.org)
+**License:** MIT | **Python:** 3.9+ | **React:** 18+
 
 REMEZ is a comprehensive web platform for pharmaceutical safety analysis that enables researchers and healthcare professionals to identify and visualize adverse drug reaction signals using FDA Adverse Event Reporting System (FAERS) data.
 
