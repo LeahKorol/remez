@@ -149,7 +149,7 @@ We welcome contributions to the REMEZ project! To contribute:
 2. **Make your changes** with clear commit messages and tests
 3. **Submit a pull request** with a detailed description
 
-Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines and [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) for community standards.
+Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines including testing requirements and [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) for community standards.
 
 ## License
 
