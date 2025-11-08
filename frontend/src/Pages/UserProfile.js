@@ -414,9 +414,13 @@ const UserProfile = () => {
         setTimeout(() => setShowToast(false), 3000);
     };
 
-    const handleSubmitQuery = async (e, FormData) => {
-        e.preventDefault();
+    const handleSubmitQuery = async (FormData) => {
         const { queryName, yearStart, yearEnd, quarterStart, quarterEnd, drugs, reactions } = FormData;
+
+        if (!queryName) {
+            console.error("FormData missing, did you call handleSubmitQuery without data?");
+            return;
+        }
 
         if (isEditing) {
             const original = savedQueries.find(q => q.id === editingQueryId);
