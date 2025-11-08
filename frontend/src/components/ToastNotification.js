@@ -1,11 +1,12 @@
 import React, { useEffect, useRef } from "react";
-import "../Pages/UserProfile.css";
+import { FaCheckCircle, FaExclamationTriangle, FaInfoCircle, FaTimesCircle } from 'react-icons/fa';
+import "./ToastNotification.css";
 
 const ToastNotification = ({ id, message, type = "info", duration = 8000, onClose, index = 0 }) => {
   const timeoutRef = useRef(null);
 
   useEffect(() => {
-    if (!message) return () => {};
+    if (!message) return () => { };
 
     timeoutRef.current = setTimeout(() => {
       onClose && onClose(id);
@@ -15,9 +16,6 @@ const ToastNotification = ({ id, message, type = "info", duration = 8000, onClos
       clearTimeout(timeoutRef.current);
     };
   }, [id, message, duration, onClose]);
-
-  const offset = index * -10; // the oldest toast is at the bottom
-  const zIndex = 1000 + (50 - index);
 
   const handleMouseEnter = () => {
     clearTimeout(timeoutRef.current);
@@ -30,6 +28,19 @@ const ToastNotification = ({ id, message, type = "info", duration = 8000, onClos
     }, duration);
   };
 
+  const getIcon = () => {
+    switch (type) {
+      case "success":
+        return <FaCheckCircle className="toast-icon success" />;
+      case "error":
+        return <FaTimesCircle className="toast-icon error" />;
+      case "warning":
+        return <FaExclamationTriangle className="toast-icon warning" />;
+      default:
+        return <FaInfoCircle className="toast-icon info" />;
+    }
+  };
+
   return (
     <div
       className={`toast-notification ${type}`}
@@ -39,11 +50,12 @@ const ToastNotification = ({ id, message, type = "info", duration = 8000, onClos
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       style={{
-        zIndex: 2000 + index,
+        animationDelay: `${index * 0.05}s`,
         ["--duration"]: `${duration / 1000}s`,
       }}
     >
-      {message}
+      {getIcon()}
+      <span className="toast-message">{message}</span>
     </div>
   );
 };
