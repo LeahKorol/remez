@@ -22,6 +22,7 @@ function AboutResearch() {
 
                 <p className="description" style={{ maxWidth: '700px', marginTop: '20px' }}>
                     You can access Dr. Boris Gorelik's main research paper here:
+                    <br></br>
                     <a href="https://gorelik.net/2020/03/11/the-cardiovascular-safety-of-antiobesity-drugs-analysis-of-signals-in-the-fda-adverse-event-report-system-database"
                         target="_blank" rel="noopener noreferrer"
                         style={{ color: '#5e68f1', textDecoration: 'underline', marginLeft: '5px' }}>

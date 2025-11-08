@@ -44,7 +44,7 @@ function App() {
             <Route path="/loading" element={<LoadingPage />} />
             <Route path="/queries/:queryId" element={<QueryResultPage />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            <Route path="/about" element={<AboutResearch />} />
+            <Route path="/about-research" element={<AboutResearch />} />
             <Route path="*" element={<NotFoundPage />} />
             <Route path="/404" element={<NotFoundPage />} />
             <Route path="/500" element={<ServerErrorPage />} />
