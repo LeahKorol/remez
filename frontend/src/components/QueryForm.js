@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { FaPlus, FaTimes } from 'react-icons/fa';
 import CustomSelect from './CustomSelect';
 import ToastNotification from './ToastNotification';
@@ -28,16 +28,19 @@ export default function QueryForm({
     const [quarterEnd, setQuarterEnd] = useState('');
     const [drugs, setDrugs] = useState([{ name: '', id: null }]);
     const [reactions, setReactions] = useState([{ name: '', id: null }]);
+    const [localErrors, setLocalErrors] = useState([]);
+    const [drugSearchResults, setDrugSearchResults] = useState([]);
+    const [reactionSearchResults, setReactionSearchResults] = useState([]);
+    const [activeDrugSearchIndex, setActiveDrugSearchIndex] = useState(null);
+    const [activeReactionSearchIndex, setActiveReactionSearchIndex] = useState(null);
 
+    const drugSearchTimeout = useRef(null);
+    const reactionSearchTimeout = useRef(null);
+
+    // ===== Effects =====  
     useEffect(() => {
         if (resetTrigger > 0) {
-            setQueryName('New Query');
-            setYearStart('');
-            setYearEnd('');
-            setQuarterStart('');
-            setQuarterEnd('');
-            setDrugs([{ name: '', id: null }]);
-            setReactions([{ name: '', id: null }]);
+            resetForm();
         }
     }, [resetTrigger]);
 
@@ -51,14 +54,23 @@ export default function QueryForm({
             setDrugs(initialDrugs && initialDrugs.length > 0 ? initialDrugs : [{ name: '', id: null }]);
             setReactions(initialReactions && initialReactions.length > 0 ? initialReactions : [{ name: '', id: null }]);
         }
-    }, [isEditing, initialQueryName, initialYearStart, initialYearEnd, initialQuarterStart, initialQuarterEnd, initialDrugs, initialReactions]);
+    }, [isEditing,
+        initialQueryName,
+        initialYearStart,
+        initialYearEnd,
+        initialQuarterStart,
+        initialQuarterEnd,
+        initialDrugs,
+        initialReactions]
+    );
 
-    // Search state
-    const [drugSearchResults, setDrugSearchResults] = useState([]);
-    const [reactionSearchResults, setReactionSearchResults] = useState([]);
-    const [activeDrugSearchIndex, setActiveDrugSearchIndex] = useState(null);
-    const [activeReactionSearchIndex, setActiveReactionSearchIndex] = useState(null);
-    const [localErrors, setLocalErrors] = useState([]);
+    // Cleanup search timers
+    useEffect(() => {
+        return () => {
+            clearTimeout(drugSearchTimeout.current);
+            clearTimeout(reactionSearchTimeout.current);
+        };
+    }, []);
 
     useEffect(() => {
         if (localErrors.length > 0) {
@@ -66,19 +78,39 @@ export default function QueryForm({
         }
     }, [localErrors]);
 
-    const drugSearchTimeout = useRef(null);
-    const reactionSearchTimeout = useRef(null);
-
     // ======= Handlers =======
+    const resetForm = useCallback(() => {
+        setQueryName("New Query");
+        setYearStart("");
+        setYearEnd("");
+        setQuarterStart("");
+        setQuarterEnd("");
+        setDrugs([{ name: "", id: null }]);
+        setReactions([{ name: "", id: null }]);
+        setLocalErrors([]);
+    }, []);
+
     const handleInputChange = (e) => {
         const { name, value } = e.target;
+        const val = name.includes("Year") ? Number(value) : value;
         switch (name) {
-            case 'queryName': setQueryName(value); break;
-            case 'startYear': setYearStart(value); break;
-            case 'endYear': setYearEnd(value); break;
-            case 'startQuarter': setQuarterStart(value); break;
-            case 'endQuarter': setQuarterEnd(value); break;
-            default: break;
+            case 'queryName':
+                setQueryName(value);
+                break;
+            case 'startYear':
+                setYearStart(value);
+                break;
+            case 'endYear':
+                setYearEnd(value);
+                break;
+            case 'startQuarter':
+                setQuarterStart(value);
+                break;
+            case 'endQuarter':
+                setQuarterEnd(value);
+                break;
+            default:
+                break;
         }
     };
 
@@ -90,13 +122,12 @@ export default function QueryForm({
             return;
         }
         try {
-            const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/drug-names/search/${prefix}/`);
+            const url = `http://127.0.0.1:8000/api/v1/analysis/drug-names/search/${encodeURIComponent(prefix)}/`;
+            const response = await fetchWithRefresh(url);
             if (response.ok) {
                 const data = await response.json();
                 setDrugSearchResults(data);
                 setActiveDrugSearchIndex(index);
-            } else {
-                setDrugSearchResults([]);
             }
         } catch (error) {
             console.error('Drug search error:', error);
@@ -108,25 +139,31 @@ export default function QueryForm({
         const newDrugs = [...drugs];
         newDrugs[index] = { name: value, id: null };
         setDrugs(newDrugs);
-
-        if (drugSearchTimeout.current) clearTimeout(drugSearchTimeout.current);
-        drugSearchTimeout.current = setTimeout(() => searchDrugs(value, index), 300);
+        clearTimeout(drugSearchTimeout.current);
+        drugSearchTimeout.current = setTimeout(() => searchDrugs(value, index), 350);
     };
 
     const selectDrug = (drug) => {
         if (activeDrugSearchIndex === null) return;
         const newDrugs = [...drugs];
-        newDrugs[activeDrugSearchIndex] = { name: drug.name, id: drug.id };
-        setDrugs(newDrugs);
+        const duplicate = drugs.some(
+            (d, i) => i !== activeDrugSearchIndex && d.name.toLowerCase() === drug.name.toLowerCase()
+        );
+        if (duplicate) {
+            showToastMessage?.("Drug already added");
+            return;
+        }
+        const updated = [...drugs];
+        updated[activeDrugSearchIndex] = { name: drug.name, id: drug.id };
+        setDrugs(updated);
         setActiveDrugSearchIndex(null);
         setDrugSearchResults([]);
     };
 
     const addDrug = () => {
         // check if there are any empty drug fields
-        const hasEmptyDrug = drugs.some(drug => !drug.name.trim());
-        if (hasEmptyDrug) {
-            showToastMessage && showToastMessage('Please fill the existing drug field before adding a new one');
+        if (drugs.some((d) => !d.name.trim())) {
+            showToastMessage?.("Please fill the existing drug field first");
             return;
         }
         setDrugs([...drugs, { name: '', id: null }]);
@@ -135,16 +172,11 @@ export default function QueryForm({
     const removeDrug = (index) => {
         // if there is only one box - clear only content
         if (drugs.length === 1) {
-            const newDrugs = [...drugs];
-            newDrugs[0] = { name: '', id: null };
-            setDrugs(newDrugs);
-            setActiveDrugSearchIndex(null);
-            setDrugSearchResults([]);
+            setDrugs([{ name: "", id: null }]);
         } else {
-            // if there are multiple boxes - remove the selected one (content and box)
-            const updatedDrugs = drugs.filter((_, i) => i !== index);
-            setDrugs(updatedDrugs);
+            setDrugs(drugs.filter((_, i) => i !== index));
         }
+        setDrugSearchResults([]);
     };
 
     // ===== Reactions =====
@@ -155,13 +187,12 @@ export default function QueryForm({
             return;
         }
         try {
-            const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/reaction-names/search/${prefix}/`);
+            const url = `http://127.0.0.1:8000/api/v1/analysis/reaction-names/search/${encodeURIComponent(prefix)}/`;
+            const response = await fetchWithRefresh(url);
             if (response.ok) {
                 const data = await response.json();
                 setReactionSearchResults(data);
                 setActiveReactionSearchIndex(index);
-            } else {
-                setReactionSearchResults([]);
             }
         } catch (error) {
             console.error('Reaction search error:', error);
@@ -173,25 +204,31 @@ export default function QueryForm({
         const newReactions = [...reactions];
         newReactions[index] = { name: value, id: null };
         setReactions(newReactions);
-
-        if (reactionSearchTimeout.current) clearTimeout(reactionSearchTimeout.current);
-        reactionSearchTimeout.current = setTimeout(() => searchReactions(value, index), 300);
+        clearTimeout(reactionSearchTimeout.current);
+        reactionSearchTimeout.current = setTimeout(() => searchReactions(value, index), 350);
     };
 
     const selectReaction = (reaction) => {
         if (activeReactionSearchIndex === null) return;
         const newReactions = [...reactions];
-        newReactions[activeReactionSearchIndex] = { name: reaction.name, id: reaction.id };
-        setReactions(newReactions);
+        const duplicate = reactions.some(
+            (r, i) => i !== activeReactionSearchIndex && r.name.toLowerCase() === reaction.name.toLowerCase()
+        );
+        if (duplicate) {
+            showToastMessage?.("Reaction already added");
+            return;
+        }
+        const updated = [...reactions];
+        updated[activeReactionSearchIndex] = { name: reaction.name, id: reaction.id };
+        setReactions(updated);
         setActiveReactionSearchIndex(null);
         setReactionSearchResults([]);
     };
 
     const addReaction = () => {
         // check if there are any empty drug fields
-        const hasEmptyReaction = reactions.some(reaction => !reaction.name.trim());
-        if (hasEmptyReaction) {
-            showToastMessage && showToastMessage('Please fill the existing reaction field before adding a new one');
+        if (reactions.some((r) => !r.name.trim())) {
+            showToastMessage?.("Please fill the existing reaction field first");
             return;
         }
         setReactions([...reactions, { name: '', id: null }]);
@@ -200,25 +237,39 @@ export default function QueryForm({
     const removeReaction = (index) => {
         // if there is only one box - clear only content
         if (reactions.length === 1) {
-            const newReactions = [...reactions];
-            newReactions[0] = { name: '', id: null };
-            setReactions(newReactions);
-            setActiveReactionSearchIndex(null);
-            setReactionSearchResults([]);
+            setReactions([{ name: "", id: null }]);
         } else {
-            // if there are multiple boxes - remove the selected one (content and box)
-            const updatedReactions = reactions.filter((_, i) => i !== index);
-            setReactions(updatedReactions);
+            setReactions(reactions.filter((_, i) => i !== index));
         }
+        setReactionSearchResults([]);
     };
 
-    // ===== Submit =====
-    const handleSubmit = (e) => {
-        if (e && typeof e.preventDefault === 'function') {
-            e.preventDefault();
+    // === Errors from API ===
+    function extractApiErrors(error) {
+        const res = error?.response;
+        const d = res?.data;
+        if (d && typeof d === "object") {
+            const messages = Object.entries(d).flatMap(([key, val]) =>
+                Array.isArray(val)
+                    ? val.map((v) => `${key}: ${v}`)
+                    : typeof val === "string"
+                        ? [`${key}: ${val}`]
+                        : []
+            );
+            if (messages.length) return messages;
         }
+        return [res?.statusText || error?.message || "Request failed"];
+    }
 
+    // ===== Submit =====
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        const CURRENT_YEAR = new Date().getFullYear();
+        const yStart = Number(yearStart);
+        const yEnd = Number(yearEnd);
         const errors = [];
+
+        // client-side validation
         if (!queryName.trim()) errors.push('Query Name is required');
         if (!yearStart) errors.push('Start Year is required');
         if (!yearEnd) errors.push('End Year is required');
@@ -226,12 +277,18 @@ export default function QueryForm({
         if (!quarterEnd) errors.push('End Quarter is required');
         if (drugs.every(d => !d.name)) errors.push('At least one drug is required');
         if (reactions.every(r => !r.name)) errors.push('At least one reaction is required');
+        if (yStart && yEnd && yStart > yEnd) errors.push('Start Year must be <= End Year');
+        if (yStart > CURRENT_YEAR) errors.push(`Start Year must be <= ${CURRENT_YEAR}`);
+        if (yEnd > CURRENT_YEAR) errors.push(`End Year must be <= ${CURRENT_YEAR}`);
+        if (yStart === yEnd && Number(quarterStart) > Number(quarterEnd)) {
+            errors.push('When years are equal, Start Quarter must be <= End Quarter');
+        }
 
-        if (errors.length > 0) {
+        if (errors.length) {
             // id uniqueness ensures proper handling in ToastNotification
-            const newErrObjs = errors.map(msg => ({
+            const newErrObjs = errors.map((msg) => ({
                 id: `err-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-                message: msg
+                message: msg,
             }));
             // adding to existing errors (if any) to show all at once
             setLocalErrors(prev => [...prev, ...newErrObjs]);
@@ -240,7 +297,26 @@ export default function QueryForm({
         }
 
         setLocalErrors([]);
-        onSubmit(e, { queryName, yearStart, yearEnd, quarterStart, quarterEnd, drugs, reactions });
+
+        try {
+            await onSubmit({
+                queryName,
+                yearStart: yStart,
+                yearEnd: yEnd,
+                quarterStart,
+                quarterEnd,
+                drugs,
+                reactions,
+            });
+
+        } catch (err) {
+            const msgs = extractApiErrors(err);
+            const newErrObjs = msgs.map((msg) => ({
+                id: `err-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+                message: msg,
+            }));
+            setLocalErrors((prev) => [...prev, ...newErrObjs]);
+        }
     };
 
     // ===== Render =====
@@ -255,7 +331,7 @@ export default function QueryForm({
                                 id={errObj.id}
                                 message={errObj.message}
                                 type="error"
-                                index={idx}          
+                                index={idx}
                                 duration={8000}
                                 onClose={(id) => setLocalErrors(prev => prev.filter(e => e.id !== id))}
                             />
@@ -265,35 +341,45 @@ export default function QueryForm({
 
                 <div className="form-section">
                     <div className="form-field">
-                        <label>Query Name</label>
+                        <label htmlFor="queryName">Query Name</label>
                         <input
+                            id="queryName"
                             type="text"
                             name="queryName"
                             value={queryName}
                             onChange={handleInputChange}
                             className="input-field"
+                            required
                         />
 
                         <div className="row">
                             <div className="form-field" style={{ flex: 1 }}>
-                                <label>Start Year</label>
+                                <label htmlFor="startYear">Start Year</label>
                                 <input
+                                    id="startYear"
                                     type="number"
                                     name="startYear"
+                                    min="2000"
+                                    max={new Date().getFullYear()}
                                     value={yearStart}
                                     onChange={handleInputChange}
                                     className="input-field"
+                                    required
                                 />
                             </div>
 
                             <div className="form-field" style={{ flex: 1 }}>
-                                <label>End Year</label>
+                                <label htmlFor="endYear">End Year</label>
                                 <input
+                                    id='endYear'
                                     type="number"
                                     name="endYear"
+                                    min="2000"
+                                    max={new Date().getFullYear()}
                                     value={yearEnd}
                                     onChange={handleInputChange}
                                     className="input-field"
+                                    required
                                 />
                             </div>
                         </div>
@@ -332,6 +418,7 @@ export default function QueryForm({
                     </div>
                 </div>
 
+                {/* Drugs */}
                 <div className="form-section">
                     <h3 className="section-label">Drugs List</h3>
                     {drugs.map((drug, index) => (
@@ -344,9 +431,14 @@ export default function QueryForm({
                                 placeholder="Enter a drug..."
                             />
                             {activeDrugSearchIndex === index && drugSearchResults.length > 0 && (
-                                <div className="search-results">
+                                <div className="search-results" role="listbox">
                                     {drugSearchResults.map((result, idx) => (
-                                        <div key={idx} className="search-result-item" onClick={() => selectDrug(result)}>
+                                        <div
+                                            key={idx}
+                                            role="option"
+                                            className="search-result-item"
+                                            onClick={() => selectDrug(result)}
+                                        >
                                             {result.name}
                                         </div>
                                     ))}
@@ -361,11 +453,17 @@ export default function QueryForm({
                             </button>
                         </div>
                     ))}
-                    <button type="button" className="add-button" onClick={addDrug}>
-                        Add Drug <FaPlus />
+                    <button
+                        type="button"
+                        className="add-button"
+                        onClick={addDrug}
+                    >
+                        Add Drug
+                        <FaPlus />
                     </button>
                 </div>
 
+                {/* Reactions */}
                 <div className="form-section">
                     <h3 className="section-label">Reactions List</h3>
                     {reactions.map((reaction, index) => (
@@ -378,9 +476,14 @@ export default function QueryForm({
                                 placeholder="Enter a reaction..."
                             />
                             {activeReactionSearchIndex === index && reactionSearchResults.length > 0 && (
-                                <div className="search-results">
+                                <div className="search-results" role="listbox">
                                     {reactionSearchResults.map((result, idx) => (
-                                        <div key={idx} className="search-result-item" onClick={() => selectReaction(result)}>
+                                        <div
+                                            key={idx}
+                                            role="option"
+                                            className="search-result-item"
+                                            onClick={() => selectReaction(result)}
+                                        >
                                             {result.name}
                                         </div>
                                     ))}
@@ -395,11 +498,17 @@ export default function QueryForm({
                             </button>
                         </div>
                     ))}
-                    <button type="button" className="add-button" onClick={addReaction}>
-                        Add Reaction <FaPlus />
+                    <button
+                        type="button"
+                        className="add-button"
+                        onClick={addReaction}
+                    >
+                        Add Reaction
+                        <FaPlus />
                     </button>
                 </div>
 
+                {/* Submit / Cancel */}
                 <div className="submit-container">
                     <button
                         type="submit"
