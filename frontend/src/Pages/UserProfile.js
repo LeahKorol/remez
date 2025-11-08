@@ -94,7 +94,7 @@ const UserProfile = () => {
         // if this is the query being edited, allow editing
         if (editingQueryId && query.id === editingQueryId) return false;
         return status && status !== "completed" && status !== "failed";
-    };    
+    };
 
     const navigate = useNavigate();
     const location = useLocation();
@@ -243,7 +243,7 @@ const UserProfile = () => {
     // Handle viewing a saved query
     const handleViewQuery = async (query) => {
         setViewMode('view');
-        setViewingQueryId(query.id); 
+        setViewingQueryId(query.id);
         setViewingQuery(null);
 
         try {
@@ -420,7 +420,7 @@ const UserProfile = () => {
 
         if (isEditing) {
             const original = savedQueries.find(q => q.id === editingQueryId);
-            if(original && isQueryLocked(original)) {
+            if (original && isQueryLocked(original)) {
                 showToastMessage("Cannot update query while processing.");
                 setIsSubmitting(false);
                 setGlobalLoading(false);
@@ -792,15 +792,13 @@ const UserProfile = () => {
                         <>
                             <div className="form-header">
                                 <h2>{isEditing ? 'Update Query' : 'New Query'}</h2>
-                                {isEditing && (
-                                    <button
-                                        type="button"
-                                        className="cancel-button"
-                                        onClick={cancelEditing}
-                                    >
-                                        Cancel
-                                    </button>
-                                )}
+                                <button
+                                    type="button"
+                                    className="cancel-button"
+                                    onClick={cancelEditing}
+                                >
+                                    Cancel
+                                </button>
 
                                 <ToastNotification message={toastMessage} type="error" show={showToast} />
                             </div>
@@ -851,7 +849,7 @@ const UserProfile = () => {
                 handleLogout={handleLogout}
                 editingQueryId={editingQueryId}
                 isEditing={isEditing}
-                editingQueryLoading={loading && viewMode === 'edit'} 
+                editingQueryLoading={loading && viewMode === 'edit'}
                 viewingQueryId={viewingQueryId}
             />
 
