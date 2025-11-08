@@ -151,7 +151,7 @@ export default function QueryForm({
             (d, i) => i !== activeDrugSearchIndex && d.name.toLowerCase() === drug.name.toLowerCase()
         );
         if (duplicate) {
-            showToastMessage?.("Drug already added");
+            showToastMessage?.("Drug already added", "warning");
             return;
         }
         const updated = [...drugs];
@@ -164,7 +164,7 @@ export default function QueryForm({
     const addDrug = () => {
         // check if there are any empty drug fields
         if (drugs.some((d) => !d.name.trim())) {
-            showToastMessage?.("Please fill the existing drug field first");
+            showToastMessage?.("Please fill the existing drug field first", "info");
             return;
         }
         setDrugs([...drugs, { name: '', id: null }]);
@@ -216,7 +216,7 @@ export default function QueryForm({
             (r, i) => i !== activeReactionSearchIndex && r.name.toLowerCase() === reaction.name.toLowerCase()
         );
         if (duplicate) {
-            showToastMessage?.("Reaction already added");
+            showToastMessage?.("Reaction already added", "warning");
             return;
         }
         const updated = [...reactions];
@@ -229,7 +229,7 @@ export default function QueryForm({
     const addReaction = () => {
         // check if there are any empty drug fields
         if (reactions.some((r) => !r.name.trim())) {
-            showToastMessage?.("Please fill the existing reaction field first");
+            showToastMessage?.("Please fill the existing reaction field first", "info");
             return;
         }
         setReactions([...reactions, { name: '', id: null }]);
@@ -313,6 +313,11 @@ export default function QueryForm({
                 reactions,
             });
 
+            showToastMessage?.(
+                isEditing ? "Query updated successfully!" : "Query saved successfully!",
+                "success"
+              );              
+
         } catch (err) {
             const msgs = extractApiErrors(err);
             const newErrObjs = msgs.map((msg) => ({
@@ -320,6 +325,7 @@ export default function QueryForm({
                 message: msg,
             }));
             setLocalErrors((prev) => [...prev, ...newErrObjs]);
+            showToastMessage?.("An error occurred while saving the query.", "error");
         }
         finally {
             setIsButtonLoading(false);

@@ -88,6 +88,7 @@ const UserProfile = () => {
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [resetFormTrigger, setResetFormTrigger] = useState(0);
     const [isButtonLoading, setIsButtonLoading] = useState(false);
+    const [toasts, setToasts] = useState([]);
 
     // Lock editing/deleting for queries that are in progress
     const isQueryLocked = (query) => {
@@ -409,10 +410,9 @@ const UserProfile = () => {
         setEditingQueryId(null);
     };
 
-    const showToastMessage = (message) => {
-        setToastMessage(message);
-        setShowToast(true);
-        setTimeout(() => setShowToast(false), 3000);
+    const showToastMessage = (message, type = "info") => {
+        const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+        setToasts((prev) => [...prev, { id, message, type }]);
     };
 
     const handleSubmitQuery = async (FormData) => {
@@ -427,7 +427,7 @@ const UserProfile = () => {
         if (isEditing) {
             const original = savedQueries.find(q => q.id === editingQueryId);
             if (original && isQueryLocked(original)) {
-                showToastMessage("Cannot update query while processing.");
+                showToastMessage("Cannot update query while processing." , "error");
                 setIsSubmitting(false);
                 setGlobalLoading(false);
                 return;
@@ -493,10 +493,10 @@ const UserProfile = () => {
 
             if (editingQueryId) {
                 setSavedQueries(prev => prev.map(q => q.id === newQuery.id ? newQuery : q));
-                showToastMessage('Query updated successfully!');
+                showToastMessage('Query updated successfully!', "success");
             } else {
                 setSavedQueries(prev => [newQuery, ...prev]);
-                showToastMessage('Query saved successfully!');
+                showToastMessage('Query saved successfully!', "success");
                 resetForm();
             }
 
@@ -592,7 +592,7 @@ const UserProfile = () => {
 
             if (response && (response.ok || response.status === 204)) {
                 setSavedQueries(savedQueries.filter(q => q.id !== deleteQueryId));
-                showToastMessage('Query deleted successfully!');
+                showToastMessage('Query deleted successfully!', "success");
 
                 if (viewMode === 'view' && viewingQueryId === deleteQueryId) {
                     // If currently viewing the deleted query, reset to new query form
@@ -819,7 +819,19 @@ const UserProfile = () => {
                                     Cancel
                                 </button>
 
-                                <ToastNotification message={toastMessage} type="error" show={showToast} />
+                                <div className="toast-container">
+                                    {toasts.map((toast, index) => (
+                                        <ToastNotification
+                                            key={toast.id}
+                                            id={toast.id}
+                                            message={toast.message}
+                                            type={toast.type}
+                                            duration={8000}
+                                            index={index}
+                                            onClose={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))}
+                                        />
+                                    ))}
+                                </div>
                             </div>
 
                             <QueryForm
