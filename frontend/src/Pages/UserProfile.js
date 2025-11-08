@@ -87,6 +87,7 @@ const UserProfile = () => {
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [resetFormTrigger, setResetFormTrigger] = useState(0);
+    const [isButtonLoading, setIsButtonLoading] = useState(false);
 
     // Lock editing/deleting for queries that are in progress
     const isQueryLocked = (query) => {
@@ -415,6 +416,7 @@ const UserProfile = () => {
     };
 
     const handleSubmitQuery = async (FormData) => {
+        setIsButtonLoading(true);
         const { queryName, yearStart, yearEnd, quarterStart, quarterEnd, drugs, reactions } = FormData;
 
         if (!queryName) {
@@ -529,6 +531,7 @@ const UserProfile = () => {
         } finally {
             setIsSubmitting(false);
             setGlobalLoading(false);
+            setIsButtonLoading(false);
         }
     };
 
@@ -571,6 +574,8 @@ const UserProfile = () => {
     };
 
     const confirmDeleteQuery = async () => {
+        setIsButtonLoading(true);
+
         if (!deleteQueryId) return;
 
         try {
@@ -606,6 +611,7 @@ const UserProfile = () => {
         } finally {
             setDeleteQueryId(null);
             setShowDeletePopup(false);
+            setIsButtonLoading(false);
         }
     };
 
@@ -886,8 +892,18 @@ const UserProfile = () => {
                         <h3>Delete Query</h3>
                         <p>Are you sure you want to delete this query?</p>
                         <div className="modal-buttons">
-                            <button className="confirm-button" onClick={confirmDeleteQuery}>Delete</button>
-                            <button className="cancel-button" onClick={cancelDelete}>Cancel</button>
+                            <button
+                                className="confirm-button"
+                                disabled={isButtonLoading}
+                                onClick={confirmDeleteQuery}
+                            >
+                                {isButtonLoading ? <div className="spinner"></div> : 'Delete'}
+                            </button>
+                            <button
+                                className="cancel-button"
+                                onClick={cancelDelete}>
+                                Cancel
+                            </button>
                         </div>
                     </div>
                 </div>

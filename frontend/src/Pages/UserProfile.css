@@ -670,6 +670,33 @@
   margin: 0 auto;
 }
 
+.spinner {
+  width: 1em;
+  height: 1em;
+  border: 0.15em solid rgba(255, 255, 255, 0.4);
+  border-top: 0.15em solid #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.submit-button:disabled .spinner,
+.confirm-button:disabled .spinner {
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.submit-button.disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 /* Chart container */
 .chart-container {
   min-height: 400px;

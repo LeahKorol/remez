@@ -33,6 +33,7 @@ export default function QueryForm({
     const [reactionSearchResults, setReactionSearchResults] = useState([]);
     const [activeDrugSearchIndex, setActiveDrugSearchIndex] = useState(null);
     const [activeReactionSearchIndex, setActiveReactionSearchIndex] = useState(null);
+    const [isButtonLoading, setIsButtonLoading] = useState(false);
 
     const drugSearchTimeout = useRef(null);
     const reactionSearchTimeout = useRef(null);
@@ -264,6 +265,9 @@ export default function QueryForm({
     // ===== Submit =====
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (isButtonLoading) return; // if already submitting, do nothing
+        setIsButtonLoading(true);
+
         const CURRENT_YEAR = new Date().getFullYear();
         const yStart = Number(yearStart);
         const yEnd = Number(yearEnd);
@@ -316,6 +320,9 @@ export default function QueryForm({
                 message: msg,
             }));
             setLocalErrors((prev) => [...prev, ...newErrObjs]);
+        }
+        finally {
+            setIsButtonLoading(false);
         }
     };
 
@@ -512,16 +519,21 @@ export default function QueryForm({
                 <div className="submit-container">
                     <button
                         type="submit"
-                        className={`submit-button ${isSubmitting ? 'disabled' : ''}`}
+                        className={`submit-button ${isButtonLoading || isSubmitting ? 'disabled' : ''}`}
                         disabled={
+                            isButtonLoading ||
                             isSubmitting ||
                             drugs.every(d => !d.name.trim()) ||
                             reactions.every(r => !r.name.trim())
                         }
                     >
-                        {isSubmitting
-                            ? (isEditing ? 'Updating...' : 'Saving...')
-                            : (isEditing ? 'Update + Calc' : 'Save + Calc')}
+                        {isButtonLoading ? (
+                            <div className="spinner"></div>
+                        ) : (
+                            isSubmitting
+                                ? (isEditing ? 'Updating...' : 'Saving...')
+                                : (isEditing ? 'Update + Calc' : 'Save + Calc')
+                        )}
                     </button>
                 </div>
             </form>
