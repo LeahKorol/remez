@@ -80,9 +80,9 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery }) => {
 
   // download chart as PNG
   const downloadChart = () => {
-    const chart = chartRef.current;
-    if (chart) {
-      const url = chart.toBase64Image("image/png", 1.0);
+    const chartComponent = chartRef.current?.getChart?.();
+    if (chartComponent) {
+      const url = chartComponent.toBase64Image("image/png", 1.0);
       const link = document.createElement("a");
       link.download = `${currentQuery.name.replace(/[^a-z0-9]/gi, "_")}_analysis.png`;
       link.href = url;
@@ -90,7 +90,10 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery }) => {
       link.click();
       document.body.removeChild(link);
 
-      showToastMessage("Chart downloaded successfully!");
+      showToastMessage("Chart downloaded successfully!", "success");
+    }
+    else {
+      showToastMessage("Chart not ready yet.", "warning");
     }
   };
 

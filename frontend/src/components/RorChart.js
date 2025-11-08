@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useImperativeHandle, forwardRef } from 'react';
 import { Line } from 'react-chartjs-2';
 import {
     Chart as ChartJS,
@@ -26,8 +26,13 @@ ChartJS.register(
     zoomPlugin
 );
 
-export default function RorChart({ query, year_start, quarter_start }) {
+const RorChart = forwardRef(({ query, year_start, quarter_start }, ref) => {
     const chartRef = useRef(null);
+
+    // Expose chart instance to parent via ref
+    useImperativeHandle(ref, () => ({
+        getChart: () => chartRef.current,
+      }));
 
     if (!query || !query.ror_values) return null;
 
@@ -175,4 +180,6 @@ export default function RorChart({ query, year_start, quarter_start }) {
             <p className="drag-hint">Click and drag to move the chart</p>
         </div>
     );
-}
+});
+
+export default RorChart;
