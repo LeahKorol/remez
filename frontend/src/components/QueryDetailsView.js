@@ -81,20 +81,64 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery }) => {
   // download chart as PNG
   const downloadChart = () => {
     const chartComponent = chartRef.current?.getChart?.();
-    if (chartComponent) {
-      const url = chartComponent.toBase64Image("image/png", 1.0);
+
+    if (!chartComponent) {
+      showToastMessage("Chart not ready yet.", "warning");
+      return;
+    }
+
+    // get the chart as a base64 image
+    const chartImage = chartComponent.toBase64Image("image/png", 1.0);
+    const image = new Image();
+    image.src = chartImage;
+
+    // create new image with logo
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      const padding = 80;
+      const logoHeight = 40;
+      canvas.width = image.width;
+      canvas.height = image.height + padding + logoHeight;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // draw the chart image
+      ctx.drawImage(image, 0, 0);
+
+      const gradient = ctx.createLinearGradient(
+        canvas.width * 0.3,
+        image.height + 10,
+        canvas.width * 0.7,
+        image.height + 10
+      );
+      gradient.addColorStop(0, "#7b42e0");
+      gradient.addColorStop(1, "#5e68f1");
+
+      // adding a sighture with REMEZ logo
+      ctx.font = "bold 36px Arial";
+      ctx.fillStyle = gradient;
+      ctx.textAlign = "center";
+      ctx.shadowColor = "rgba(0, 0, 0, 0.2)";
+      ctx.shadowBlur = 6;
+      ctx.shadowOffsetY = 2;
+      ctx.fillText("REMEZ", canvas.width / 2, image.height + logoHeight);
+
+      ctx.shadowBlur = 0;
+      ctx.font = "16px Arial";
+      ctx.fillStyle = "#7b61ff";
+      ctx.fillText("REMEZ - Risk Evaluation & Monitoring of Emerging Signals", canvas.width / 2, image.height + logoHeight + 24);
+
+      const finalURL = canvas.toDataURL("image/png");
       const link = document.createElement("a");
-      link.download = `${currentQuery.name.replace(/[^a-z0-9]/gi, "_")}_analysis.png`;
-      link.href = url;
+      link.download = `${currentQuery.name.replace(/[^a-z0-9]/gi, "_")}_REMEZ_chart.png`;
+      link.href = finalURL;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
 
       showToastMessage("Chart downloaded successfully!", "success");
-    }
-    else {
-      showToastMessage("Chart not ready yet.", "warning");
-    }
+    };
   };
 
   // download data as CSV
