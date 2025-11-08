@@ -588,6 +588,15 @@ const UserProfile = () => {
             if (response && (response.ok || response.status === 204)) {
                 setSavedQueries(savedQueries.filter(q => q.id !== deleteQueryId));
                 showToastMessage('Query deleted successfully!');
+
+                if (viewMode === 'view' && viewingQueryId === deleteQueryId) {
+                    // If currently viewing the deleted query, reset to new query form
+                    setViewMode('new');
+                    setViewingQuery(null);
+                    setViewingQueryId(null);
+                    resetForm();
+                    setResetFormTrigger(prev => prev + 1);
+                }
             } else {
                 alert('Failed to delete query');
             }
