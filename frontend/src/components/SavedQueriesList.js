@@ -14,9 +14,24 @@ const SavedQueriesList = ({
 }) => {
 
   const isQueryLocked = (query) => {
-    const status = query?.result?.status;
-    // if this is the query being edited, allow editing
-    if (editingQueryId && query.id === editingQueryId) return false;
+    // if the query is currently being edited, it should not be locked
+    if (editingQueryId && query.id === editingQueryId) {
+      console.log("🔓 Query unlocked - currently editing:", query.id);
+      return false;
+    }
+
+    const resultStatus = query?.result?.status;
+    const queryStatus = query?.status;
+    const status = resultStatus || queryStatus;
+
+    console.log("🔒 isQueryLocked check:", {
+      queryId: query.id,
+      queryStatus: queryStatus,
+      resultStatus: resultStatus,
+      finalStatus: status,
+      isLocked: status && status !== "completed" && status !== "failed"
+    });
+
     return status && status !== "completed" && status !== "failed";
   };
 
@@ -32,7 +47,7 @@ const SavedQueriesList = ({
             <span
               className="query-name"
               style={{
-                color: item.id === viewingQueryId ? "#7b5dc7" : "inherit" 
+                color: item.id === viewingQueryId ? "#7b5dc7" : "inherit"
               }}
             >
               {item.name}

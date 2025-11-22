@@ -4,7 +4,7 @@ import RorChart from "./RorChart";
 import { showToastMessage } from "../utils/toast";
 import "../Pages/UserProfile.css";
 
-const QueryDetailsView = ({ query, handleNewQuery, refreshQuery }) => {
+const QueryDetailsView = ({ query, handleNewQuery, refreshQuery, onQueryUpdate }) => {
   const chartRef = useRef(null);
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [currentQuery, setCurrentQuery] = useState(query);
@@ -23,32 +23,35 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery }) => {
     Array.isArray(currentQuery?.result?.ror_values) &&
     currentQuery.result.ror_values.length > 0;
 
-  const handleRefreshStatus = async () => {
-    if (!refreshQuery) return;
-    try {
-      const fullQuery = await refreshQuery(currentQuery.id);
-      console.log("Refreshed query:", fullQuery);
-
-      setCurrentQuery(fullQuery);
-
-      if (fullQuery.result?.status === "completed") {
-        if (Array.isArray(fullQuery.result?.ror_values) && fullQuery.result.ror_values.length > 0) {
-          showToastMessage("✅ Analysis completed! Results are now available.");
+    const handleRefreshStatus = async () => {
+      if (!refreshQuery) return;
+      try {
+        const fullQuery = await refreshQuery(currentQuery.id);
+        console.log("Refreshed query:", fullQuery);
+  
+        setCurrentQuery(fullQuery);
+        
+        if (onQueryUpdate) {
+          onQueryUpdate(fullQuery);
         }
-        else {
-          showToastMessage("⚠️ Analysis completed but no results found.", "warning");
+  
+        if (fullQuery.result?.status === "completed") {
+          if (Array.isArray(fullQuery.result?.ror_values) && fullQuery.result.ror_values.length > 0) {
+            showToastMessage("✅ Analysis completed! Results are now available.");
+          }
+          else {
+            showToastMessage("⚠️ Analysis completed but no results found.", "warning");
+          }
+        } else if (fullQuery.result?.status === "failed") {
+          showToastMessage("⚠️ Query failed during processing. Please try again.", "error");
+        } else {
+          showToastMessage("⏳ Query still processing, try again soon.");
         }
-      } else if (fullQuery.result?.status === "failed") {
-        showToastMessage("⚠️ Query failed during processing. Please try again.", "error");
-      } else {
-        showToastMessage("⏳ Query still processing, try again soon.");
+      } catch (err) {
+        console.error("Error refreshing query:", err);
+        alert("Failed to refresh query. Please try again.");
       }
-    } catch (err) {
-      console.error("Error refreshing query:", err);
-      alert("Failed to refresh query. Please try again.");
-    }
   };
-
   const csvHeaders = [
     "Time Period",
     "ROR (Log10)",

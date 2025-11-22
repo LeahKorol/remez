@@ -783,18 +783,30 @@ const UserProfile = () => {
                 `http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`,
                 { method: 'GET' }
             );
-
+    
             if (!response.ok) {
                 console.error("Failed to refresh query:", response.status);
                 return null;
             }
-
+    
             const data = await response.json();
             return data;
         } catch (err) {
             console.error("Error refreshing query:", err);
             return null;
         }
+    };
+    
+    const handleQueryUpdate = (updatedQuery) => {
+        console.log("📝 Updating query in savedQueries list:", updatedQuery);
+        
+        setSavedQueries(prevQueries => 
+            prevQueries.map(q => 
+                q.id === updatedQuery.id ? updatedQuery : q
+            )
+        );
+        
+        setViewingQuery(updatedQuery);
     };
 
     return (
@@ -806,6 +818,7 @@ const UserProfile = () => {
                             query={viewingQuery}
                             handleNewQuery={handleNewQuery}
                             refreshQuery={refreshQuery}
+                            onQueryUpdate={handleQueryUpdate}
                         />
                     ) : (
                         <>
