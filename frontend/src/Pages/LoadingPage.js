@@ -30,36 +30,6 @@ const LoadingPage = () => {
     const isPollingCancelled = useRef(false);
     const timeoutRef = useRef(null);
 
-    // useEffect(() => {
-    //     // if there is no queryData, redirect back to profile
-    //     if (!queryData?.id) {
-    //         console.error("No query ID provided");
-    //         navigate("/profile");
-    //         return;
-    //     }
-
-    //     if (queryData.result?.id) {
-    //         const resId = queryData.result.id;
-    //         console.log("✅ Result exists, polling Result ID:", resId);
-    //         setResultId(resId);
-    //         pollForResult(resId);
-    //     }
-
-    //     else {
-    //         console.log("Starting polling for query ID:", queryData.id);
-    //         // start the polling process
-    //         pollForResultCreation(queryData.id);
-    //     }
-
-    //     // if the user navigates away, cancel polling
-    //     return () => {
-    //         console.log("🛑 Cancelling polling and clearing timeout");
-    //         isPollingCancelled.current = true;
-    //         if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    //     };
-    // }, [queryData, navigate]);
-
-
     useEffect(() => {
         // Reset polling flag
         isPollingCancelled.current = false;
@@ -89,26 +59,6 @@ const LoadingPage = () => {
         };
     }, []); 
 
-    // useEffect(() => {
-    //     const loadQueryDetails = async () => {
-    //         if (!queryData?.id) return;
-    //         try {
-    //             const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/queries/${queryData.id}/`);
-    //             if (response.ok) {
-    //                 const fullData = await response.json();
-    //                 setFullQuery(fullData);
-    //             }
-    //         } catch (err) {
-    //             console.error("Error fetching query details:", err);
-    //         }
-    //     };
-
-    //     if (!queryData?.displayDrugs && !queryData?.displayReactions) {
-    //         loadQueryDetails();
-    //     }
-    // }, [queryData]);
-
-
     useEffect(() => {
         const loadQueryDetails = async () => {
             if (!queryData?.id) return;
@@ -128,33 +78,13 @@ const LoadingPage = () => {
         if (!queryData?.displayDrugs && !queryData?.displayReactions) {
             loadQueryDetails();
         }
-    }, []); // ← שינוי כאן! הסרתי את queryData
+    }, []); 
 
     const safeSetTimeout = (fn, delay) => {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         timeoutRef.current = setTimeout(fn, delay);
     };
 
-    // const extractStatus = (data) => {
-    //     const status =
-    //         data?.result?.status ||
-    //         data?.status ||
-    //         data?.result?.analysis_status ||
-    //         data?.analysis_status ||
-    //         data?.result?.state ||
-    //         "";
-
-    //     const normalized = typeof status === "string" ? status.toLowerCase().trim() : "";
-
-    //     console.log("🔍 extractStatus:", {
-    //         raw: status,
-    //         normalized,
-    //         hasResult: !!data?.result,
-    //         resultStatus: data?.result?.status
-    //     });
-
-    //     return normalized;
-    // };
 
     const extractStatus = (data) => {
         const status = data?.status || data?.result?.status || "";
@@ -268,12 +198,10 @@ const LoadingPage = () => {
             console.log(`Polling result ${resId}, attempt ${attempts}`);
 
             try {
-                // ✅ בקשת API
                 const response = await fetchWithRefresh(
                     `${API_BASE}/analysis/queries/${queryData.id}/?_t=${Date.now()}`
                 );
 
-                // בדיקת שגיאות
                 if (response.status === 500) {
                     console.log("Server error (500) while polling...");
                     setStatusText("Server encountered an error processing your analysis.");
@@ -298,7 +226,6 @@ const LoadingPage = () => {
                     throw new Error(`HTTP ${response.status}`);
                 }
 
-                // get ata
                 const data = await response.json();
                 console.log("📦 Query data:", data);
                 console.log("🔍 Data structure:", {
