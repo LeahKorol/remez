@@ -118,6 +118,10 @@ EMAIL_HOST_USER=your-email@gmail.com
 EMAIL_HOST_PASSWORD=your-app-password
 DEFAULT_FROM_EMAIL=your-email@gmail.com
 
+# Python 3.13 Email Backend Compatibility, Default: False
+# Set to True if experiencing SSL certificate validation issues with Python 3.13+
+PYTHON313_EMAIL_BACKEND=False
+
 # Frontend Integration
 # Password reset emails will include links that redirect to the frontend URL
 FRONTEND_URL=http://localhost:3000

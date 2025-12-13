@@ -260,7 +260,12 @@ CORS_ALLOW_CREDENTIALS = True  # Allow using cookies for authentication
 
 # Use SMTP server for sending emails, print to console for development
 # EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+# Use custom backend for Python 3.13 SSL compatibility if enabled
+PYTHON313_EMAIL_BACKEND = os.getenv("PYTHON313_EMAIL_BACKEND", "False") == "True"
+if PYTHON313_EMAIL_BACKEND:
+    EMAIL_BACKEND = "backend.email_backend.Python313EmailBackend"
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.getenv("EMAIL_HOST")
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
 EMAIL_PORT = os.getenv("EMAIL_PORT")
