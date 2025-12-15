@@ -47,7 +47,7 @@ class TestPipelineStatusCheckMixinCompletedStatus:
         mock_result.save()
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status"
+            "analysis.views.pipeline_service.get_pipeline_task"
         )
 
         mixin_instance.check_and_update_result_from_pipeline(mock_result)
@@ -82,7 +82,7 @@ class TestPipelineStatusCheckMixinTimeout:
         mock_result.save()
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status"
+            "analysis.views.pipeline_service.get_pipeline_task"
         )
 
         mixin_instance.check_and_update_result_from_pipeline(mock_result)
@@ -110,7 +110,7 @@ class TestPipelineStatusCheckMixinTimeout:
         }
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status",
+            "analysis.views.pipeline_service.get_pipeline_task",
             return_value=pipeline_response,
         )
 
@@ -131,7 +131,7 @@ class TestPipelineStatusCheckMixinTimeout:
         mock_result.save()
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status"
+            "analysis.views.pipeline_service.get_pipeline_task"
         )
 
         mixin_instance.check_and_update_result_from_pipeline(mock_result)
@@ -153,7 +153,7 @@ class TestPipelineStatusCheckMixinPipelineNotFound:
         mock_result.save()
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status", return_value=None
+            "analysis.views.pipeline_service.get_pipeline_task", return_value=None
         )
 
         mixin_instance.check_and_update_result_from_pipeline(mock_result)
@@ -171,9 +171,7 @@ class TestPipelineStatusCheckMixinCompletedWithDetails:
         mock_result.status = ResultStatus.PENDING
         mock_result.save()
 
-        pipeline_status = {"id": mock_result.id, "status": ResultStatus.COMPLETED}
-
-        detailed_results = {
+        task_results = {
             "id": mock_result.id,
             "status": ResultStatus.COMPLETED,
             "ror_values": [1.5, 2.0, 2.5],
@@ -182,19 +180,13 @@ class TestPipelineStatusCheckMixinCompletedWithDetails:
         }
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status",
-            return_value=pipeline_status,
-        )
-
-        mock_get_results = mocker.patch(
-            "analysis.views.pipeline_service.get_task_results",
-            return_value=detailed_results,
+            "analysis.views.pipeline_service.get_pipeline_task",
+            return_value=task_results,
         )
 
         mixin_instance.check_and_update_result_from_pipeline(mock_result)
 
         mock_check_status.assert_called_once_with(mock_result.id)
-        mock_get_results.assert_called_once_with(mock_result.id)
         mock_result.refresh_from_db()
         assert mock_result.status == ResultStatus.COMPLETED
         assert mock_result.ror_values == [1.5, 2.0, 2.5]
@@ -210,18 +202,13 @@ class TestPipelineStatusCheckMixinCompletedWithDetails:
         pipeline_status = {"id": mock_result.id, "status": ResultStatus.COMPLETED}
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status",
+            "analysis.views.pipeline_service.get_pipeline_task",
             return_value=pipeline_status,
-        )
-
-        mock_get_results = mocker.patch(
-            "analysis.views.pipeline_service.get_task_results", return_value=None
         )
 
         mixin_instance.check_and_update_result_from_pipeline(mock_result)
 
         mock_check_status.assert_called_once()
-        mock_get_results.assert_called_once()
         mock_result.refresh_from_db()
         assert mock_result.status == ResultStatus.FAILED
 
@@ -240,19 +227,13 @@ class TestPipelineStatusCheckMixinCompletedWithDetails:
         }
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status",
+            "analysis.views.pipeline_service.get_pipeline_task",
             return_value=pipeline_status,
-        )
-
-        mock_get_results = mocker.patch(
-            "analysis.views.pipeline_service.get_task_results",
-            return_value=invalid_results,
         )
 
         mixin_instance.check_and_update_result_from_pipeline(mock_result)
 
         mock_check_status.assert_called_once()
-        mock_get_results.assert_called_once()
         mock_result.refresh_from_db()
         assert mock_result.status == ResultStatus.FAILED
 
@@ -260,9 +241,7 @@ class TestPipelineStatusCheckMixinCompletedWithDetails:
         mock_result.status = ResultStatus.RUNNING
         mock_result.save()
 
-        pipeline_status = {"id": mock_result.id, "status": ResultStatus.COMPLETED}
-
-        detailed_results = {
+        task_results = {
             "id": mock_result.id,
             "status": ResultStatus.COMPLETED,
             "ror_values": [],
@@ -271,13 +250,8 @@ class TestPipelineStatusCheckMixinCompletedWithDetails:
         }
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status",
-            return_value=pipeline_status,
-        )
-
-        mock_get_results = mocker.patch(
-            "analysis.views.pipeline_service.get_task_results",
-            return_value=detailed_results,
+            "analysis.views.pipeline_service.get_pipeline_task",
+            return_value=task_results,
         )
 
         mixin_instance.check_and_update_result_from_pipeline(mock_result)
@@ -313,7 +287,7 @@ class TestPipelineStatusCheckMixinStatusUpdate:
         }
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status",
+            "analysis.views.pipeline_service.get_pipeline_task",
             return_value=pipeline_response,
         )
 
@@ -342,7 +316,7 @@ class TestPipelineStatusCheckMixinStatusUpdate:
         invalid_response["id"] = mock_result.id
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status",
+            "analysis.views.pipeline_service.get_pipeline_task",
             return_value=invalid_response,
         )
 
@@ -363,7 +337,7 @@ class TestPipelineStatusCheckMixinEdgeCases:
         mock_result.save()
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status"
+            "analysis.views.pipeline_service.get_pipeline_task"
         )
 
         mixin_instance.check_and_update_result_from_pipeline(mock_result)
@@ -388,7 +362,7 @@ class TestPipelineStatusCheckMixinEdgeCases:
         }
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status",
+            "analysis.views.pipeline_service.get_pipeline_task",
             return_value=pipeline_response,
         )
 
@@ -405,8 +379,6 @@ class TestPipelineStatusCheckMixinEdgeCases:
         mock_result.ror_upper = [1.2, 2.2]
         mock_result.save()
 
-        pipeline_status = {"id": mock_result.id, "status": ResultStatus.COMPLETED}
-
         new_results = {
             "id": mock_result.id,
             "status": ResultStatus.COMPLETED,
@@ -416,12 +388,8 @@ class TestPipelineStatusCheckMixinEdgeCases:
         }
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status",
-            return_value=pipeline_status,
-        )
-
-        mock_get_results = mocker.patch(
-            "analysis.views.pipeline_service.get_task_results", return_value=new_results
+            "analysis.views.pipeline_service.get_pipeline_task",
+            return_value=new_results,
         )
 
         mixin_instance.check_and_update_result_from_pipeline(mock_result)
@@ -450,7 +418,7 @@ class TestPipelineStatusCheckMixinEdgeCases:
         }
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status",
+            "analysis.views.pipeline_service.get_pipeline_task",
             return_value=pipeline_response,
         )
 

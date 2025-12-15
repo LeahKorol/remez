@@ -226,7 +226,7 @@ class TestCheckTaskStatus:
         )
         service = PipelineService()
         result = service.get_pipeline_task(task_id=999)
-        mock_get.assert_called_once()
+        assert mock_get.call_count == 4 # 3 retries
         assert result is None
 
     def test_status_custom_timeout_used(self, mocker):
@@ -274,8 +274,8 @@ class TestGetTaskResults:
         )
         assert result["status"] == "completed"
 
-    @pytest.mark.parametrize("status_code", [404, 500])
-    def test_results_http_errors_return_none(self, mocker, status_code):
+    @pytest.mark.parametrize("status_code, call_count", [(404, 1), (500, 4)])
+    def test_results_http_errors_return_none(self, mocker, status_code, call_count):
         mock_response = mocker.Mock()
         mock_response.status_code = status_code
         http_error = requests.HTTPError("HTTP Error")
@@ -288,7 +288,7 @@ class TestGetTaskResults:
         )
         service = PipelineService()
         result = service.get_pipeline_task(task_id=222)
-        mock_get.assert_called_once()
+        assert mock_get.call_count == call_count
         assert result is None
 
     @pytest.mark.parametrize(

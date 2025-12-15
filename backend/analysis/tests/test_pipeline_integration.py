@@ -334,6 +334,8 @@ class TestPipelineIntegration:
         # Update relevant field that should trigger pipeline in normal mode
         detail_url = reverse("query-detail", kwargs={"id": query.id})
         data = {"quarter_start": 2, "quarter_end": 4}
+        query.result.status = ResultStatus.COMPLETED  # Set to completed to allow re-trigger
+        query.result.save()
         response = api_client.patch(detail_url, data, format="json")
 
         assert response.status_code == status.HTTP_200_OK

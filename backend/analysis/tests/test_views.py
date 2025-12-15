@@ -315,6 +315,134 @@ class TestQueryViewSet:
         query1.refresh_from_db()
         assert query1.name == "Updated Query"
 
+    @pytest.mark.parametrize(
+        "initial_status", [ResultStatus.PENDING, ResultStatus.RUNNING]
+    )
+    def test_update_ignored_when_task_in_progress(
+        self, mocker, api_client, user1, query1, required_fields, initial_status
+    ):
+        """If result is pending/running, log and do not re-trigger pipeline even if ROR fields change."""
+        mock_trigger = mocker.patch(
+            "analysis.views.pipeline_service.trigger_pipeline_analysis"
+        )
+        mocker.patch.object(settings, "NUM_DEMO_QUARTERS", -1)
+
+        # Set in-progress status
+        query1.result.status = initial_status
+        query1.result.save()
+
+        self.authenticate_user(api_client, user=user1)
+        detail_url = reverse("query-detail", kwargs={"id": query1.id})
+
+        # Change ROR fields
+        updated_data = required_fields.copy()
+        updated_data["name"] = "Updated Query"
+        response = api_client.put(detail_url, updated_data)
+
+        assert response.status_code == status.HTTP_200_OK
+        # Ensure pipeline not triggered
+        mock_trigger.assert_not_called()
+        # Status remains in-progress
+        query1.result.refresh_from_db()
+        assert query1.result.status == initial_status
+
+    @pytest.mark.parametrize(
+        "initial_status,should_trigger,expected_status",
+        [
+            (ResultStatus.FAILED, True, ResultStatus.PENDING),
+            (ResultStatus.RUNNING, False, ResultStatus.RUNNING),
+            (ResultStatus.PENDING, False, ResultStatus.PENDING),
+            (ResultStatus.COMPLETED, False, ResultStatus.COMPLETED),
+        ],
+    )
+    def test_no_ror_change_resend_logic(
+        self,
+        mocker,
+        api_client,
+        user1,
+        query1,
+        initial_status,
+        should_trigger,
+        expected_status,
+    ):
+        """When no ROR fields change, resend only if previous status was FAILED"""
+        # Ensure real pipeline path (demo disabled)
+        mocker.patch.object(settings, "NUM_DEMO_QUARTERS", -1)
+
+        # Spy on pipeline trigger
+        mock_trigger = mocker.patch(
+            "analysis.views.pipeline_service.trigger_pipeline_analysis"
+        )
+
+        # Set initial result status
+        query1.result.status = initial_status
+        query1.result.save()
+        query1
+        print(f"Initial result status: {query1.result.status}")
+
+        self.authenticate_user(api_client, user=user1)
+        detail_url = reverse("query-detail", kwargs={"id": query1.id})
+
+        # Change only non-ROR field (name), should never trigger pipeline
+        resp = api_client.patch(detail_url, {"name": "Only Name Change"})
+
+        assert resp.status_code == status.HTTP_200_OK
+
+        if should_trigger:
+            mock_trigger.assert_called_once()
+        else:
+            mock_trigger.assert_not_called()
+
+        query1.result.refresh_from_db()
+        assert query1.result.status == expected_status
+
+    @pytest.mark.parametrize(
+        "initial_status,should_trigger,expected_status",
+        [
+            (ResultStatus.FAILED, True, ResultStatus.PENDING),
+            (ResultStatus.RUNNING, False, ResultStatus.RUNNING),
+            (ResultStatus.PENDING, False, ResultStatus.PENDING),
+            (ResultStatus.COMPLETED, True, ResultStatus.PENDING),
+        ],
+    )
+    def test_ror_change_resend_logic(
+        self,
+        mocker,
+        api_client,
+        user1,
+        query1,
+        initial_status,
+        should_trigger,
+        expected_status,
+    ):
+        """When ROR fields change, resend only if previous status was COMPLETED or FAILED."""
+        # Ensure real pipeline path (demo disabled)
+        mocker.patch.object(settings, "NUM_DEMO_QUARTERS", -1)
+
+        mock_trigger = mocker.patch(
+            "analysis.views.pipeline_service.trigger_pipeline_analysis"
+        )
+
+        # Set initial result status
+        query1.result.status = initial_status
+        query1.result.save()
+
+        self.authenticate_user(api_client, user=user1)
+        detail_url = reverse("query-detail", kwargs={"id": query1.id})
+
+        # Change ROR field, should trigger pipeline for COMPLETED/FAILED status
+        resp = api_client.patch(detail_url, {"year_start": "2018"})
+
+        assert resp.status_code == status.HTTP_200_OK
+
+        if should_trigger:
+            mock_trigger.assert_called_once()
+        else:
+            mock_trigger.assert_not_called()
+
+        query1.result.refresh_from_db()
+        assert query1.result.status == expected_status
+
     def test_partial_update_query_not_owned_by_user(self, api_client, user1, query3):
         """Test that a user cannot update someone else's query."""
         self.authenticate_user(api_client, user=user1)
@@ -435,7 +563,13 @@ class TestQueryViewSet:
 
         self.authenticate_user(api_client, user=user1)
         detail_url = reverse("query-detail", kwargs={"id": query1.id})
+
         updated_data = required_fields.copy()
+        query1.result.status = (
+            ResultStatus.COMPLETED
+        )  # Set to completed to allow re-trigger
+        query1.result.save()
+
         updated_data["quarter_start"] = quarter_start
         updated_data["quarter_end"] = quarter_end
         updated_data["year_start"] = year_start
@@ -537,7 +671,7 @@ class TestResultViewSetRetrieve:
         }
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status",
+            "analysis.views.pipeline_service.get_pipeline_task",
             return_value=pipeline_response,
         )
 
@@ -563,7 +697,7 @@ class TestResultViewSetRetrieve:
         result1.save()
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status"
+            "analysis.views.pipeline_service.get_pipeline_task"
         )
 
         api_client.force_authenticate(user=user1)
@@ -582,12 +716,7 @@ class TestResultViewSetRetrieve:
         result1.status = ResultStatus.PENDING
         result1.save()
 
-        pipeline_status_response = {
-            "id": result1.id,
-            "status": ResultStatus.COMPLETED,
-        }
-
-        detailed_results_response = {
+        pipeline_response = {
             "id": result1.id,
             "status": ResultStatus.COMPLETED,
             "ror_values": [2.1, 2.5, 3.0],
@@ -596,13 +725,8 @@ class TestResultViewSetRetrieve:
         }
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status",
-            return_value=pipeline_status_response,
-        )
-
-        mock_get_results = mocker.patch(
-            "analysis.views.pipeline_service.get_task_results",
-            return_value=detailed_results_response,
+            "analysis.views.pipeline_service.get_pipeline_task",
+            return_value=pipeline_response,
         )
 
         api_client.force_authenticate(user=user1)
@@ -611,7 +735,6 @@ class TestResultViewSetRetrieve:
 
         assert response.status_code == status.HTTP_200_OK
         mock_check_status.assert_called_once_with(result1.id)
-        mock_get_results.assert_called_once_with(result1.id)
 
         result1.refresh_from_db()
         assert result1.status == ResultStatus.COMPLETED
@@ -627,7 +750,7 @@ class TestResultViewSetRetrieve:
         result1.save()
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status", return_value=None
+            "analysis.views.pipeline_service.get_pipeline_task", return_value=None
         )
 
         api_client.force_authenticate(user=user1)
@@ -648,7 +771,7 @@ class TestResultViewSetRetrieve:
         result1.save()
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status"
+            "analysis.views.pipeline_service.get_pipeline_task"
         )
 
         api_client.force_authenticate(user=user1)
@@ -776,7 +899,7 @@ class TestQueryRetrieveWithPipelineStatusChecks:
         query1.result.save()
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status"
+            "analysis.views.pipeline_service.get_pipeline_task"
         )
 
         api_client.force_authenticate(user=user1)
@@ -798,7 +921,7 @@ class TestQueryRetrieveWithPipelineStatusChecks:
         query1.result.save()
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status",
+            "analysis.views.pipeline_service.get_pipeline_task",
             return_value=None,  # Simulates 404 or error
         )
 
@@ -837,7 +960,7 @@ class TestQueryRetrieveWithPipelineStatusChecks:
         }
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status",
+            "analysis.views.pipeline_service.get_pipeline_task",
             return_value=pipeline_response,
         )
 
@@ -867,22 +990,9 @@ class TestQueryRetrieveWithPipelineStatusChecks:
             "ror_upper": [3.0, 3.5],
         }
 
-        mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status",
-            return_value=pipeline_response,
-        )
-
-        detailed_results_response = {
-            "id": query1.result.id,
-            "status": ResultStatus.COMPLETED,
-            "ror_values": [2.5, 3.0],
-            "ror_lower": [2.0, 2.5],
-            "ror_upper": [3.0, 3.5],
-        }
-
         mock_get_results = mocker.patch(
-            "analysis.views.pipeline_service.get_task_results",
-            return_value=detailed_results_response,
+            "analysis.views.pipeline_service.get_pipeline_task",
+            return_value=pipeline_response,
         )
 
         api_client.force_authenticate(user=user1)
@@ -891,7 +1001,6 @@ class TestQueryRetrieveWithPipelineStatusChecks:
         response = api_client.get(detail_url)
 
         assert response.status_code == status.HTTP_200_OK
-        mock_check_status.assert_called_once_with(query1.result.id)
         mock_get_results.assert_called_once_with(query1.result.id)
 
         query1.result.refresh_from_db()
@@ -914,7 +1023,7 @@ class TestQueryRetrieveWithPipelineStatusChecks:
         }
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status",
+            "analysis.views.pipeline_service.get_pipeline_task",
             return_value=pipeline_response,
         )
 
@@ -946,7 +1055,7 @@ class TestQueryRetrieveWithPipelineStatusChecks:
         }
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status",
+            "analysis.views.pipeline_service.get_pipeline_task",
             return_value=pipeline_response,
         )
 
@@ -978,7 +1087,7 @@ class TestQueryRetrieveWithPipelineStatusChecks:
         query_no_result.reactions.set([reaction.id])
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status"
+            "analysis.views.pipeline_service.get_pipeline_task"
         )
 
         api_client.force_authenticate(user=user1)
@@ -994,7 +1103,9 @@ class TestQueryRetrieveWithPipelineStatusChecks:
 class TestQueryRetrieveWithTimeoutAndCompletedResults:
     """Test cases for query retrieve with task timeout and completed result fetching"""
 
-    @pytest.mark.parametrize("initial_status", [ResultStatus.PENDING, ResultStatus.RUNNING])
+    @pytest.mark.parametrize(
+        "initial_status", [ResultStatus.PENDING, ResultStatus.RUNNING]
+    )
     def test_retrieve_query_task_timeout_exceeded(
         self, mocker, api_client, user1, query1, settings, initial_status
     ):
@@ -1011,7 +1122,7 @@ class TestQueryRetrieveWithTimeoutAndCompletedResults:
         query1.result.save()
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status"
+            "analysis.views.pipeline_service.get_pipeline_task"
         )
 
         api_client.force_authenticate(user=user1)
@@ -1050,7 +1161,7 @@ class TestQueryRetrieveWithTimeoutAndCompletedResults:
         }
 
         mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status",
+            "analysis.views.pipeline_service.get_pipeline_task",
             return_value=pipeline_response,
         )
 
@@ -1072,19 +1183,9 @@ class TestQueryRetrieveWithTimeoutAndCompletedResults:
         query1.result.status = ResultStatus.PENDING
         query1.result.save()
 
-        pipeline_status_response = {
-            "id": query1.result.id,
-            "status": ResultStatus.COMPLETED,
-        }
-
-        mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status",
-            return_value=pipeline_status_response,
-        )
-
         # Simulate failure to fetch detailed results
         mock_get_results = mocker.patch(
-            "analysis.views.pipeline_service.get_task_results", return_value=None
+            "analysis.views.pipeline_service.get_pipeline_task", return_value=None
         )
 
         api_client.force_authenticate(user=user1)
@@ -1093,7 +1194,6 @@ class TestQueryRetrieveWithTimeoutAndCompletedResults:
         response = api_client.get(detail_url)
 
         assert response.status_code == status.HTTP_200_OK
-        mock_check_status.assert_called_once_with(query1.result.id)
         mock_get_results.assert_called_once_with(query1.result.id)
 
         query1.result.refresh_from_db()
@@ -1119,13 +1219,8 @@ class TestQueryRetrieveWithTimeoutAndCompletedResults:
             "ror_values": "not_a_list",
         }
 
-        mock_check_status = mocker.patch(
-            "analysis.views.pipeline_service.check_task_status",
-            return_value=pipeline_status_response,
-        )
-
         mock_get_results = mocker.patch(
-            "analysis.views.pipeline_service.get_task_results",
+            "analysis.views.pipeline_service.get_pipeline_task",
             return_value=invalid_detailed_results,
         )
 
@@ -1135,7 +1230,6 @@ class TestQueryRetrieveWithTimeoutAndCompletedResults:
         response = api_client.get(detail_url)
 
         assert response.status_code == status.HTTP_200_OK
-        mock_check_status.assert_called_once_with(query1.result.id)
         mock_get_results.assert_called_once_with(query1.result.id)
 
         query1.result.refresh_from_db()

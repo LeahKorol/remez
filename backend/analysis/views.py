@@ -234,21 +234,46 @@ class QueryViewSet(PipelineStatusCheckMixin, viewsets.ModelViewSet):
         """
         logger.debug(f"perform_update called with method: {self.request.method}")
 
-        if not is_ror_field_changed(serializer.instance, self.request.data):
-            # No relevant fields updated, skip recalculation
+        # If result is currently pending or running, do not re-trigger pipeline
+        try:
+            current_status = serializer.instance.result.status
+        except Exception:
+            current_status = None
+
+        if current_status in [ResultStatus.PENDING, ResultStatus.RUNNING]:
             logger.info(
-                f"Query {serializer.instance.id} updated without ROR-related fields; skipping recalculation."
+                f"Query {serializer.instance.id} update ignored for recalculation: task already {current_status}."
             )
             serializer.save()
             return
 
+        if not is_ror_field_changed(serializer.instance, self.request.data):
+            # No ROR-related fields updated
+            result_status = None
+            try:
+                result_status = serializer.instance.result.status
+            except Exception:
+                result_status = None
+
+            query = serializer.save()
+
+            # Resend to pipeline only if previous status was FAILED
+            if result_status == ResultStatus.FAILED:
+                logger.info(
+                    f"Query {serializer.instance.id} updated without ROR changes and previous status FAILED; re-triggering pipeline."
+                )
+            else:
+                logger.info(
+                    f"Query {serializer.instance.id} updated without ROR changes; not re-triggering pipeline (status={result_status})."
+                )
+                return
+
         logger.info(
             f"Query {serializer.instance.id} updated with ROR-related fields; triggering recalculation."
         )
-        # Save the query first
-        query = serializer.save()
 
-        # Handle demo data mode or trigger pipeline
+        query = serializer.save() # Save updated query
+
         if settings.NUM_DEMO_QUARTERS >= 0:
             self._create_demo_result(query)
         else:
