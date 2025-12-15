@@ -90,6 +90,50 @@ class PipelineService:
             logger.error(error_msg)
             raise ValueError(error_msg) from e
 
+    def get_pipeline_task(self, task_id: int, retry_http_error_cnt=3) -> Dict[str, any]:
+        """
+        Get detailed results of a completed task from the pipeline service.
+
+        Note: The pipeline now identifies tasks by external_id. We route
+        this call to the external lookup endpoint using the provided task_id
+        (which equals the external_id of the result in our system).
+        """
+        url = f"{self.base_url}/api/v1/pipeline/external/{task_id}"
+
+        try:
+            logger.debug(f"Fetching detailed results for task_id: {task_id}")
+
+            response = requests.get(
+                url,
+                timeout=self.timeout,
+            )
+
+            response.raise_for_status()
+            response_data = response.json()
+            logger.info(f"Retrieved detailed results for task_id {task_id}")
+            return response_data
+
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                logger.warning(f"Task results {task_id} not found in pipeline service")
+                return None
+            logger.error(
+                f"Pipeline service HTTP error for task_id {task_id}: {e.response.status_code}"
+            )
+            if retry_http_error_cnt > 0:
+                retry_http_error_cnt -= 1
+                logger.info(
+                    f"Retrying fetch for task_id {task_id}, attempts left: {retry_http_error_cnt}"
+                )
+                return self.get_pipeline_task(task_id, retry_http_error_cnt)
+            return None
+
+        except requests.exceptions.RequestException as e:
+            logger.error(
+                f"Pipeline service connection error for task_id {task_id}: {str(e)}"
+            )
+            return None
+
     def health_check(self) -> bool:
         """
         Check if the pipeline service is healthy.

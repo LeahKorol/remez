@@ -332,3 +332,32 @@ def test_get_available_data_service_error(test_client, mocker):
     assert response.status_code == HTTP_500_INTERNAL_SERVER_ERROR
     data = response.json()
     assert "Failed to retrieve available data information" in data["detail"]
+
+
+# ============================================================================
+# TESTS FOR GET /external/{external_id} endpoint
+# ============================================================================
+
+
+def test_get_pipeline_by_external_id_success(test_client, test_session):
+    """Test successful retrieval of task by external_id"""
+    task = TaskResults(id=42, external_id="ext_target_123", status=TaskStatus.RUNNING)
+    test_session.add(task)
+    test_session.commit()
+
+    response = test_client.get("/external/ext_target_123")
+
+    assert response.status_code == HTTP_200_OK
+    data = response.json()
+    assert data["id"] == 42
+    assert data["external_id"] == "ext_target_123"
+    assert data["status"] == "running"
+
+
+def test_get_pipeline_by_external_id_not_found(test_client):
+    """Test retrieval by external_id when no matching task exists"""
+    response = test_client.get("/external/does_not_exist")
+
+    assert response.status_code == HTTP_404_NOT_FOUND
+    data = response.json()
+    assert "Task with external_id does_not_exist not found" in data["detail"]

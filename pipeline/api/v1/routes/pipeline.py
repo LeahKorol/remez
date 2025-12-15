@@ -97,6 +97,48 @@ async def get_pipeline_status(task_id: int, session: SessionDep) -> TaskResults:
 
 
 @router.get(
+    "/external/{external_id}",
+    response_model=TaskResults,
+    summary="Get pipeline task by external_id",
+    description="Get the current state of a pipeline task by external_id",
+    responses={404: {"model": ErrorResponse, "description": "Task not found"}},
+)
+async def get_pipeline_by_external_id(
+    external_id: str, session: SessionDep
+) -> TaskResults:
+    """Get the current state of a pipeline task by external_id"""
+    try:
+        logger.debug(f"Retrieving task by external_id: {external_id}")
+
+        statement = select(TaskResults).where(TaskResults.external_id == external_id)
+        task = session.exec(statement).first()
+
+        if not task:
+            logger.warning(f"Task not found for external_id: {external_id}")
+            raise HTTPException(
+                status_code=HTTP_404_NOT_FOUND,
+                detail=f"Task with external_id {external_id} not found",
+            )
+
+        logger.debug(
+            f"Retrieved task id={task.id} for external_id={external_id} with status {task.status}"
+        )
+        return task
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            f"Error retrieving task by external_id {external_id}: {str(e)}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve task by external_id",
+        )
+
+
+@router.get(
     "/status/{status}",
     response_model=TaskListResponse,
     status_code=HTTP_200_OK,

@@ -1,7 +1,9 @@
 import logging
+from datetime import timedelta
 
 from django.conf import settings
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -21,6 +23,97 @@ from analysis.serializers import (
 from analysis.services.pipeline_service import pipeline_service
 
 logger = logging.getLogger(__name__)
+
+
+class PipelineStatusCheckMixin:
+    """
+    Mixin to handle pipeline status checking and result updates.
+    Used by both QueryViewSet and ResultViewSet to avoid code duplication.
+    """
+
+    def check_and_update_result_from_pipeline(self, result: Result) -> None:
+        """
+        Check pipeline status for pending/running results and update accordingly.
+        It saves the updated result to the database.
+
+        Logic:
+        - If task exceeds timeout threshold, mark as failed
+        - If pipeline returns completed status, fetch detailed results
+        - If pipeline returns error/404, mark as failed
+        - Otherwise, update with current pipeline status
+        """
+        # Only check if result is pending or running
+        if result.status not in [ResultStatus.PENDING, ResultStatus.RUNNING]:
+            logger.debug(
+                f"Result {result.id} status is {result.status}, no pipeline check needed"
+            )
+            return
+
+        task_id = result.id
+
+        # If task exceeded timeout threshold, mark as failed
+        timeout_minutes = settings.PIPELINE_TASK_TIMEOUT_MINUTES
+        task_age = timezone.now() - result.query.created_at
+        timeout_threshold = timedelta(minutes=timeout_minutes)
+
+        if task_age > timeout_threshold:
+            logger.warning(
+                f"Task {task_id} exceeded timeout threshold ({timeout_minutes} minutes), "
+                f"marking as failed.\n"
+                f"Task age: {task_age.total_seconds() / 60:.1f} minutes, created at: {result.query.created_at}, timeout: {timeout_threshold}, now: {timezone.now()}"
+            )
+            result.status = ResultStatus.FAILED
+            result.save()
+            return
+
+        task = pipeline_service.get_pipeline_task(task_id)
+
+        if task is None or not task.get("status"):
+            logger.warning(
+                f"Pipeline task {task_id} not found or error occurred, marking result as failed"
+            )
+            result.status = ResultStatus.FAILED
+            result.save()
+            return
+        
+        if task.get("status") != ResultStatus.COMPLETED:
+            # Update result with current status (running, pending, etc.)
+            result_serializer = ResultSerializer(result, data=task, partial=True)
+            if result_serializer.is_valid():
+                result_serializer.save()
+                logger.info(
+                    f"Result {result.id} is updated to status: {task.get('status')}"
+                )
+            else:
+                logger.warning(
+                    f"Invalid pipeline data for result {result.id}: {result_serializer.errors}"
+                )
+                result.status = ResultStatus.FAILED
+                result.save()
+            return
+
+        # If task is completed - parse detailed results
+        logger.info(f"Task {task_id} completed, parsing detailed results")
+
+        if task.get("ror_values") is not None and task.get("ror_lower") is not None and task.get("ror_upper") is not None:
+            result_serializer = ResultSerializer(result, data=task, partial=True)
+            if result_serializer.is_valid():
+                result_serializer.save()
+                logger.info(
+                    f"Result {result.id} updated with completed data from pipeline"
+                )
+            else:
+                logger.warning(
+                    f"Invalid pipeline data for result {result.id}: {result_serializer.errors}"
+                )
+                result.status = ResultStatus.FAILED
+                result.save()
+        else:
+            logger.warning(
+                f"Failed to fetch detailed results for completed task {task_id}"
+            )
+            result.status = ResultStatus.FAILED
+            result.save()
 
 
 def is_ror_field_changed(old_query: Query, request_data: dict) -> bool:
@@ -82,7 +175,7 @@ for method in ["list", "create", "get_queries_names"]:
 
 
 @extend_schema_view(**query_schemas)
-class QueryViewSet(viewsets.ModelViewSet):
+class QueryViewSet(PipelineStatusCheckMixin, viewsets.ModelViewSet):
     serializer_class = QuerySerializer
     permission_classes = [IsAuthenticated]
     lookup_field = "id"  # Force DRF to use "id" instead of "pk"
@@ -101,6 +194,20 @@ class QueryViewSet(viewsets.ModelViewSet):
     def get_object(self):
         """Single database lookup for single-object queries"""
         return get_object_or_404(Query, user=self.request.user, id=self.kwargs["id"])
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Override retrieve to check pipeline status when result is pending or running.
+        Uses PipelineStatusCheckMixin for status checking and updating logic.
+        """
+        query = self.get_object()
+
+        # Check and update result from pipeline if needed
+        if hasattr(query, "result"):
+            self.check_and_update_result_from_pipeline(query.result)
+
+        serializer = self.get_serializer(query)
+        return Response(serializer.data)
 
     def perform_create(self, serializer):
         """
@@ -248,7 +355,7 @@ class QueryViewSet(viewsets.ModelViewSet):
         description="Update result by task_id. Used by external pipeline service.",
     ),
 )
-class ResultViewSet(viewsets.ReadOnlyModelViewSet):
+class ResultViewSet(PipelineStatusCheckMixin, viewsets.ReadOnlyModelViewSet):
     """
     ViewSet for Result model with the following access rules:
     - Regular users: read-only access to their own results via query__user
@@ -270,6 +377,19 @@ class ResultViewSet(viewsets.ReadOnlyModelViewSet):
         return Result.objects.filter(query__user=self.request.user).select_related(
             "query"
         )
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Override retrieve to check pipeline status when result is pending or running.
+        Uses PipelineStatusCheckMixin for status checking and updating logic.
+        """
+        result = self.get_object()
+
+        # Check and update result from pipeline if needed
+        self.check_and_update_result_from_pipeline(result)
+
+        serializer = self.get_serializer(result)
+        return Response(serializer.data)
 
     @action(
         detail=False,

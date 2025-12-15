@@ -1,8 +1,11 @@
+from datetime import timedelta
+
 import pytest
 from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -14,13 +17,11 @@ User = get_user_model()
 
 @pytest.fixture
 def api_client():
-    """Fixture for API client"""
     return APIClient()
 
 
 @pytest.fixture
 def user1(db):
-    """Fixture for first test user"""
     user = User.objects.create_user(email="user1@example.com", password="testpassword1")
     email_address = EmailAddress.objects.get(user=user)
     email_address.verified = True
@@ -30,7 +31,6 @@ def user1(db):
 
 @pytest.fixture
 def user2(db):
-    """Fixture for second test user"""
     user = User.objects.create_user(email="user2@example.com", password="testpassword2")
     email_address = EmailAddress.objects.get(user=user)
     email_address.verified = True
@@ -40,19 +40,16 @@ def user2(db):
 
 @pytest.fixture
 def drug(db):
-    """Fixture for drug name"""
     return DrugName.objects.create(name="drug")
 
 
 @pytest.fixture
 def reaction(db):
-    """Fixture for reaction name"""
     return ReactionName.objects.create(name="reaction")
 
 
 @pytest.fixture
 def required_fields(drug, reaction):
-    """Fixture for required query fields"""
     return {
         "quarter_start": 1,
         "quarter_end": 2,
@@ -65,7 +62,6 @@ def required_fields(drug, reaction):
 
 @pytest.fixture
 def query1(user1, drug, reaction):
-    """Fixture for query belonging to user1"""
     query = Query.objects.create(
         user=user1,
         name="User1 Query 1",
@@ -76,7 +72,6 @@ def query1(user1, drug, reaction):
     )
     query.drugs.set([drug.id])
     query.reactions.set([reaction.id])
-    # Create associated Result object
     Result.objects.create(
         query=query,
         status=ResultStatus.PENDING,
@@ -238,6 +233,9 @@ class TestQueryViewSet:
         response = api_client.get(detail_url)
 
         assert response.status_code == status.HTTP_200_OK
+        query1.result.status = (
+            ResultStatus.FAILED
+        )  # The pipeline doesnt run during the tests
         expected_data = QuerySerializer(query1).data
         assert response.data == expected_data
 
@@ -249,7 +247,9 @@ class TestQueryViewSet:
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_create_query_authenticated_user(self, mocker, api_client, user1, required_fields):
+    def test_create_query_authenticated_user(
+        self, mocker, api_client, user1, required_fields
+    ):
         """Test that an authenticated user can create a query and associated result."""
         # Mock the pipeline service call to prevent real HTTP requests during unit tests
         mocker.patch("analysis.views.pipeline_service.trigger_pipeline_analysis")
@@ -281,8 +281,6 @@ class TestQueryViewSet:
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-
-
     def test_delete_query_owned_by_user(self, api_client, user1, query1):
         """Test that a user can delete their own query."""
         self.authenticate_user(api_client, user=user1)
@@ -301,7 +299,9 @@ class TestQueryViewSet:
         assert response.status_code == status.HTTP_404_NOT_FOUND
         assert Query.objects.filter(id=query3.id).exists()
 
-    def test_partial_update_query_owned_by_user(self, mocker, api_client, user1, query1):
+    def test_partial_update_query_owned_by_user(
+        self, mocker, api_client, user1, query1
+    ):
         """Test that a user can update their own query."""
         # Mock pipeline service to prevent real HTTP requests during unit tests
         mocker.patch("analysis.views.pipeline_service.trigger_pipeline_analysis")
@@ -365,7 +365,9 @@ class TestQueryViewSet:
     ):
         """Test that serializer blocks invalid quarter numbers."""
         # Mock the pipeline service call to prevent real HTTP requests during unit tests
-        mock_trigger = mocker.patch("analysis.views.pipeline_service.trigger_pipeline_analysis")
+        mock_trigger = mocker.patch(
+            "analysis.views.pipeline_service.trigger_pipeline_analysis"
+        )
 
         self.authenticate_user(api_client, user=user1)
         detail_url = reverse("query-detail", kwargs={"id": query1.id})
@@ -383,7 +385,9 @@ class TestQueryViewSet:
     ):
         """Test that serializer blocks year_start greater than year_end."""
         # Mock the pipeline service call to prevent real HTTP requests during unit tests
-        mock_trigger = mocker.patch("analysis.views.pipeline_service.trigger_pipeline_analysis")
+        mock_trigger = mocker.patch(
+            "analysis.views.pipeline_service.trigger_pipeline_analysis"
+        )
 
         self.authenticate_user(api_client, user=user1)
         detail_url = reverse("query-detail", kwargs={"id": query1.id})
@@ -423,7 +427,9 @@ class TestQueryViewSet:
     ):
         """Test that serializer validates quarter and year ranges properly."""
         # Mock the pipeline service call to prevent real HTTP requests during unit tests
-        mock_trigger = mocker.patch("analysis.views.pipeline_service.trigger_pipeline_analysis")
+        mock_trigger = mocker.patch(
+            "analysis.views.pipeline_service.trigger_pipeline_analysis"
+        )
         # Mock demo mode as disabled
         mocker.patch.object(settings, "NUM_DEMO_QUARTERS", -1)
 
@@ -515,6 +521,143 @@ class TestResultViewSetRetrieve:
         ):  # Should be only 1 query due to select_related
             response = api_client.get(detail_url)
             assert response.status_code == status.HTTP_200_OK
+
+    def test_retrieve_pending_result_checks_pipeline(
+        self, mocker, api_client, user1, result1
+    ):
+        result1.status = ResultStatus.PENDING
+        result1.save()
+
+        pipeline_response = {
+            "id": result1.id,
+            "status": ResultStatus.RUNNING,
+            "ror_values": [],
+            "ror_lower": [],
+            "ror_upper": [],
+        }
+
+        mock_check_status = mocker.patch(
+            "analysis.views.pipeline_service.check_task_status",
+            return_value=pipeline_response,
+        )
+
+        api_client.force_authenticate(user=user1)
+        detail_url = reverse("result-detail", kwargs={"id": result1.id})
+        response = api_client.get(detail_url)
+
+        assert response.status_code == status.HTTP_200_OK
+        mock_check_status.assert_called_once_with(result1.id)
+
+        result1.refresh_from_db()
+        assert result1.status == ResultStatus.RUNNING
+
+    def test_retrieve_running_result_timeout_exceeded(
+        self, mocker, api_client, user1, result1, settings
+    ):
+        settings.PIPELINE_TASK_TIMEOUT_MINUTES = 45
+        old_time = timezone.now() - timedelta(minutes=50)
+        result1.query.created_at = old_time
+        result1.query.save()
+
+        result1.status = ResultStatus.RUNNING
+        result1.save()
+
+        mock_check_status = mocker.patch(
+            "analysis.views.pipeline_service.check_task_status"
+        )
+
+        api_client.force_authenticate(user=user1)
+        detail_url = reverse("result-detail", kwargs={"id": result1.id})
+        response = api_client.get(detail_url)
+
+        assert response.status_code == status.HTTP_200_OK
+        mock_check_status.assert_not_called()
+
+        result1.refresh_from_db()
+        assert result1.status == ResultStatus.FAILED
+
+    def test_retrieve_pending_result_pipeline_returns_completed(
+        self, mocker, api_client, user1, result1
+    ):
+        result1.status = ResultStatus.PENDING
+        result1.save()
+
+        pipeline_status_response = {
+            "id": result1.id,
+            "status": ResultStatus.COMPLETED,
+        }
+
+        detailed_results_response = {
+            "id": result1.id,
+            "status": ResultStatus.COMPLETED,
+            "ror_values": [2.1, 2.5, 3.0],
+            "ror_lower": [1.8, 2.2, 2.7],
+            "ror_upper": [2.4, 2.8, 3.3],
+        }
+
+        mock_check_status = mocker.patch(
+            "analysis.views.pipeline_service.check_task_status",
+            return_value=pipeline_status_response,
+        )
+
+        mock_get_results = mocker.patch(
+            "analysis.views.pipeline_service.get_task_results",
+            return_value=detailed_results_response,
+        )
+
+        api_client.force_authenticate(user=user1)
+        detail_url = reverse("result-detail", kwargs={"id": result1.id})
+        response = api_client.get(detail_url)
+
+        assert response.status_code == status.HTTP_200_OK
+        mock_check_status.assert_called_once_with(result1.id)
+        mock_get_results.assert_called_once_with(result1.id)
+
+        result1.refresh_from_db()
+        assert result1.status == ResultStatus.COMPLETED
+        assert result1.ror_values == [2.1, 2.5, 3.0]
+        assert result1.ror_lower == [1.8, 2.2, 2.7]
+        assert result1.ror_upper == [2.4, 2.8, 3.3]
+
+    def test_retrieve_running_result_pipeline_not_found(
+        self, mocker, api_client, user1, result1
+    ):
+        """Test that running result is marked as failed when pipeline returns 404"""
+        result1.status = ResultStatus.RUNNING
+        result1.save()
+
+        mock_check_status = mocker.patch(
+            "analysis.views.pipeline_service.check_task_status", return_value=None
+        )
+
+        api_client.force_authenticate(user=user1)
+        detail_url = reverse("result-detail", kwargs={"id": result1.id})
+        response = api_client.get(detail_url)
+
+        assert response.status_code == status.HTTP_200_OK
+        mock_check_status.assert_called_once_with(result1.id)
+
+        result1.refresh_from_db()
+        assert result1.status == ResultStatus.FAILED
+
+    def test_retrieve_completed_result_no_pipeline_check(
+        self, mocker, api_client, user1, result1
+    ):
+        result1.status = ResultStatus.COMPLETED
+        result1.ror_values = [1.0, 2.0]
+        result1.save()
+
+        mock_check_status = mocker.patch(
+            "analysis.views.pipeline_service.check_task_status"
+        )
+
+        api_client.force_authenticate(user=user1)
+        detail_url = reverse("result-detail", kwargs={"id": result1.id})
+        response = api_client.get(detail_url)
+
+        assert response.status_code == status.HTTP_200_OK
+        mock_check_status.assert_not_called()
+        assert response.data["status"] == ResultStatus.COMPLETED
 
 
 @pytest.mark.django_db
@@ -618,3 +761,382 @@ class TestResultViewSetUpdateByTaskId:
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "invalid task_id" in response.data["error"].lower()
+
+
+@pytest.mark.django_db
+class TestQueryRetrieveWithPipelineStatusChecks:
+    """Test cases for query retrieve and pipeline status checks"""
+
+    def test_retrieve_query_with_completed_result_no_pipeline_check(
+        self, mocker, api_client, user1, query1
+    ):
+        """Test that completed results don't trigger pipeline status check"""
+        query1.result.status = ResultStatus.COMPLETED
+        query1.result.ror_values = [1.5, 2.0]
+        query1.result.save()
+
+        mock_check_status = mocker.patch(
+            "analysis.views.pipeline_service.check_task_status"
+        )
+
+        api_client.force_authenticate(user=user1)
+        detail_url = reverse("query-detail", kwargs={"id": query1.id})
+
+        response = api_client.get(detail_url)
+
+        assert response.status_code == status.HTTP_200_OK
+        mock_check_status.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "initial_status", [ResultStatus.PENDING, ResultStatus.RUNNING]
+    )
+    def test_retrieve_query_with_error_status(
+        self, mocker, api_client, user1, query1, initial_status
+    ):
+        """Test that result is marked as failed when pipeline returns 404"""
+        query1.result.status = initial_status
+        query1.result.save()
+
+        mock_check_status = mocker.patch(
+            "analysis.views.pipeline_service.check_task_status",
+            return_value=None,  # Simulates 404 or error
+        )
+
+        api_client.force_authenticate(user=user1)
+        detail_url = reverse("query-detail", kwargs={"id": query1.id})
+
+        response = api_client.get(detail_url)
+
+        assert response.status_code == status.HTTP_200_OK
+        mock_check_status.assert_called_once_with(query1.result.id)
+
+        query1.result.refresh_from_db()
+        assert query1.result.status == ResultStatus.FAILED
+
+    @pytest.mark.parametrize(
+        "initial_status, final_status",
+        [
+            (ResultStatus.PENDING, ResultStatus.RUNNING),
+            (ResultStatus.RUNNING, ResultStatus.RUNNING),
+            (ResultStatus.RUNNING, ResultStatus.FAILED),
+        ],
+    )
+    def test_retrieve_query_with_pending_result_pipeline_returns_running(
+        self, mocker, api_client, user1, query1, initial_status, final_status
+    ):
+        """Test that pending result is updated to running when pipeline returns running status"""
+        query1.result.status = initial_status
+        query1.result.save()
+
+        pipeline_response = {
+            "id": query1.result.id,
+            "status": final_status,
+            "ror_values": [],
+            "ror_lower": [],
+            "ror_upper": [],
+        }
+
+        mock_check_status = mocker.patch(
+            "analysis.views.pipeline_service.check_task_status",
+            return_value=pipeline_response,
+        )
+
+        api_client.force_authenticate(user=user1)
+        detail_url = reverse("query-detail", kwargs={"id": query1.id})
+
+        response = api_client.get(detail_url)
+
+        assert response.status_code == status.HTTP_200_OK
+        mock_check_status.assert_called_once_with(query1.result.id)
+
+        query1.result.refresh_from_db()
+        assert query1.result.status == final_status
+
+    def test_retrieve_query_running_pipeline_returns_completed(
+        self, mocker, api_client, user1, query1
+    ):
+        """Test that running result is updated to completed with ROR values from pipeline"""
+        query1.result.status = ResultStatus.RUNNING
+        query1.result.save()
+
+        pipeline_response = {
+            "id": query1.result.id,
+            "status": ResultStatus.COMPLETED,
+            "ror_values": [2.5, 3.0],
+            "ror_lower": [2.0, 2.5],
+            "ror_upper": [3.0, 3.5],
+        }
+
+        mock_check_status = mocker.patch(
+            "analysis.views.pipeline_service.check_task_status",
+            return_value=pipeline_response,
+        )
+
+        detailed_results_response = {
+            "id": query1.result.id,
+            "status": ResultStatus.COMPLETED,
+            "ror_values": [2.5, 3.0],
+            "ror_lower": [2.0, 2.5],
+            "ror_upper": [3.0, 3.5],
+        }
+
+        mock_get_results = mocker.patch(
+            "analysis.views.pipeline_service.get_task_results",
+            return_value=detailed_results_response,
+        )
+
+        api_client.force_authenticate(user=user1)
+        detail_url = reverse("query-detail", kwargs={"id": query1.id})
+
+        response = api_client.get(detail_url)
+
+        assert response.status_code == status.HTTP_200_OK
+        mock_check_status.assert_called_once_with(query1.result.id)
+        mock_get_results.assert_called_once_with(query1.result.id)
+
+        query1.result.refresh_from_db()
+        assert query1.result.status == ResultStatus.COMPLETED
+        assert query1.result.ror_values == [2.5, 3.0]
+        assert query1.result.ror_lower == [2.0, 2.5]
+        assert query1.result.ror_upper == [3.0, 3.5]
+
+    def test_retrieve_query_pipeline_returns_invalid_data(
+        self, mocker, api_client, user1, query1
+    ):
+        """Test that result is marked as failed when pipeline returns invalid data"""
+        query1.result.status = ResultStatus.PENDING
+        query1.result.save()
+
+        pipeline_response = {
+            "id": query1.result.id,
+            "status": "invalid_status",  # Invalid status value
+            "ror_values": "not_a_list",  # Invalid type
+        }
+
+        mock_check_status = mocker.patch(
+            "analysis.views.pipeline_service.check_task_status",
+            return_value=pipeline_response,
+        )
+
+        api_client.force_authenticate(user=user1)
+        detail_url = reverse("query-detail", kwargs={"id": query1.id})
+
+        response = api_client.get(detail_url)
+
+        assert response.status_code == status.HTTP_200_OK
+        mock_check_status.assert_called_once_with(query1.result.id)
+
+        query1.result.refresh_from_db()
+        assert query1.result.status == ResultStatus.FAILED
+
+    def test_retrieve_query_pipeline_status_unchanged(
+        self, mocker, api_client, user1, query1
+    ):
+        """Test that result is not updated when pipeline returns same status"""
+        query1.result.status = ResultStatus.RUNNING
+        query1.result.ror_values = [1.0]
+        query1.result.save()
+
+        pipeline_response = {
+            "id": query1.result.id,
+            "status": ResultStatus.RUNNING,
+            "ror_values": [1.0],
+            "ror_lower": [],
+            "ror_upper": [],
+        }
+
+        mock_check_status = mocker.patch(
+            "analysis.views.pipeline_service.check_task_status",
+            return_value=pipeline_response,
+        )
+
+        api_client.force_authenticate(user=user1)
+        detail_url = reverse("query-detail", kwargs={"id": query1.id})
+
+        response = api_client.get(detail_url)
+
+        assert response.status_code == status.HTTP_200_OK
+        mock_check_status.assert_called_once_with(query1.result.id)
+
+        query1.result.refresh_from_db()
+        assert query1.result.status == ResultStatus.RUNNING
+        assert query1.result.ror_values == [1.0]
+
+    def test_retrieve_query_without_result_no_error(
+        self, mocker, api_client, user1, drug, reaction
+    ):
+        """Test that queries without results don't cause errors"""
+        query_no_result = Query.objects.create(
+            user=user1,
+            name="Query without result",
+            quarter_start=1,
+            quarter_end=2,
+            year_start=2020,
+            year_end=2020,
+        )
+        query_no_result.drugs.set([drug.id])
+        query_no_result.reactions.set([reaction.id])
+
+        mock_check_status = mocker.patch(
+            "analysis.views.pipeline_service.check_task_status"
+        )
+
+        api_client.force_authenticate(user=user1)
+        detail_url = reverse("query-detail", kwargs={"id": query_no_result.id})
+
+        response = api_client.get(detail_url)
+
+        assert response.status_code == status.HTTP_200_OK
+        mock_check_status.assert_not_called()
+
+
+@pytest.mark.django_db
+class TestQueryRetrieveWithTimeoutAndCompletedResults:
+    """Test cases for query retrieve with task timeout and completed result fetching"""
+
+    @pytest.mark.parametrize("initial_status", [ResultStatus.PENDING, ResultStatus.RUNNING])
+    def test_retrieve_query_task_timeout_exceeded(
+        self, mocker, api_client, user1, query1, settings, initial_status
+    ):
+        """Test that pending result is marked as failed when task exceeds timeout threshold"""
+
+        settings.PIPELINE_TASK_TIMEOUT_MINUTES = 60
+
+        # Set query created_at to 61 minutes ago (exceeds timeout)
+        old_time = timezone.now() - timedelta(minutes=61)
+        query1.created_at = old_time
+        query1.save()
+
+        query1.result.status = initial_status
+        query1.result.save()
+
+        mock_check_status = mocker.patch(
+            "analysis.views.pipeline_service.check_task_status"
+        )
+
+        api_client.force_authenticate(user=user1)
+        detail_url = reverse("query-detail", kwargs={"id": query1.id})
+
+        response = api_client.get(detail_url)
+
+        assert response.status_code == status.HTTP_200_OK
+        # Pipeline should NOT be checked since timeout was exceeded
+        mock_check_status.assert_not_called()
+
+        query1.result.refresh_from_db()
+        assert query1.result.status == ResultStatus.FAILED
+
+    def test_retrieve_query_pending_task_within_timeout(
+        self, mocker, api_client, user1, query1, settings
+    ):
+        """Test that pending result is checked when task is within timeout threshold"""
+
+        settings.PIPELINE_TASK_TIMEOUT_MINUTES = 60
+
+        # Set query created_at to 30 minutes ago (within timeout)
+        recent_time = timezone.now() - timedelta(minutes=30)
+        query1.created_at = recent_time
+        query1.save()
+
+        query1.result.status = ResultStatus.PENDING
+        query1.result.save()
+
+        pipeline_response = {
+            "id": query1.result.id,
+            "status": ResultStatus.RUNNING,
+            "ror_values": [],
+            "ror_lower": [],
+            "ror_upper": [],
+        }
+
+        mock_check_status = mocker.patch(
+            "analysis.views.pipeline_service.check_task_status",
+            return_value=pipeline_response,
+        )
+
+        api_client.force_authenticate(user=user1)
+        detail_url = reverse("query-detail", kwargs={"id": query1.id})
+
+        response = api_client.get(detail_url)
+
+        assert response.status_code == status.HTTP_200_OK
+        mock_check_status.assert_called_once_with(query1.result.id)
+
+        query1.result.refresh_from_db()
+        assert query1.result.status == ResultStatus.RUNNING
+
+    def test_retrieve_query_completed_status_but_failed_to_fetch_details(
+        self, mocker, api_client, user1, query1
+    ):
+        """Test that result is marked as failed when fetching detailed results fails"""
+        query1.result.status = ResultStatus.PENDING
+        query1.result.save()
+
+        pipeline_status_response = {
+            "id": query1.result.id,
+            "status": ResultStatus.COMPLETED,
+        }
+
+        mock_check_status = mocker.patch(
+            "analysis.views.pipeline_service.check_task_status",
+            return_value=pipeline_status_response,
+        )
+
+        # Simulate failure to fetch detailed results
+        mock_get_results = mocker.patch(
+            "analysis.views.pipeline_service.get_task_results", return_value=None
+        )
+
+        api_client.force_authenticate(user=user1)
+        detail_url = reverse("query-detail", kwargs={"id": query1.id})
+
+        response = api_client.get(detail_url)
+
+        assert response.status_code == status.HTTP_200_OK
+        mock_check_status.assert_called_once_with(query1.result.id)
+        mock_get_results.assert_called_once_with(query1.result.id)
+
+        query1.result.refresh_from_db()
+        assert query1.result.status == ResultStatus.FAILED
+
+    def test_retrieve_query_completed_status_invalid_detailed_results(
+        self, mocker, api_client, user1, query1
+    ):
+        """Test that result is marked as failed when detailed results are invalid"""
+        # Arrange
+        query1.result.status = ResultStatus.RUNNING
+        query1.result.save()
+
+        pipeline_status_response = {
+            "id": query1.result.id,
+            "status": ResultStatus.COMPLETED,
+        }
+
+        # Invalid detailed results (missing required fields)
+        invalid_detailed_results = {
+            "id": query1.result.id,
+            "status": "invalid_status",
+            "ror_values": "not_a_list",
+        }
+
+        mock_check_status = mocker.patch(
+            "analysis.views.pipeline_service.check_task_status",
+            return_value=pipeline_status_response,
+        )
+
+        mock_get_results = mocker.patch(
+            "analysis.views.pipeline_service.get_task_results",
+            return_value=invalid_detailed_results,
+        )
+
+        api_client.force_authenticate(user=user1)
+        detail_url = reverse("query-detail", kwargs={"id": query1.id})
+
+        response = api_client.get(detail_url)
+
+        assert response.status_code == status.HTTP_200_OK
+        mock_check_status.assert_called_once_with(query1.result.id)
+        mock_get_results.assert_called_once_with(query1.result.id)
+
+        query1.result.refresh_from_db()
+        assert query1.result.status == ResultStatus.FAILED

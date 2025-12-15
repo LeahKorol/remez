@@ -149,3 +149,192 @@ class TestPipelineService:
         service = PipelineService()
         assert service.health_check() is False
         mock_get.assert_called_once()
+
+
+@pytest.mark.django_db
+class TestCheckTaskStatus:
+    def test_status_success_running(self, mocker):
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "id": 123,
+            "status": "running",
+            "ror_values": [],
+            "ror_lower": [],
+            "ror_upper": [],
+        }
+        mock_response.raise_for_status.return_value = None
+
+        mock_get = mocker.patch(
+            "analysis.services.pipeline_service.requests.get",
+            return_value=mock_response,
+        )
+
+        service = PipelineService()
+        result = service.get_pipeline_task(task_id=123)
+
+        mock_get.assert_called_once_with(
+            "http://localhost:8001/api/v1/pipeline/external/123",
+            timeout=30,
+        )
+        assert result["status"] == "running"
+
+    def test_status_404_returns_none(self, mocker):
+        mock_response = mocker.Mock()
+        mock_response.status_code = 404
+        http_error = requests.HTTPError("Not Found")
+        http_error.response = mock_response
+        mock_response.raise_for_status.side_effect = http_error
+
+        mock_get = mocker.patch(
+            "analysis.services.pipeline_service.requests.get",
+            return_value=mock_response,
+        )
+
+        service = PipelineService()
+        result = service.get_pipeline_task(task_id=456)
+        mock_get.assert_called_once()
+        assert result is None
+
+    @pytest.mark.parametrize(
+        "error_cls, msg",
+        [
+            (requests.ConnectionError, "refused"),
+            (requests.Timeout, "timed out"),
+        ],
+    )
+    def test_status_network_errors_return_none(self, mocker, error_cls, msg):
+        mock_get = mocker.patch(
+            "analysis.services.pipeline_service.requests.get",
+            side_effect=error_cls(msg),
+        )
+        service = PipelineService()
+        result = service.get_pipeline_task(task_id=789)
+        mock_get.assert_called_once()
+        assert result is None
+
+    def test_status_http_500_returns_none(self, mocker):
+        mock_response = mocker.Mock()
+        mock_response.status_code = 500
+        http_error = requests.HTTPError("Server Error")
+        http_error.response = mock_response
+        mock_response.raise_for_status.side_effect = http_error
+
+        mock_get = mocker.patch(
+            "analysis.services.pipeline_service.requests.get",
+            return_value=mock_response,
+        )
+        service = PipelineService()
+        result = service.get_pipeline_task(task_id=999)
+        mock_get.assert_called_once()
+        assert result is None
+
+    def test_status_custom_timeout_used(self, mocker):
+        mocker.patch.object(settings, "PIPELINE_TIMEOUT", 10)
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"id": 1, "status": "running"}
+        mock_response.raise_for_status.return_value = None
+
+        mock_get = mocker.patch(
+            "analysis.services.pipeline_service.requests.get",
+            return_value=mock_response,
+        )
+        service = PipelineService()
+        service.get_pipeline_task(task_id=1)
+        mock_get.assert_called_once_with(
+            "http://localhost:8001/api/v1/pipeline/external/1",
+            timeout=10,
+        )
+
+
+@pytest.mark.django_db
+class TestGetTaskResults:
+    def test_results_success_completed(self, mocker):
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "id": 123,
+            "status": "completed",
+            "ror_values": [1.1],
+            "ror_lower": [0.9],
+            "ror_upper": [1.3],
+        }
+        mock_response.raise_for_status.return_value = None
+
+        mock_get = mocker.patch(
+            "analysis.services.pipeline_service.requests.get",
+            return_value=mock_response,
+        )
+        service = PipelineService()
+        result = service.get_pipeline_task(task_id=123)
+        mock_get.assert_called_once_with(
+            "http://localhost:8001/api/v1/pipeline/external/123",
+            timeout=30,
+        )
+        assert result["status"] == "completed"
+
+    @pytest.mark.parametrize("status_code", [404, 500])
+    def test_results_http_errors_return_none(self, mocker, status_code):
+        mock_response = mocker.Mock()
+        mock_response.status_code = status_code
+        http_error = requests.HTTPError("HTTP Error")
+        http_error.response = mock_response
+        mock_response.raise_for_status.side_effect = http_error
+
+        mock_get = mocker.patch(
+            "analysis.services.pipeline_service.requests.get",
+            return_value=mock_response,
+        )
+        service = PipelineService()
+        result = service.get_pipeline_task(task_id=222)
+        mock_get.assert_called_once()
+        assert result is None
+
+    @pytest.mark.parametrize(
+        "error_cls, msg",
+        [
+            (requests.ConnectionError, "refused"),
+            (requests.Timeout, "timed out"),
+        ],
+    )
+    def test_results_network_errors_return_none(self, mocker, error_cls, msg):
+        mock_get = mocker.patch(
+            "analysis.services.pipeline_service.requests.get",
+            side_effect=error_cls(msg),
+        )
+        service = PipelineService()
+        result = service.get_pipeline_task(task_id=333)
+        mock_get.assert_called_once()
+        assert result is None
+
+    def test_results_invalid_json_raises(self, mocker):
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.side_effect = ValueError("Invalid JSON")
+
+        mock_get = mocker.patch(
+            "analysis.services.pipeline_service.requests.get",
+            return_value=mock_response,
+        )
+        service = PipelineService()
+        with pytest.raises(ValueError):
+            service.get_pipeline_task(task_id=444)
+
+    def test_results_custom_timeout_used(self, mocker):
+        mocker.patch.object(settings, "PIPELINE_TIMEOUT", 15)
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"id": 1, "status": "completed"}
+        mock_response.raise_for_status.return_value = None
+        mock_get = mocker.patch(
+            "analysis.services.pipeline_service.requests.get",
+            return_value=mock_response,
+        )
+        service = PipelineService()
+        service.get_pipeline_task(task_id=1)
+        mock_get.assert_called_once_with(
+            "http://localhost:8001/api/v1/pipeline/external/1",
+            timeout=15,
+        )

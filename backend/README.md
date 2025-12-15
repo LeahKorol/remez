@@ -143,7 +143,8 @@ NUM_DEMO_QUARTERS=-1
 # Can be a comma-separated list of IPs for multiple allowed services
 PIPELINE_SERVICE_IPS=127.0.0.1,localhost
 PIPELINE_BASE_URL=http://localhost:8001
-PIPELINE_TIMEOUT=30 # timeout (minutes) for sending a request to the pipeline
+PIPELINE_TIMEOUT=30 # timeout (seconds) for sending a request to the pipeline
+PIPELINE_TASK_TIMEOUT_MINUTES # timeout before a pipeline task is considered failed
 ```
 
 ### Prerequisites
