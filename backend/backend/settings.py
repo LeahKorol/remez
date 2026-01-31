@@ -340,7 +340,7 @@ NUM_DEMO_QUARTERS = int(os.getenv("NUM_DEMO_QUARTERS", -1))
 # Email verification settings
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_CONFIRM_EMAIL_ON_GET = True
-ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 0.0005  # 1
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
 
 # Custom adapter
 ACCOUNT_ADAPTER = "users.adapters.CustomAccountAdapter"
@@ -358,12 +358,6 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 REST_AUTH_REGISTER_SERIALIZERS = {
     "REGISTER_SERIALIZER": "users.serializers.CustomRegisterSerializer",
 }
-
-
-# Email verification settings
-ACCOUNT_EMAIL_VERIFICATION = "mandatory"
-ACCOUNT_CONFIRM_EMAIL_ON_GET = True
-ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 0.0005  # 1
 
 # Pipeline service settings
 

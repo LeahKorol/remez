@@ -159,6 +159,7 @@ def password_reset_confirm_redirect(request, uidb64, token):
 
 
 def verify_email_api(request, key):
+    logger.info(f"Verifying email with key: {key}")
     try:
         email_confirmation = EmailConfirmationHMAC.from_key(key)
         if not email_confirmation:
@@ -166,9 +167,11 @@ def verify_email_api(request, key):
 
         email_confirmation.confirm(request)
         # Redirect to frontend with success message
+        logger.info(f"Email verified successfully for key: {key}")
         frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
         return redirect(f"{frontend_url}/login?verified=true")
-    except Exception:
+    except Exception as e:
+        logger.error(f"Email verification failed for key: {key} with error: {e}")
         frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
         return redirect(f"{frontend_url}/login?verified=false")
 
