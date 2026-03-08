@@ -1,4 +1,4 @@
-import React, { useRef, useImperativeHandle, forwardRef } from 'react';
+import React, { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { Line } from 'react-chartjs-2';
 import {
     Chart as ChartJS,
@@ -32,7 +32,14 @@ const RorChart = forwardRef(({ query, year_start, quarter_start }, ref) => {
     // Expose chart instance to parent via ref
     useImperativeHandle(ref, () => ({
         getChart: () => chartRef.current,
-    }));
+      }));
+
+    // Ensure stale zoom/pan state does not hide points when switching queries.
+    useEffect(() => {
+        const chart = chartRef.current;
+        if (!chart) return;
+        chart.resetZoom();
+    }, [query?.ror_values?.length, year_start, quarter_start]);
 
     if (!query || !query.ror_values) return null;
 

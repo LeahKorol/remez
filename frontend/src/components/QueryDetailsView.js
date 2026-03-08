@@ -14,7 +14,7 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery, onQueryUpdate }
   }, [query]);
 
   console.log("Rendering QueryDetailsView for:", currentQuery);
-  console.log("status: ", currentQuery.result.status);
+  console.log("status: ", currentQuery?.result?.status);
 
   const isQueryLocked = currentQuery?.result?.status !== "completed" && currentQuery?.result?.status !== "failed";
 
@@ -60,11 +60,17 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery, onQueryUpdate }
     "Upper CI",
   ];
 
+  const toFiniteNumber = (value) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  };
+
   const csvRows =
-    currentQuery?.result.ror_values?.map((rorValue, index) => {
-      const logValue = Math.log10(rorValue || 0.1);
-      const lowerCI = currentQuery.result.ror_lower[index] || "";
-      const upperCI = currentQuery.result.ror_upper[index] || "";
+    currentQuery?.result?.ror_values?.map((rorValue, index) => {
+      const safeRor = toFiniteNumber(rorValue);
+      const lowerCI = toFiniteNumber(currentQuery?.result?.ror_lower?.[index]);
+      const upperCI = toFiniteNumber(currentQuery?.result?.ror_upper?.[index]);
+      const logValue = safeRor && safeRor > 0 ? Math.log10(safeRor) : null;
       let currentYear = currentQuery.year_start;
       let currentQuarter = currentQuery.quarter_start + index;
       while (currentQuarter > 4) {
@@ -74,10 +80,10 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery, onQueryUpdate }
       const timePeriod = `${currentYear} Q${currentQuarter}`;
       return {
         timePeriod,
-        logValue: logValue.toFixed(4),
-        rorValue: rorValue.toFixed(4),
-        lowerCI: lowerCI ? lowerCI.toFixed(4) : "",
-        upperCI: upperCI ? upperCI.toFixed(4) : "",
+        logValue: logValue !== null ? logValue.toFixed(4) : "",
+        rorValue: safeRor !== null ? safeRor.toFixed(4) : "",
+        lowerCI: lowerCI !== null ? lowerCI.toFixed(4) : "",
+        upperCI: upperCI !== null ? upperCI.toFixed(4) : "",
       };
     }) || [];
 
@@ -167,18 +173,19 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery, onQueryUpdate }
     })();
 
     currentQuery.result.ror_values.forEach((rorValue, index) => {
-      const logValue = Math.log10(rorValue || 0.1);
-      const lowerCI = currentQuery.result.ror_lower[index] || "";
-      const upperCI = currentQuery.result.ror_upper[index] || "";
+      const safeRor = toFiniteNumber(rorValue);
+      const lowerCI = toFiniteNumber(currentQuery?.result?.ror_lower?.[index]);
+      const upperCI = toFiniteNumber(currentQuery?.result?.ror_upper?.[index]);
+      const logValue = safeRor && safeRor > 0 ? Math.log10(safeRor) : null;
       const timePeriod = labels[index] || `Period ${index + 1}`;
 
       csvData.push(
         [
           `"${timePeriod}"`,
-          logValue.toFixed(4),
-          rorValue.toFixed(4),
-          lowerCI ? lowerCI.toFixed(4) : "",
-          upperCI ? upperCI.toFixed(4) : "",
+          logValue !== null ? logValue.toFixed(4) : "",
+          safeRor !== null ? safeRor.toFixed(4) : "",
+          lowerCI !== null ? lowerCI.toFixed(4) : "",
+          upperCI !== null ? upperCI.toFixed(4) : "",
         ].join(",")
       );
     });
@@ -351,6 +358,7 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery, onQueryUpdate }
           <div className="chart-container">
             {currentQuery?.result?.status === "completed" && hasResults ? (
               <RorChart
+                key={`${currentQuery.id}-${currentQuery.result?.id}-${currentQuery.result?.ror_values?.length || 0}`}
                 query={currentQuery.result}
                 year_start={currentQuery.year_start}
                 quarter_start={currentQuery.quarter_start}
