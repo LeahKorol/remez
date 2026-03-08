@@ -4,6 +4,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -50,17 +51,20 @@ class PipelineStatusCheckMixin:
             return
 
         task_id = result.id
+        logger.debug(
+            f"Checking pipeline task for result {result.id} (query_id={result.query.id}, current_status={result.status})"
+        )
 
         # If task exceeded timeout threshold, mark as failed
         timeout_minutes = settings.PIPELINE_TASK_TIMEOUT_MINUTES
-        task_age = timezone.now() - result.query.created_at
+        task_age = timezone.now() - result.query.updated_at
         timeout_threshold = timedelta(minutes=timeout_minutes)
 
         if task_age > timeout_threshold:
             logger.warning(
                 f"Task {task_id} exceeded timeout threshold ({timeout_minutes} minutes), "
                 f"marking as failed.\n"
-                f"Task age: {task_age.total_seconds() / 60:.1f} minutes, created at: {result.query.created_at}, timeout: {timeout_threshold}, now: {timezone.now()}"
+                f"Task age: {task_age.total_seconds() / 60:.1f} minutes, updated at: {result.query.updated_at}, timeout: {timeout_threshold}, now: {timezone.now()}"
             )
             result.status = ResultStatus.FAILED
             result.save()
@@ -69,13 +73,33 @@ class PipelineStatusCheckMixin:
         task = pipeline_service.get_pipeline_task(task_id)
 
         if task is None or not task.get("status"):
-            logger.warning(
-                f"Pipeline task {task_id} not found or error occurred, marking result as failed"
+            logger.info(
+                f"Pipeline task {task_id} not ready yet (not found/no status). Keeping local status as {result.status}."
             )
-            result.status = ResultStatus.FAILED
-            result.save()
             return
         
+        # Guard against stale task snapshots from previous runs:
+        # for the same external_id we only accept task records created at/after
+        # this query's latest update timestamp.
+        task_created_at = parse_datetime(task.get("created_at", "")) if task else None
+        if task_created_at is None:
+            logger.debug(
+                f"Pipeline task {task_id} has no parseable created_at. Proceeding without stale-snapshot guard."
+            )
+        if task_created_at is not None:
+            if timezone.is_naive(task_created_at):
+                task_created_at = timezone.make_aware(
+                    task_created_at, timezone.get_current_timezone()
+                )
+
+            query_updated_at = result.query.updated_at
+            if task_created_at < (query_updated_at - timedelta(seconds=1)):
+                logger.info(
+                    f"Ignoring stale pipeline task snapshot for result {result.id}: "
+                    f"task created_at={task_created_at}, query updated_at={query_updated_at}"
+                )
+                return
+
         if task.get("status") != ResultStatus.COMPLETED:
             # Update result with current status (running, pending, etc.)
             result_serializer = ResultSerializer(result, data=task, partial=True)
@@ -129,6 +153,8 @@ def is_ror_field_changed(old_query: Query, request_data: dict) -> bool:
         "reactions",
     ]
 
+    numeric_fields = {"year_start", "year_end", "quarter_start", "quarter_end"}
+
     for field in recalculate_ror_fields:
         old_value = getattr(old_query, field)
         new_value = request_data.get(field, None)
@@ -142,13 +168,38 @@ def is_ror_field_changed(old_query: Query, request_data: dict) -> bool:
 
         if field in ["drugs", "reactions"]:
             # list fields need special handling
-            new_value = set(int(pk) for pk in request_data.get(field, []))
+            try:
+                if hasattr(request_data, "getlist"):
+                    raw_values = request_data.getlist(field)
+                else:
+                    raw_values = request_data.get(field, [])
+
+                if isinstance(raw_values, str):
+                    raw_values = [raw_values]
+                elif raw_values is None:
+                    raw_values = []
+
+                new_value = set(int(pk) for pk in raw_values)
+            except (TypeError, ValueError):
+                # If parsing fails, treat as changed and let serializer validation handle details.
+                logger.warning(
+                    f"Failed parsing '{field}' values during update for query {old_query.id}; forcing recalculation."
+                )
+                return True
             old_value = set(obj.pk for obj in old_value.all())
             if old_value != new_value:
                 logger.debug(f"Field '{field}' changed from {old_value} to {new_value}")
                 return True
         else:
             # scalar fields
+            if field in numeric_fields:
+                try:
+                    new_value = int(new_value)
+                except (TypeError, ValueError):
+                    logger.warning(
+                        f"Failed parsing numeric field '{field}' during update for query {old_query.id}; forcing recalculation."
+                    )
+                    return True
             if old_value != new_value:
                 logger.debug(f"Field '{field}' changed from {old_value} to {new_value}")
                 return True
@@ -279,6 +330,11 @@ class QueryViewSet(PipelineStatusCheckMixin, viewsets.ModelViewSet):
         else:
             self._trigger_pipeline_analysis(query)
 
+        # Ensure response serialization reflects the updated result state.
+        query.refresh_from_db()
+        if hasattr(query, "result"):
+            query.result.refresh_from_db()
+
     def _create_demo_result(self, query):
         """Create Result object with demo data and mark as completed."""
         try:
@@ -304,7 +360,20 @@ class QueryViewSet(PipelineStatusCheckMixin, viewsets.ModelViewSet):
             # Mark result as pending
             result = query.result
             result.status = ResultStatus.PENDING
+            old_lengths = (
+                len(result.ror_values or []),
+                len(result.ror_lower or []),
+                len(result.ror_upper or []),
+            )
+            # Clear stale values so old ROR data is never shown during a new run.
+            result.ror_values = []
+            result.ror_lower = []
+            result.ror_upper = []
             result.save()
+            logger.info(
+                f"Result {result.id} reset to PENDING and cleared stale ROR arrays "
+                f"(old_lengths values/lower/upper={old_lengths[0]}/{old_lengths[1]}/{old_lengths[2]})."
+            )
 
             # Prepare data for pipeline service
             drugs = list(query.drugs.all())
