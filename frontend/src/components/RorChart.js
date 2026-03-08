@@ -32,7 +32,7 @@ const RorChart = forwardRef(({ query, year_start, quarter_start }, ref) => {
     // Expose chart instance to parent via ref
     useImperativeHandle(ref, () => ({
         getChart: () => chartRef.current,
-      }));
+    }));
 
     if (!query || !query.ror_values) return null;
 
@@ -52,12 +52,14 @@ const RorChart = forwardRef(({ query, year_start, quarter_start }, ref) => {
         return arr;
     })();
 
+    const toLog10 = (value) => Math.log10(value || 0.1);
+
     const data = {
         labels,
         datasets: [
             {
                 label: 'Lower CI',
-                data: query.ror_lower.map(v => Math.log10(v || 0.1)),
+                data: query.ror_lower.map(v => toLog10(v)),
                 borderColor: '#7b61ff',
                 borderDash: [3, 3],
                 tension: 0.3,
@@ -65,8 +67,8 @@ const RorChart = forwardRef(({ query, year_start, quarter_start }, ref) => {
                 fill: false,
             },
             {
-                label: 'ROR (Log₁₀)',
-                data: query.ror_values.map(v => Math.log10(v || 0.1)),
+                label: 'ROR (Log10)',
+                data: query.ror_values.map(v => toLog10(v)),
                 borderColor: '#7b61ff',
                 backgroundColor: 'rgba(123,97,255,0.2)',
                 fill: '-1',
@@ -76,7 +78,7 @@ const RorChart = forwardRef(({ query, year_start, quarter_start }, ref) => {
             },
             {
                 label: 'Upper CI',
-                data: query.ror_upper.map(v => Math.log10(v || 0.1)),
+                data: query.ror_upper.map(v => toLog10(v)),
                 borderColor: '#7b61ff',
                 backgroundColor: 'rgba(123,97,255,0.2)',
                 borderDash: [3, 3],
@@ -95,8 +97,8 @@ const RorChart = forwardRef(({ query, year_start, quarter_start }, ref) => {
                 top: 30,
                 right: 30,
                 bottom: 10,
-                left: 10
-            }
+                left: 10,
+            },
         },
         plugins: {
             legend: {
@@ -105,6 +107,13 @@ const RorChart = forwardRef(({ query, year_start, quarter_start }, ref) => {
             tooltip: {
                 mode: 'index',
                 intersect: false,
+                callbacks: {
+                    label: (context) => {
+                        const yLog = Number(context.parsed.y);
+                        if (!Number.isFinite(yLog)) return `${context.dataset.label}: -`;
+                        return `${context.dataset.label}: ${Math.pow(10, yLog).toFixed(4)}`;
+                    },
+                },
             },
             zoom: {
                 pan: {
@@ -131,14 +140,13 @@ const RorChart = forwardRef(({ query, year_start, quarter_start }, ref) => {
             y: {
                 beginAtZero: false,
                 grace: '5%',
-                title: { display: true, text: 'ROR (log₁₀)' },
+                title: { display: true, text: 'ROR (log10)' },
                 ticks: {
-                    callback: v => (Math.pow(10, v)).toFixed(2),
+                    callback: (v) => (Math.pow(10, v)).toFixed(2),
                 },
             },
         },
     };
-
 
     // Zoom controls - With smooth animation
     const zoomIn = () => {
@@ -163,7 +171,7 @@ const RorChart = forwardRef(({ query, year_start, quarter_start }, ref) => {
         if (!chart) return;
 
         // Reset with smooth animation
-        chart.resetZoom(); //'active'
+        chart.resetZoom(); // 'active'
     };
 
     return (
