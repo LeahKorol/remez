@@ -169,11 +169,23 @@ def generate_reports(marked_data_dir, dir_external, config_dict, dir_reports):
 def save_results_to_db(task: TaskResults, results_file):
     """Save pipeline results to database using TaskRepository."""
     ror_fields = get_ror_fields(results_file)
+    task_logger.debug(
+        f"Extracted ROR arrays for task {task.id}: "
+        f"values/lower/upper lengths="
+        f"{len(ror_fields[RorFields.ROR_VALUES])}/"
+        f"{len(ror_fields[RorFields.ROR_LOWER])}/"
+        f"{len(ror_fields[RorFields.ROR_UPPER])}"
+    )
     task.status = TaskStatus.COMPLETED
     task.completed_at = datetime.now()
     task.ror_values = ror_fields[RorFields.ROR_VALUES]
     task.ror_lower = ror_fields[RorFields.ROR_LOWER]
     task.ror_upper = ror_fields[RorFields.ROR_UPPER]
+    changed_fields = normalise_empty_ror_fields(task)
+    if changed_fields:
+        task_logger.warning(
+            f"Task {task.id}: normalized ROR fields before DB save due to invalid values: {changed_fields}"
+        )
 
     TaskRepository.save_task_results(task)
     task_logger.info(f"Results for task {task.id} saved to DB")
@@ -195,11 +207,18 @@ def send_results_to_callback(task: TaskResults):
 
         # Scoped client ensures proper cleanup before event loop closes
         async with httpx.AsyncClient(timeout=timeout, limits=limits) as client:
-            normalise_empty_ror_fields(task)
+            changed_fields = normalise_empty_ror_fields(task)
+            if changed_fields:
+                task_logger.warning(
+                    f"Task {task.id}: normalized ROR fields before callback payload: {changed_fields}"
+                )
             task_logger.debug(f"Sending task data: {task}")
             # Convert task to JSON-compatible dict. Use mode="json" to handle datetime serialization as well.
             task_json = task.model_dump(mode="json")
             url = f"{callback_url}/{task_json['external_id']}/"
+            task_logger.info(
+                f"Sending callback for task {task.id} (external_id={task_json['external_id']}, status={task_json['status']})"
+            )
 
             response = await client.put(url, json=task_json)
             response.raise_for_status()

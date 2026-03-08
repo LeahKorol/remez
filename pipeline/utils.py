@@ -412,31 +412,58 @@ def get_ror_fields(json_file: Union[str, Path]) -> Dict[str, Any]:
         raise ValueError(f"Error processing ROR data from {json_file}: {e}")
 
 
-def normalise_empty_ror_fields(task: TaskResults) -> None:
-    """Convert None and [numpy.nan] to empty lists so that they can be parsed as float JSON arrays"""
+def normalise_empty_ror_fields(task: TaskResults) -> list[str]:
+    """
+    Normalize ROR arrays for safe JSON serialization.
+
+    - `None` field becomes `[]`
+    - Any non-finite numeric values (NaN/inf) invalidate the whole field -> `[]`
+    """
     import math
 
-    def is_nan_list(field_value):
-        """Check if field is None, empty, or contains only nan values"""
+    changed_fields: list[str] = []
+
+    def normalise_field(field_name, field_value):
         if field_value is None:
-            return True
+            logger.warning(
+                f"Task {task.id}: field '{field_name}' is None, normalizing to empty list"
+            )
+            return []
         if not isinstance(field_value, list):
             logger.warning(
                 f"Expected list or None, got {type(field_value)} with value {field_value}"
             )
-            return False
+            return field_value
         if len(field_value) == 0:
-            return False  # Empty list is already valid
+            return field_value
 
-        # Check if all values are nan
         for val in field_value:
-            if isinstance(val, (int, float)) and math.isnan(val):
-                continue
-            # If we find any non-nan value, it's not a nan-only list. This function doesn't handle such cases
-            return False
-        return True
+            if isinstance(val, (int, float, np.floating, np.integer)):
+                val = float(val)
+                if not math.isfinite(val):
+                    logger.warning(
+                        f"Task {task.id}: field '{field_name}' contains non-finite value, normalizing to empty list"
+                    )
+                    return []
+            elif val is None:
+                logger.warning(
+                    f"Task {task.id}: field '{field_name}' contains null value, normalizing to empty list"
+                )
+                return []
+            else:
+                logger.warning(
+                    f"Task {task.id}: field '{field_name}' contains non-numeric value {type(val)}, normalizing to empty list"
+                )
+                return []
+
+        # All values are finite numbers.
+        return [float(v) for v in field_value]
 
     for field_name in ["ror_values", "ror_lower", "ror_upper"]:
         field_value = getattr(task, field_name)
-        if is_nan_list(field_value):
-            setattr(task, field_name, [])
+        normalised_value = normalise_field(field_name, field_value)
+        if normalised_value != field_value:
+            changed_fields.append(field_name)
+        setattr(task, field_name, normalised_value)
+
+    return changed_fields

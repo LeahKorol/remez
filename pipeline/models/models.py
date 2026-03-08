@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from constants import TaskStatus
 from sqlmodel import JSON, Column, Field, SQLModel
@@ -35,17 +35,17 @@ class TaskResults(TaskBase, table=True):
     __tablename__ = "tasks"
 
     completed_at: datetime | None = Field(default=None, nullable=True)
-    ror_values: List[float] = Field(
+    ror_values: List[Optional[float]] = Field(
         sa_column=Column("ror_values", JSON),
         default_factory=list,
         description="ROR values",
     )
-    ror_lower: List[float] = Field(
+    ror_lower: List[Optional[float]] = Field(
         sa_column=Column("ror_lower", JSON),
         default_factory=list,
         description="Lower bound of ROR values",
     )
-    ror_upper: List[float] = Field(
+    ror_upper: List[Optional[float]] = Field(
         sa_column=Column("ror_upper", JSON),
         default_factory=list,
         description="Upper bound of ROR values",

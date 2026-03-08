@@ -25,6 +25,7 @@ from starlette.status import (
     HTTP_404_NOT_FOUND,
     HTTP_429_TOO_MANY_REQUESTS,
 )
+from utils import normalise_empty_ror_fields
 
 logger = logging.getLogger("faers-api.routes")
 router = APIRouter()
@@ -83,6 +84,11 @@ async def get_pipeline_status(task_id: int, session: SessionDep) -> TaskResults:
             raise HTTPException(
                 status_code=HTTP_404_NOT_FOUND, detail=f"Task {task_id} not found"
             )
+        changed_fields = normalise_empty_ror_fields(task)
+        if changed_fields:
+            logger.warning(
+                f"Task {task_id}: normalized fields before API response: {changed_fields}"
+            )
         logger.debug(f"Retrieved task {task_id} with status {task.status}")
         return task
 
@@ -110,7 +116,11 @@ async def get_pipeline_by_external_id(
     try:
         logger.debug(f"Retrieving task by external_id: {external_id}")
 
-        statement = select(TaskResults).where(TaskResults.external_id == external_id)
+        statement = (
+            select(TaskResults)
+            .where(TaskResults.external_id == external_id)
+            .order_by(TaskResults.created_at.desc(), TaskResults.id.desc())
+        )
         task = session.exec(statement).first()
 
         if not task:
@@ -120,8 +130,14 @@ async def get_pipeline_by_external_id(
                 detail=f"Task with external_id {external_id} not found",
             )
 
+        changed_fields = normalise_empty_ror_fields(task)
+        if changed_fields:
+            logger.warning(
+                f"Task {task.id} (external_id={external_id}): normalized fields before API response: {changed_fields}"
+            )
         logger.debug(
-            f"Retrieved task id={task.id} for external_id={external_id} with status {task.status}"
+            f"Retrieved latest task id={task.id} for external_id={external_id} "
+            f"(created_at={task.created_at}, status={task.status})"
         )
         return task
 
