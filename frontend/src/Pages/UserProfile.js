@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { fetchWithRefresh } from '../utils/tokenService';
+import { API_BASE } from '../utils/apiBase';
 import QueryDetailsView from "../components/QueryDetailsView";
 import { useUser } from "../utils/UserContext";
 import { validateQueryForm } from '../utils/formValidation';
@@ -90,12 +91,18 @@ const UserProfile = () => {
     const [isButtonLoading, setIsButtonLoading] = useState(false);
     const [toasts, setToasts] = useState([]);
 
+    const getQueryStatus = (query) => {
+        const resultStatus = query?.result?.status;
+        const queryStatus = query?.status;
+        return (resultStatus || queryStatus || "").toLowerCase().trim();
+    };
+
     // Lock editing/deleting for queries that are in progress
     const isQueryLocked = (query) => {
-        const status = query?.result?.status;
+        const status = getQueryStatus(query);
         // if this is the query being edited, allow editing
         if (editingQueryId && query.id === editingQueryId) return false;
-        return status && status !== "completed" && status !== "failed";
+        return status === "pending" || status === "running";
     };
 
     const navigate = useNavigate();
@@ -238,6 +245,36 @@ const UserProfile = () => {
         } catch (err) {
             console.error('Unexpected error fetching queries:', err);
             setError('Unexpected error occurred. Please check your connection.');
+        }
+    };
+
+    const refreshQuerySnapshot = async (queryId) => {
+        try {
+            const response = await fetchWithRefresh(
+                `${API_BASE}/analysis/queries/${queryId}/?_t=${Date.now()}`,
+                { method: 'GET' }
+            );
+
+            if (!response?.ok) {
+                return null;
+            }
+
+            const latestQuery = await response.json();
+
+            setSavedQueries((prevQueries) =>
+                prevQueries.map((query) =>
+                    query.id === latestQuery.id ? latestQuery : query
+                )
+            );
+
+            setViewingQuery((prevQuery) =>
+                prevQuery?.id === latestQuery.id ? latestQuery : prevQuery
+            );
+
+            return latestQuery;
+        } catch (error) {
+            console.error('Error refreshing query snapshot:', error);
+            return null;
         }
     };
 
@@ -569,6 +606,18 @@ const UserProfile = () => {
 
     // Handle deleting a query
     const handleDeleteQuery = async (queryId) => {
+        const latestQuery = await refreshQuerySnapshot(queryId);
+
+        if (!latestQuery) {
+            showToastMessage('Could not verify query status. Please try again.', 'error');
+            return;
+        }
+
+        if (isQueryLocked(latestQuery)) {
+            showToastMessage('Query is still processing. Delete will be available after it is completed or failed.', 'info');
+            return;
+        }
+
         setDeleteQueryId(queryId);
         setShowDeletePopup(true);
     };
@@ -662,29 +711,24 @@ const UserProfile = () => {
     };
 
     const handleEditQuery = async (query) => {
-        setViewMode('edit');
-        setViewingQuery(null);
-        // setIsEditing(true);
-        setEditingQueryId(query.id);
-        setLoading(true);
-
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                alert('You are not logged in. Please log in first.');
-                navigate('/session-expired');
+            const latestQuery = await refreshQuerySnapshot(query.id);
+            if (!latestQuery) {
+                showToastMessage('Could not verify query status. Please try again.', 'error');
                 return;
             }
 
-            const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/queries/${query.id}/`);
-
-            if (!response) {
-                alert('Failed to load query data for editing');
-                resetForm();
+            if (isQueryLocked(latestQuery)) {
+                showToastMessage('Query is still processing. Edit will be available after it is completed or failed.', 'info');
                 return;
             }
 
-            const queryData = await response.json();
+            setViewMode('edit');
+            setViewingQuery(null);
+            setEditingQueryId(latestQuery.id);
+            setLoading(true);
+
+            const queryData = latestQuery;
             console.log('Query data from backend:', queryData);
 
             const drugsToEdit = (queryData.drugs_details || []).map(d => ({

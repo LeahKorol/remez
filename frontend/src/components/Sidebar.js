@@ -14,7 +14,10 @@ const Sidebar = ({
     showLogoutPopup,
     handleLogoutClick,
     handleLogout,
-    viewingQueryId
+    viewingQueryId,
+    editingQueryId,
+    isEditing,
+    editingQueryLoading
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [visibleCount, setVisibleCount] = useState(7);
@@ -99,7 +102,10 @@ const Sidebar = ({
                     onViewQuery={onViewQuery}
                     onEditQuery={onEditQuery}
                     onDeleteQuery={onDeleteQuery}
-                    viewingQueryId={viewingQueryId} 
+                    viewingQueryId={viewingQueryId}
+                    editingQueryId={editingQueryId}
+                    isEditing={isEditing}
+                    editingQueryLoading={editingQueryLoading}
                 />
 
                 {visibleCount < filteredQueries.length && (
