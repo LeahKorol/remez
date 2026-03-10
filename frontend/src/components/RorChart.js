@@ -59,14 +59,18 @@ const RorChart = forwardRef(({ query, year_start, quarter_start }, ref) => {
         return arr;
     })();
 
-    const toLog10 = (value) => Math.log10(value || 0.1);
+    const toLog10 = (value) => {
+        const n = Number(value);
+        if (!Number.isFinite(n) || n <= 0) return null;
+        return Math.log10(n);
+    };
 
     const data = {
         labels,
         datasets: [
             {
                 label: 'Lower CI',
-                data: query.ror_lower.map(v => toLog10(v)),
+                data: (query.ror_lower || []).map(v => toLog10(v)),
                 borderColor: '#7b61ff',
                 borderDash: [3, 3],
                 tension: 0.3,
@@ -75,7 +79,7 @@ const RorChart = forwardRef(({ query, year_start, quarter_start }, ref) => {
             },
             {
                 label: 'ROR (Log10)',
-                data: query.ror_values.map(v => toLog10(v)),
+                data: (query.ror_values || []).map(v => toLog10(v)),
                 borderColor: '#7b61ff',
                 backgroundColor: 'rgba(123,97,255,0.2)',
                 fill: '-1',
@@ -85,7 +89,7 @@ const RorChart = forwardRef(({ query, year_start, quarter_start }, ref) => {
             },
             {
                 label: 'Upper CI',
-                data: query.ror_upper.map(v => toLog10(v)),
+                data: (query.ror_upper || []).map(v => toLog10(v)),
                 borderColor: '#7b61ff',
                 backgroundColor: 'rgba(123,97,255,0.2)',
                 borderDash: [3, 3],
