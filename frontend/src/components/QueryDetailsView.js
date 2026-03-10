@@ -1,8 +1,11 @@
 import React, { useRef, useState, useEffect } from "react";
-import { FaTimes, FaFileImage, FaFileCsv, FaArrowDown } from "react-icons/fa";
+import { FaTimes, FaFileImage, FaFileCsv, FaArrowDown, FaInfoCircle } from "react-icons/fa";
 import RorChart from "./RorChart";
 import { showToastMessage } from "../utils/toast";
 import "../Pages/UserProfile.css";
+
+const QUARTER_RANGE_TOOLTIP =
+  "The selected period includes the start quarter and excludes the end quarter. Example: 2023 Q1 to 2023 Q4 includes Q1-Q3 only, and does not include Q4.";
 
 const QueryDetailsView = ({ query, handleNewQuery, refreshQuery, onQueryUpdate }) => {
   const chartRef = useRef(null);
@@ -361,7 +364,17 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery, onQueryUpdate }
         <h3>Query Information</h3>
         <div className="info-grid">
           <div className="info-item">
-            <span className="info-label">Time Period:</span>
+            <span className="info-label info-label-with-tooltip">
+              <span>Time Period:</span>
+              <button
+                type="button"
+                className="info-tooltip-trigger"
+                data-tooltip={QUARTER_RANGE_TOOLTIP}
+                aria-label="Time period uses an exclusive end quarter"
+              >
+                <FaInfoCircle />
+              </button>
+            </span>
             <span className="info-value">
               {currentQuery.year_start} Q{currentQuery.quarter_start} - {currentQuery.year_end} Q
               {currentQuery.quarter_end}

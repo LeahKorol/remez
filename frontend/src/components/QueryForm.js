@@ -1,9 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { FaPlus, FaTimes } from 'react-icons/fa';
+import { FaInfoCircle, FaPlus, FaTimes } from 'react-icons/fa';
 import CustomSelect from './CustomSelect';
 import ToastNotification from './ToastNotification';
 import { fetchWithRefresh } from '../utils/tokenService';
 import '../Pages/UserProfile.css';
+
+const QUARTER_RANGE_TOOLTIP =
+    'The selected period includes the start quarter and excludes the end quarter. Example: 2023 Q1 to 2023 Q4 includes Q1-Q3 only, and does not include Q4.';
 
 export default function QueryForm({
     onSubmit,
@@ -414,7 +417,17 @@ export default function QueryForm({
                             </div>
 
                             <div className="form-field" style={{ flex: 1 }}>
-                                <label>End Quarter</label>
+                                <div className="label-with-info">
+                                    <label>End Quarter</label>
+                                    <button
+                                        type="button"
+                                        className="info-tooltip-trigger"
+                                        data-tooltip={QUARTER_RANGE_TOOLTIP}
+                                        aria-label="End quarter is excluded from the calculated period"
+                                    >
+                                        <FaInfoCircle />
+                                    </button>
+                                </div>
                                 <CustomSelect
                                     name="endQuarter"
                                     value={quarterEnd}

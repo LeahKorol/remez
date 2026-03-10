@@ -939,6 +939,102 @@
   letter-spacing: 0.3px;
 }
 
+.label-with-info,
+.info-label-with-tooltip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.label-with-info {
+  margin-bottom: 8px;
+}
+
+.label-with-info label {
+  margin-bottom: 0;
+}
+
+.info-tooltip-trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #7b61ff;
+  cursor: help;
+  flex-shrink: 0;
+}
+
+.info-tooltip-trigger svg {
+  font-size: 14px;
+}
+
+.info-tooltip-trigger::before,
+.info-tooltip-trigger::after {
+  position: absolute;
+  left: 50%;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  z-index: 1200;
+}
+
+.info-tooltip-trigger::before {
+  content: "";
+  bottom: calc(100% + 4px);
+  transform: translateX(-50%) translateY(4px);
+  border-width: 6px;
+  border-style: solid;
+  border-color: rgba(43, 45, 66, 0.96) transparent transparent transparent;
+}
+
+.info-tooltip-trigger::after {
+  content: attr(data-tooltip);
+  bottom: calc(100% + 14px);
+  transform: translateX(-50%) translateY(6px);
+  width: 250px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(43, 45, 66, 0.96);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  text-align: left;
+  white-space: normal;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+.info-tooltip-trigger:hover::before,
+.info-tooltip-trigger:hover::after,
+.info-tooltip-trigger:focus-visible::before,
+.info-tooltip-trigger:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+.info-tooltip-trigger:hover::before,
+.info-tooltip-trigger:focus-visible::before {
+  transform: translateX(-50%) translateY(0);
+}
+
+.info-tooltip-trigger:hover::after,
+.info-tooltip-trigger:focus-visible::after {
+  transform: translateX(-50%) translateY(0);
+}
+
+.info-tooltip-trigger:focus-visible {
+  outline: 2px solid rgba(123, 97, 255, 0.35);
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+
 .form-field input,
 .form-field .custom-select-container {
   width: 100%;
