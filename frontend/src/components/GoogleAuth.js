@@ -176,44 +176,6 @@ export const useGoogleAuth = () => {
     }
 
   };
-
-  const handleOneTapCallback = async (response) => {
-    try {
-      setIsLoading(true);
-      const userObject = JSON.parse(atob(response.credential.split('.')[1]));
-      const googleUser = {
-        id: userObject.sub,
-        email: userObject.email,
-        name: userObject.name,
-        picture: userObject.picture,
-        verified_email: userObject.email_verified
-      };
-
-      try {
-        const authResult = await googleAuthService.authenticateWithBackend(googleUser, false);
-        if (authResult.access) {
-          localStorage.setItem('token', authResult.access);
-          toast.success('You have successfully connected!');
-          navigate('/profile');
-        }
-      } catch (loginError) {
-        if (loginError.message.includes('User not found') || loginError.message.includes('404')) {
-          const registerResult = await googleAuthService.authenticateWithBackend(googleUser, true);
-          if (registerResult.access) {
-            localStorage.setItem('token', registerResult.access);
-            toast.success('You have successfully registered and logged in!');
-            navigate('/profile');
-          }
-        } else throw loginError;
-      }
-    } catch (err) {
-      console.error('One Tap error:', err);
-      toast.error('Quick connect error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   // const initializeOneTap = () => {
   //   googleAuthService.initializeOneTap(handleOneTapCallback);
   // };

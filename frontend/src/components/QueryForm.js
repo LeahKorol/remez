@@ -96,7 +96,6 @@ export default function QueryForm({
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        const val = name.includes("Year") ? Number(value) : value;
         switch (name) {
             case 'queryName':
                 setQueryName(value);
@@ -149,7 +148,6 @@ export default function QueryForm({
 
     const selectDrug = (drug) => {
         if (activeDrugSearchIndex === null) return;
-        const newDrugs = [...drugs];
         const duplicate = drugs.some(
             (d, i) => i !== activeDrugSearchIndex && d.name.toLowerCase() === drug.name.toLowerCase()
         );
@@ -214,7 +212,6 @@ export default function QueryForm({
 
     const selectReaction = (reaction) => {
         if (activeReactionSearchIndex === null) return;
-        const newReactions = [...reactions];
         const duplicate = reactions.some(
             (r, i) => i !== activeReactionSearchIndex && r.name.toLowerCase() === reaction.name.toLowerCase()
         );

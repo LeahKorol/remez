@@ -180,7 +180,7 @@ function Login() {
     setIsResetLoading(true);
     setErrors([]);
     try {
-      const res = await axios.post('auth/password/reset/', { email });
+      await axios.post('auth/password/reset/', { email });
       toast.success('If an account exists, a reset link has been sent.');
       setShowForgotPassword(false);
       setDynamicButtonType(null);

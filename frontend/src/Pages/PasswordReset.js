@@ -66,8 +66,7 @@ function PasswordReset() {
     }
 
     try {
-      const { data } = await axios.post('/auth/password/reset/', { email });
-
+      await axios.post('/auth/password/reset/', { email });
       setIsSuccess(true);
       setErrors([]);
       toast.success('If an account with this email exists, a reset link has been sent to your email address.');
