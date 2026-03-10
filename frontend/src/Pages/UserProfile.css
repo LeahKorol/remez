@@ -670,6 +670,15 @@
   margin: 0 auto;
 }
 
+.no-correlation-note {
+  margin: 12px auto 0;
+  max-width: 760px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.98rem;
+  line-height: 1.55;
+}
+
 .spinner {
   width: 1em;
   height: 1em;
