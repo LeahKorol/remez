@@ -77,7 +77,7 @@ class PipelineStatusCheckMixin:
                 f"Pipeline task {task_id} not ready yet (not found/no status). Keeping local status as {result.status}."
             )
             return
-        
+
         # Guard against stale task snapshots from previous runs:
         # for the same external_id we only accept task records created at/after
         # this query's latest update timestamp.
@@ -100,6 +100,12 @@ class PipelineStatusCheckMixin:
                 )
                 return
 
+        if task.get("status") == result.status:
+            logger.debug(
+                f"Pipeline task {task_id} status is still {task.get('status')}, no update needed."
+            )
+            return
+
         if task.get("status") != ResultStatus.COMPLETED:
             # Update result with current status (running, pending, etc.)
             result_serializer = ResultSerializer(result, data=task, partial=True)
@@ -119,7 +125,11 @@ class PipelineStatusCheckMixin:
         # If task is completed - parse detailed results
         logger.info(f"Task {task_id} completed, parsing detailed results")
 
-        if task.get("ror_values") is not None and task.get("ror_lower") is not None and task.get("ror_upper") is not None:
+        if (
+            task.get("ror_values") is not None
+            and task.get("ror_lower") is not None
+            and task.get("ror_upper") is not None
+        ):
             result_serializer = ResultSerializer(result, data=task, partial=True)
             if result_serializer.is_valid():
                 result_serializer.save()
@@ -323,7 +333,7 @@ class QueryViewSet(PipelineStatusCheckMixin, viewsets.ModelViewSet):
             f"Query {serializer.instance.id} updated with ROR-related fields; triggering recalculation."
         )
 
-        query = serializer.save() # Save updated query
+        query = serializer.save()  # Save updated query
 
         if settings.NUM_DEMO_QUARTERS >= 0:
             self._create_demo_result(query)
