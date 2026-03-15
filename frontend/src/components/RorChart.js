@@ -163,10 +163,7 @@ const RorChart = forwardRef(({ query, year_start, quarter_start }, ref) => {
             y: {
                 beginAtZero: false,
                 grace: '5%',
-                title: { display: true, text: 'ROR' },
-                ticks: {
-                    callback: (v) => (Math.pow(10, v)).toFixed(2),
-                },
+                title: { display: true, text: 'log10(ROR)' },
             },
         },
     };
