@@ -169,6 +169,14 @@ https://data.nber.org/fda/faers/{year}/csv/{filetype}{yearquarter}.csv.zip
 - 2018 Q1 Demo data: `https://data.nber.org/fda/faers/2018/demo2018q1.csv.zip`
 - 2020 Q1 Demo data: `https://data.nber.org/fda/faers/2020/csv/demo2020q1.csv.zip`
 
+These ZIP files are intentionally not tracked in git. Download them into
+`pipeline/data/external/faers/` from the backend management command:
+
+```bash
+cd backend
+python manage.py download_faers_data 2020q1 2020q2 --dir_out ../pipeline/data/external/faers
+```
+
 **Example for 2020 Q1:**
 ```
 data/external/faers/
