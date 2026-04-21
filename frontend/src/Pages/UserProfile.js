@@ -145,7 +145,7 @@ const UserProfile = () => {
             }
 
             try {
-                const userResponse = await fetchWithRefresh('http://127.0.0.1:8000/api/v1/auth/user/', {
+                const userResponse = await fetchWithRefresh(`${API_BASE}/auth/user/`, {
                     method: 'GET'
                 });
 
@@ -198,7 +198,7 @@ const UserProfile = () => {
                 return;
             }
 
-            const response = await fetchWithRefresh('http://127.0.0.1:8000/api/v1/analysis/queries/', {
+            const response = await fetchWithRefresh(`${API_BASE}/analysis/queries/`, {
                 method: 'GET'
             });
 
@@ -287,7 +287,7 @@ const UserProfile = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const res = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/queries/${query.id}/`);
+            const res = await fetchWithRefresh(`${API_BASE}/analysis/queries/${query.id}/`);
             if (!res.ok) throw new Error('Failed to fetch full query');
             const fullQuery = await res.json();
             setViewingQuery(fullQuery);
@@ -340,7 +340,7 @@ const UserProfile = () => {
         }
 
         try {
-            const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/drug-names/search/${prefix}/`);
+            const response = await fetchWithRefresh(`${API_BASE}/analysis/drug-names/search/${prefix}/`);
 
             if (!response) {
                 setDrugSearchResults([]);
@@ -397,7 +397,7 @@ const UserProfile = () => {
         }
 
         try {
-            const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/reaction-names/search/${prefix}/`);
+            const response = await fetchWithRefresh(`${API_BASE}/analysis/reaction-names/search/${prefix}/`);
 
             if (!response) {
                 setReactionSearchResults([]);
@@ -513,13 +513,13 @@ const UserProfile = () => {
             let response;
             if (editingQueryId) {
                 response = await axios.put(
-                    `http://127.0.0.1:8000/api/v1/analysis/queries/${editingQueryId}/`,
+                    `${API_BASE}/analysis/queries/${editingQueryId}/`,
                     payload,
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
             } else {
                 response = await axios.post(
-                    'http://127.0.0.1:8000/api/v1/analysis/queries/',
+                    `${API_BASE}/analysis/queries/`,
                     payload,
                     { headers: { Authorization: `Bearer ${token}` } }
                 );
@@ -635,7 +635,7 @@ const UserProfile = () => {
                 return;
             }
 
-            const response = await fetchWithRefresh(`http://127.0.0.1:8000/api/v1/analysis/queries/${deleteQueryId}/`, {
+            const response = await fetchWithRefresh(`${API_BASE}/analysis/queries/${deleteQueryId}/`, {
                 method: 'DELETE'
             });
 
@@ -785,7 +785,7 @@ const UserProfile = () => {
         setShowLogoutPopup(true);
         await new Promise(resolve => setTimeout(resolve, 750));
         try {
-            const response = await fetch('http://127.0.0.1:8000/api/v1/auth/logout/', {
+            const response = await fetch(`${API_BASE}/auth/logout/`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -824,7 +824,7 @@ const UserProfile = () => {
     const refreshQuery = async (queryId) => {
         try {
             const response = await fetchWithRefresh(
-                `http://127.0.0.1:8000/api/v1/analysis/queries/${queryId}/`,
+                `${API_BASE}/analysis/queries/${queryId}/`,
                 { method: 'GET' }
             );
     
