@@ -250,11 +250,22 @@ REST_AUTH = {
     "JWT_AUTH_COOKIE": os.getenv("JWT_AUTH_COOKIE", "jwt-access"),
     "JWT_AUTH_REFRESH_COOKIE": os.getenv("JWT_AUTH_REFRESH_COOKIE", "jwt-refresh"),
     # If set to True, the cookie will only be sent over HTTPS connections
-    "JWT_AUTH_SECURE": os.getenv("JWT_AUTH_SECURE", "False") == "True",
+    "JWT_AUTH_SECURE": os.getenv("JWT_AUTH_SECURE", "True") == "True",
     # If set to True, refresh token will not be sent in the response body
-    "JWT_AUTH_HTTPONLY": os.getenv("JWT_AUTH_HTTPONLY", "False") == "True",
+    "JWT_AUTH_HTTPONLY": os.getenv("JWT_AUTH_HTTPONLY", "True") == "True",
     "JWT_AUTH_SAMESITE": "Lax",
 }
+
+if not DEBUG:
+    if not REST_AUTH["JWT_AUTH_SECURE"] or not REST_AUTH["JWT_AUTH_HTTPONLY"]:
+        raise RuntimeError(
+            "Insecure JWT cookie configuration is not allowed when DEBUG=False. "
+            "Set JWT_AUTH_SECURE=True and JWT_AUTH_HTTPONLY=True."
+        )
+
+    # Production must always use secure, HttpOnly JWT cookies.
+    REST_AUTH["JWT_AUTH_SECURE"] = True
+    REST_AUTH["JWT_AUTH_HTTPONLY"] = True
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(
