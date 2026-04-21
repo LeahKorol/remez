@@ -25,6 +25,7 @@ from drf_spectacular.views import (
 )
 
 from backend import frontend_fallback
+from backend.health import health_check
 
 spectacular_settings = {
     "TITLE": "My API",
@@ -44,6 +45,7 @@ urlpatterns = [
         SpectacularSwaggerView.as_view(url_name="api-schema"),
         name="api-docs",
     ),
+    path("api/v1/health/", health_check, name="api-health"),
     path("api/v1/auth/", include("users.urls")),
     path("api/v1/analysis/", include("analysis.urls")),
     path("frontend-down/", frontend_fallback.frontend_down, name="frontend_down"),
