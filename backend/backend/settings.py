@@ -124,24 +124,38 @@ USE_DIRECT_DB_COMMANDS = {
 }
 is_management_command = len(sys.argv) > 1 and sys.argv[1] in USE_DIRECT_DB_COMMANDS
 
+
+def get_env_setting(*keys, default=None):
+    for key in keys:
+        if not key:
+            continue
+        value = os.getenv(key)
+        if value not in (None, ""):
+            return value
+    return default
+
+
 # Choose settings based on command type
 if is_management_command:
     # Direct connection for Django management commands
-    DB_PORT = os.environ["DB_PORT_DIRECT"]
-    DB_HOST = os.environ["DB_HOST_DIRECT"]
-    DB_USER = os.environ["DB_USER_DIRECT"]
+    DB_PORT = get_env_setting("DB_PORT_DIRECT", "DB_PORT", "DB_PORT_POOLED", default="5432")
+    DB_HOST = get_env_setting("DB_HOST_DIRECT", "DB_HOST", "DB_HOST_POOLED", default="db")
+    DB_USER = get_env_setting("DB_USER_DIRECT", "DB_USER", "DB_USER_POOLED", default="postgres")
 else:
     # Pooled connection for app runtime
-    DB_PORT = os.environ["DB_PORT_POOLED"]
-    DB_HOST = os.environ["DB_HOST_POOLED"]
-    DB_USER = os.environ["DB_USER_POOLED"]
+    DB_PORT = get_env_setting("DB_PORT_POOLED", "DB_PORT", "DB_PORT_DIRECT", default="5432")
+    DB_HOST = get_env_setting("DB_HOST_POOLED", "DB_HOST", "DB_HOST_DIRECT", default="db")
+    DB_USER = get_env_setting("DB_USER_POOLED", "DB_USER", "DB_USER_DIRECT", default="postgres")
+
+DB_NAME = get_env_setting("DB_NAME", "DB_NAME_DIRECT", default="remez")
+DB_PASSWORD = get_env_setting("DB_PASSWORD", "DB_PASSWORD_DIRECT", default="postgres")
 
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("DB_NAME"),
+        "NAME": DB_NAME,
         "USER": DB_USER,
-        "PASSWORD": os.environ.get("DB_PASSWORD"),
+        "PASSWORD": DB_PASSWORD,
         "HOST": DB_HOST,
         "PORT": DB_PORT,
         # "OPTIONS": {"sslmode": "require"},  # Supabase requires SSL

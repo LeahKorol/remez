@@ -19,12 +19,19 @@ services:
     depends_on:
       - db
     environment:
+      DB_HOST: db
       DB_HOST_DIRECT: db
+      DB_HOST_POOLED: db
+      DB_PORT: 5432
       DB_PORT_DIRECT: 5432
       DB_PORT_POOLED: 5432
-      DB_NAME_DIRECT: ${DB_NAME_DIRECT}
-      DB_USER_DIRECT: ${DB_USER_DIRECT}
-      DB_PASSWORD_DIRECT: ${DB_PASSWORD_DIRECT}
+      DB_NAME: ${DB_NAME_DIRECT:-remez}
+      DB_NAME_DIRECT: ${DB_NAME_DIRECT:-remez}
+      DB_USER: ${DB_USER_DIRECT:-postgres}
+      DB_USER_DIRECT: ${DB_USER_DIRECT:-postgres}
+      DB_USER_POOLED: ${DB_USER_DIRECT:-postgres}
+      DB_PASSWORD_DIRECT: ${DB_PASSWORD_DIRECT:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD_DIRECT:-postgres}
 
   frontend:
     build: ./frontend
