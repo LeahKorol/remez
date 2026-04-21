@@ -843,9 +843,12 @@ class TestResultViewSetUpdateByTaskId:
         assert result1.status == result_data["status"]
         assert result1.ror_values == result_data["ror_values"]
 
-    def test_update_by_task_id_unauthorized_ip(self, api_client, result1, result_data):
+    def test_update_by_task_id_denied_for_invalid_ip(
+        self, settings, api_client, result1, result_data
+    ):
         """Test that unauthorized IP cannot update by task_id"""
         settings.PIPELINE_SERVICE_IPS = ["192.168.1.100"]
+        settings.DEBUG = False
         update_url = reverse("result-update-by-task-id", kwargs={"task_id": result1.id})
 
         response = api_client.put(
@@ -855,7 +858,41 @@ class TestResultViewSetUpdateByTaskId:
             format="json",
         )
 
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_update_by_task_id_denied_when_whitelist_empty_in_production(
+        self, settings, api_client, result1, result_data
+    ):
+        """Empty whitelist must fail closed in production."""
+        settings.PIPELINE_SERVICE_IPS = []
+        settings.DEBUG = False
+        update_url = reverse("result-update-by-task-id", kwargs={"task_id": result1.id})
+
+        response = api_client.put(
+            update_url,
+            result_data,
+            REMOTE_ADDR="192.168.1.100",
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_update_by_task_id_allowed_when_whitelist_empty_in_debug(
+        self, settings, api_client, result1, result_data
+    ):
+        """Empty whitelist is only allowed in DEBUG mode for development."""
+        settings.PIPELINE_SERVICE_IPS = []
+        settings.DEBUG = True
+        update_url = reverse("result-update-by-task-id", kwargs={"task_id": result1.id})
+
+        response = api_client.put(
+            update_url,
+            result_data,
+            REMOTE_ADDR="192.168.1.100",
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_200_OK
 
     def test_update_by_task_id_not_found(self, settings, api_client, result_data):
         """Test update with non-existent task_id"""

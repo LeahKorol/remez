@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import pytest
 from rest_framework.test import APIClient
 
@@ -48,8 +50,19 @@ class TestIsPipelineServicePermission:
     def test_permission_denied_when_no_ip_configured(
         self, settings, permission, mock_request
     ):
-        """Test permission is approved when no IP is configured"""
+        """Test permission is denied when no IP is configured in production"""
         settings.PIPELINE_SERVICE_IPS = []
+        settings.DEBUG = False
+        request = mock_request(REMOTE_ADDR="192.168.1.100")
+
+        assert permission.has_permission(request, None) is False
+
+    def test_permission_granted_when_no_ip_configured_in_debug(
+        self, settings, permission, mock_request
+    ):
+        """Test permission is allowed in DEBUG mode when no IP is configured"""
+        settings.PIPELINE_SERVICE_IPS = []
+        settings.DEBUG = True
         request = mock_request(REMOTE_ADDR="192.168.1.100")
 
         assert permission.has_permission(request, None) is True
@@ -78,19 +91,54 @@ class TestIsPipelineServicePermission:
             is expected_result
         )
 
-    def test_permission_with_x_forwarded_for(self, settings, permission, mock_request):
-        """Test permission uses X-Forwarded-For when available (proxy scenario)"""
-        settings.PIPELINE_SERVICE_IPS = ["192.168.1.100"]
-        request = mock_request(HTTP_X_FORWARDED_FOR="192.168.1.100, 10.0.0.1")
-
-        assert permission.has_permission(request, None) is True
-
-    def test_permission_x_forwarded_for_with_spaces(
+    def test_permission_granted_for_cidr_range(
         self, settings, permission, mock_request
     ):
-        """Test permission handles X-Forwarded-For with various spacing"""
-        settings.PIPELINE_SERVICE_IPS = ["192.168.1.100"]
-        # Test with extra spaces
-        request = mock_request(HTTP_X_FORWARDED_FOR="192.168.1.100 ,  10.0.0.1")
+        """Test permission accepts CIDR ranges in the whitelist."""
+        settings.PIPELINE_SERVICE_IPS = ["172.21.0.0/16"]
+        request = mock_request(REMOTE_ADDR="172.21.0.5")
 
         assert permission.has_permission(request, None) is True
+
+    def test_permission_denied_for_raw_string_configuration(
+        self, settings, permission, mock_request
+    ):
+        """Raw string whitelist values are rejected to avoid unsafe iteration semantics."""
+        settings.PIPELINE_SERVICE_IPS = "192.168.1.100"
+        settings.DEBUG = False
+        request = mock_request(REMOTE_ADDR="192.168.1.100")
+
+        assert permission.has_permission(request, None) is False
+
+    def test_permission_ignores_x_forwarded_for_header(
+        self, settings, permission, mock_request
+    ):
+        """Permission trusts REMOTE_ADDR and does not allow spoofed X-Forwarded-For."""
+        settings.PIPELINE_SERVICE_IPS = ["192.168.1.100"]
+        request = mock_request(
+            REMOTE_ADDR="10.0.0.1",
+            HTTP_X_FORWARDED_FOR="192.168.1.100, 10.0.0.1",
+        )
+
+        assert permission.has_permission(request, None) is False
+
+    def test_permission_logs_denied_request_reason(
+        self, settings, permission, mock_request, caplog
+    ):
+        """Denied requests are explicitly logged with endpoint, client IP, and reason."""
+        settings.PIPELINE_SERVICE_IPS = []
+        settings.DEBUG = False
+        request = mock_request(REMOTE_ADDR="10.0.0.1")
+        view = SimpleNamespace(action="update_by_task_id")
+
+        with caplog.at_level("WARNING"):
+            allowed = permission.has_permission(request, view)
+
+        assert allowed is False
+        assert any("Denied pipeline callback request." in message for message in caplog.messages)
+        record = next(
+            record for record in caplog.records if record.message == "Denied pipeline callback request."
+        )
+        assert record.client_ip == "10.0.0.1"
+        assert record.endpoint == "update_by_task_id"
+        assert record.rejection_reason == "empty_pipeline_service_ips"

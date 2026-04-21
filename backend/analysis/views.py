@@ -499,6 +499,7 @@ class ResultViewSet(PipelineStatusCheckMixin, viewsets.ReadOnlyModelViewSet):
         detail=False,
         methods=["put"],
         url_path="update-by-task/(?P<task_id>[^/.]+)",
+        authentication_classes=[],
         permission_classes=[IsPipelineService],
     )
     def update_by_task_id(self, request, task_id):
