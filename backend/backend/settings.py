@@ -389,7 +389,7 @@ REST_AUTH_REGISTER_SERIALIZERS = {
 # Comma-separated list of allowed IPs. If the variable is empty or not set, allow all IPs.
 pipeline_ips = os.getenv("PIPELINE_SERVICE_IPS", "")
 PIPELINE_SERVICE_IPS = pipeline_ips.strip().split(",") if pipeline_ips else None
-PIPELINE_BASE_URL = "http://localhost:8001"
+PIPELINE_BASE_URL = os.getenv("PIPELINE_BASE_URL", "http://localhost:8001")
 PIPELINE_TIMEOUT = 30  # seconds
 # Timeout (minutes) before a pipeline task is considered failed
 PIPELINE_TASK_TIMEOUT_MINUTES = int(os.getenv("PIPELINE_TASK_TIMEOUT_MINUTES", 60))

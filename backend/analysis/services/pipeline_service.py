@@ -139,7 +139,7 @@ class PipelineService:
         Check if the pipeline service is healthy.
         """
         try:
-            url = f"{self.base_url}/health"
+            url = f"{self.base_url}/api/v1/health"
             response = requests.get(url, timeout=5)
             return response.status_code == 200
         except Exception:
