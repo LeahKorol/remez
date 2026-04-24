@@ -108,6 +108,11 @@ PIPELINE_MIN_RESULT_RETENTION_MINUTES=30
 # Callback Configuration
 PIPELINE_CALLBACK_URL=http://localhost:8000/api/v1/analysis/results/update-by-task
 
+# FAERS Auto Sync
+FAERS_FROM=2020q1
+FAERS_TO=2020q2
+FAERS_AUTO_SYNC=True
+
 # Data Directories
 DATA_EXTERNAL_DIR=data/external/faers
 DATA_OUTPUT_DIR=pipeline_output
@@ -131,6 +136,22 @@ python main.py
 ```bash
 uvicorn main:app --host 0.0.0.0 --port 8001
 ```
+
+### Container Startup FAERS Sync
+
+When running in Docker, the pipeline container can automatically download FAERS source files on startup using the same shared range variables as backend:
+
+- `FAERS_FROM`
+- `FAERS_TO`
+- `FAERS_AUTO_SYNC` (`True` by default in compose)
+
+If enabled, startup runs:
+
+```bash
+python download_faers_data.py "$FAERS_FROM" "$FAERS_TO" --force
+```
+
+Files are stored in the pipeline external data path (`data/external/faers/`), which is the same location used by pipeline execution and data availability checks.
 
 ### With Custom Configuration
 
