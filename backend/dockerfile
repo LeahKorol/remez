@@ -7,10 +7,14 @@ COPY requirements.txt .
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
+# Copy entrypoint outside /app so it is not masked by the bind mount
+COPY entrypoint.sh /entrypoint.sh
+RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
+
 # Copy project
 COPY . .
 
 # Expose port
 EXPOSE 8000
 
-CMD ["python", "manage.py", "runserver"]
+ENTRYPOINT ["/entrypoint.sh"]
