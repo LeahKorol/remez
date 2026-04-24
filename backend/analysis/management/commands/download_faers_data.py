@@ -39,6 +39,11 @@ class Command(QuarterRangeArgMixin, BaseCommand):
             type=bool,
             help="Delete the output directory if the command fails",
         )
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            help="Delete existing files before downloading",
+        )
 
     def handle(self, *args, **options):
         year_q_from = options["year_q_from"]
@@ -48,6 +53,7 @@ class Command(QuarterRangeArgMixin, BaseCommand):
         )
         threads = options.get("threads", 4)
         clean_on_failure = options.get("clean_on_failure", True)
+        force = options.get("force", False)
 
         dir_out = os.path.abspath(dir_out)
         os.makedirs(dir_out, exist_ok=True)
@@ -62,7 +68,9 @@ class Command(QuarterRangeArgMixin, BaseCommand):
             with ThreadPool(threads) as pool:
                 _ = list(
                     tqdm.tqdm(
-                        pool.imap(lambda url: Command.download_url(url, dir_out), urls),
+                        pool.imap(
+                            lambda url: Command.download_url(url, dir_out, force), urls
+                        ),
                         total=len(urls),
                     )
                 )
@@ -77,7 +85,9 @@ class Command(QuarterRangeArgMixin, BaseCommand):
         year = quarter.year
         yearquarter = str(quarter)
         what = [
+            "demo",
             "drug",
+            "outc",
             "reac",
         ]
 
@@ -92,12 +102,16 @@ class Command(QuarterRangeArgMixin, BaseCommand):
         return ret
 
     @staticmethod
-    def download_url(url, dir_out):
+    def download_url(url, dir_out, force=False):
         fn_out = os.path.split(url)[-1]
         fn_out = os.path.join(dir_out, fn_out)
         if os.path.exists(fn_out):
-            logger.debug(f"Skipping {url} because {fn_out} already exists")
-            return
+            if force:
+                os.remove(fn_out)
+                logger.info(f"Deleted existing file {fn_out}")
+            else:
+                logger.debug(f"Skipping {url} because {fn_out} already exists")
+                return
         try:
             urllib.request.urlretrieve(url, fn_out)
         except Exception as err:
