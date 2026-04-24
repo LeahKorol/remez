@@ -110,6 +110,14 @@ REFRESH_TOKEN_LIFETIME_DAYS=7
 # CORS Settings
 CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 
+# API Rate Limits (DRF throttling)
+DRF_ANON_THROTTLE_RATE=30/minute
+DRF_USER_THROTTLE_RATE=120/minute
+
+# Request Body Upload Limits (bytes)
+DATA_UPLOAD_MAX_MEMORY_SIZE=10485760
+FILE_UPLOAD_MAX_MEMORY_SIZE=10485760
+
 # Email Configuration (SMTP)
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
@@ -219,6 +227,24 @@ The API will be available at `http://localhost:8000/`
 docker build -t remez-backend .
 docker run -p 8000:8000 --env-file .env remez-backend
 ```
+
+### Docker Setup (Automatic Migrations)
+
+When the backend runs via Docker, the container starts through `entrypoint.sh`.
+On startup it automatically:
+
+1. Runs `python manage.py migrate --noinput`
+2. Starts the Django development server on `0.0.0.0:8000`
+
+This means you do not need to run `python manage.py migrate` manually when using
+`docker compose up` or `docker run` for the backend container. The automatic
+migration step ensures required tables such as `django_site` are created before
+the server starts.
+
+Manual migrations are only required for non-Docker local setups, such as running
+the backend directly with `python manage.py runserver`.
+
+This setup is intended for development/local environments.
 
 ## Management Commands
 
