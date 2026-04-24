@@ -234,6 +234,14 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.TokenAuthentication",
     ),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": os.getenv("DRF_ANON_THROTTLE_RATE", "30/minute"),
+        "user": os.getenv("DRF_USER_THROTTLE_RATE", "120/minute"),
+    },
 }
 
 REST_AUTH = {
@@ -282,6 +290,9 @@ SIGNING_KEY = os.getenv("SIGNING_KEY")
 # CORS settings
 CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
 CORS_ALLOW_CREDENTIALS = True  # Allow using cookies for authentication
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv("DATA_UPLOAD_MAX_MEMORY_SIZE", 10 * 1024 * 1024))
+FILE_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv("FILE_UPLOAD_MAX_MEMORY_SIZE", 10 * 1024 * 1024))
 
 # Use SMTP server for sending emails, print to console for development
 # EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
@@ -386,9 +397,10 @@ REST_AUTH_REGISTER_SERIALIZERS = {
 
 # Pipeline service settings
 
-# Comma-separated list of allowed IPs. If the variable is empty or not set, allow all IPs.
+# Comma-separated list of allowed IPs. In DEBUG mode, an empty list allows all IPs
+# to support local Docker setups. In production, an empty list denies all requests.
 pipeline_ips = os.getenv("PIPELINE_SERVICE_IPS", "")
-PIPELINE_SERVICE_IPS = pipeline_ips.strip().split(",") if pipeline_ips else None
+PIPELINE_SERVICE_IPS = [ip.strip() for ip in pipeline_ips.split(",") if ip.strip()]
 PIPELINE_BASE_URL = os.getenv("PIPELINE_BASE_URL", "http://localhost:8001")
 PIPELINE_TIMEOUT = 30  # seconds
 # Timeout (minutes) before a pipeline task is considered failed
