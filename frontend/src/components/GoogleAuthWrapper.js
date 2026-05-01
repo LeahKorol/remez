@@ -1,16 +1,10 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useGoogleAuth } from './GoogleAuth';
 
 const GoogleAuthWrapper = () => {
-  const { initializeOneTap, signInWithGoogle, isLoading } = useGoogleAuth();
-
-  useEffect(() => {
-    // try to initialize One Tap on component mount
-    initializeOneTap();
-  }, []);
+  const { signInWithGoogle, isLoading } = useGoogleAuth();
 
   const handleGoogleClick = () => {
-    // allways enable to try to sign in with Google on button click
     signInWithGoogle();
   };
 

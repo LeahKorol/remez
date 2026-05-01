@@ -30,6 +30,15 @@ def get_tokens_for_user(user):
     }
 
 
+def mark_email_as_verified(user, email):
+    """Mark the user's email as verified when Google confirms ownership."""
+    EmailAddress.objects.update_or_create(
+        user=user,
+        email=email,
+        defaults={"primary": True, "verified": True},
+    )
+
+
 @extend_schema(
     request=GoogleLoginSerializer,
     responses={
@@ -55,6 +64,13 @@ def google_login(request):
         google_id = validated_data["google_id"]
         email = validated_data["email"]
         name = validated_data.get("name")
+        verified_email = validated_data.get("verified_email", True)
+
+        if not verified_email:
+            return Response(
+                {"error": "Google login requires a verified Google email."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Try to find user by google_id first, then by email
         user = None
@@ -62,6 +78,7 @@ def google_login(request):
         # Check if user exists with this Google ID
         try:
             user = User.objects.get(google_id=google_id)
+            mark_email_as_verified(user, email)
         except User.DoesNotExist:
             # Check if user exists with this email (for existing users who want to link Google)
             try:
@@ -71,6 +88,7 @@ def google_login(request):
                 if not user.name and name:
                     user.name = name
                 user.save()
+                mark_email_as_verified(user, email)
                 logger.info(f"Linked Google account to existing user: {email}")
             except User.DoesNotExist:
                 # User doesn't exist
@@ -138,6 +156,12 @@ def google_register(request):
         name = validated_data.get("name", "")
         verified_email = validated_data.get("verified_email", True)
 
+        if not verified_email:
+            return Response(
+                {"error": "Google registration requires a verified Google email."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # Check if user already exists
         if User.objects.filter(email=email).exists():
             return Response(
@@ -161,9 +185,7 @@ def google_register(request):
         )
 
         # Mark email as verified if Google says it's verified
-        # The email adress entry was created in create_user
-        if verified_email:
-            EmailAddress.objects.filter(user=user, email=email).update(verified=True)
+        mark_email_as_verified(user, email)
 
         # Generate tokens
         tokens = get_tokens_for_user(user)

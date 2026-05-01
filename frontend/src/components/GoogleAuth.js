@@ -1,24 +1,41 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import axios from '../axiosConfig';
 import { API_BASE } from '../utils/apiBase';
+import tokenService from '../utils/tokenService';
+import { useUser } from '../utils/UserContext';
 
-// Google OAuth Configuration
 const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
 
 class GoogleAuthService {
-  constructor() {
-    this.isGoogleLoaded = false;
-    this.loadGoogleAPI();
-  }
+  static scriptLoadPromise = null;
 
-  // Load Google API Script
   loadGoogleAPI() {
-    return new Promise((resolve, reject) => {
-      if (window.google && window.google.accounts) {
-        this.isGoogleLoaded = true;
-        resolve();
+    if (!GOOGLE_CLIENT_ID) {
+      return Promise.reject(new Error('Google Client ID is not configured.'));
+    }
+
+    if (window.google?.accounts) {
+      return Promise.resolve();
+    }
+
+    if (GoogleAuthService.scriptLoadPromise) {
+      return GoogleAuthService.scriptLoadPromise;
+    }
+
+    GoogleAuthService.scriptLoadPromise = new Promise((resolve, reject) => {
+      const existingScript = document.querySelector(
+        'script[src="https://accounts.google.com/gsi/client"]'
+      );
+
+      if (existingScript) {
+        existingScript.addEventListener('load', resolve, { once: true });
+        existingScript.addEventListener(
+          'error',
+          () => reject(new Error('Failed to load Google Identity Services.')),
+          { once: true }
+        );
         return;
       }
 
@@ -26,30 +43,32 @@ class GoogleAuthService {
       script.src = 'https://accounts.google.com/gsi/client';
       script.async = true;
       script.defer = true;
-      script.onload = () => {
-        this.isGoogleLoaded = true;
-        resolve();
+      script.onload = resolve;
+      script.onerror = () => {
+        GoogleAuthService.scriptLoadPromise = null;
+        reject(new Error('Failed to load Google Identity Services.'));
       };
-      script.onerror = reject;
       document.head.appendChild(script);
     });
+
+    return GoogleAuthService.scriptLoadPromise;
   }
 
-  // Initialize Google One Tap 
   async initializeOneTap(callback) {
     try {
       await this.loadGoogleAPI();
 
       window.google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
-        callback: callback,
+        callback,
         auto_select: false,
         cancel_on_tap_outside: false,
       });
 
       window.google.accounts.id.prompt((notification) => {
+        // Ignore routine One Tap suppression/skips to keep the browser console focused on actionable issues.
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          console.log('One Tap not displayed:', notification.getNotDisplayedReason());
+          return;
         }
       });
     } catch (error) {
@@ -57,7 +76,6 @@ class GoogleAuthService {
     }
   }
 
-  // Sign in with popup
   async signInWithPopup() {
     try {
       await this.loadGoogleAPI();
@@ -75,29 +93,25 @@ class GoogleAuthService {
               reject(new Error('No access token received'));
             }
           },
-          error_callback: reject
-        }).requestAccessToken();
+          error_callback: reject,
+        }).requestAccessToken({ prompt: 'consent' });
       });
     } catch (error) {
       throw new Error(`Google sign-in failed: ${error.message}`);
     }
   }
 
-  // Get user profile from Google
   async getUserProfile(accessToken) {
     try {
       const response = await axios.get(
         `https://www.googleapis.com/oauth2/v2/userinfo?access_token=${accessToken}`
       );
-      // if (!response.ok) throw new Error('Failed to fetch user profile');
-      // return await response.json();
       return response.data;
     } catch (error) {
       throw new Error(`Failed to get user profile: ${error.message}`);
     }
   }
 
-  // Send Google user data to backend
   async authenticateWithBackend(googleUser, isRegistration = false) {
     try {
       const endpoint = isRegistration
@@ -113,28 +127,31 @@ class GoogleAuthService {
       });
 
       return response.data;
-
     } catch (error) {
       if (error.response?.status === 404) {
-        throw new Error("User not found. Please register first.");
+        throw new Error('User not found. Please register first.');
       }
       if (error.response?.status === 409) {
-        throw new Error("Account already exists. Please try logging in instead.");
+        throw new Error('Account already exists. Please try logging in instead.');
       }
-      if (error.message.includes("Network Error")) {
-        throw new Error("Network error. Please check your connection.");
+      if (error.response?.status === 400 && error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      if (error.message.includes('Network Error')) {
+        throw new Error('Network error. Please check your connection.');
       }
       throw error;
     }
   }
 }
 
-// Hook for Google Auth
+const googleAuthService = new GoogleAuthService();
+
 export const useGoogleAuth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  const googleAuthService = new GoogleAuthService();
+  const { login } = useUser();
 
   const signInWithGoogle = async (isRegistration = false) => {
     setIsLoading(true);
@@ -146,52 +163,84 @@ export const useGoogleAuth = () => {
 
       toast.update(loadingToast, { render: 'Data Validator...', type: 'loading' });
 
-      const authResult = await googleAuthService.authenticateWithBackend(googleUser, isRegistration);
+      const authResult = await googleAuthService.authenticateWithBackend(
+        googleUser,
+        isRegistration
+      );
 
-      if (authResult.access) localStorage.setItem('token', authResult.access);
+      if (authResult.access) {
+        tokenService.setTokens(authResult.access, authResult.refresh || null);
+      }
+      if (authResult.user?.id) {
+        login(authResult.user.id);
+      }
 
       toast.update(loadingToast, {
-        render: isRegistration ? 'You have successfully registered!' : 'You have successfully logged in!',
+        render: isRegistration
+          ? 'You have successfully registered!'
+          : 'You have successfully logged in!',
         type: 'success',
         isLoading: false,
-        autoClose: 2000
+        autoClose: 2000,
       });
 
       setTimeout(() => navigate('/profile'), 1000);
-
     } catch (err) {
       console.error('Google auth error:', err);
       setError(err.message);
 
-      toast.dismiss(); 
+      toast.dismiss();
 
       let msg = 'Error login to Google';
-      if (err.message.includes('User not found')) msg = 'User not found. Please register first.';
-      else if (err.message.includes('already exists')) msg = 'The account already exists. Try logging in instead of signing up.';
-      else if (err.message.includes('Network error')) msg = 'Network problem. Check your internet connection.';
+      if (err.message.includes('User not found')) {
+        msg = 'User not found. Please register first.';
+      } else if (err.message.includes('already exists')) {
+        msg = 'The account already exists. Try logging in instead of signing up.';
+      } else if (err.message.includes('verified Google email')) {
+        msg = 'Google did not return a verified email for this account.';
+      } else if (err.message.includes('Client ID')) {
+        msg = 'Google login is not configured correctly.';
+      } else if (err.message.includes('Network error')) {
+        msg = 'Network problem. Check your internet connection.';
+      }
 
       toast.error(msg, { autoClose: 5000 });
     } finally {
       setIsLoading(false);
     }
-
   };
-  // const initializeOneTap = () => {
-  //   googleAuthService.initializeOneTap(handleOneTapCallback);
-  // };
 
-  return { signInWithGoogle, isLoading, error };
+  const initializeOneTap = async (callback) => {
+    if (typeof callback !== 'function') {
+      return;
+    }
+
+    await googleAuthService.initializeOneTap(callback);
+  };
+
+  return { signInWithGoogle, initializeOneTap, isLoading, error };
 };
 
-// Google Auth Button
-export const GoogleAuthButton = ({ isRegistration = false, className = '', disabled = false, size = 'large' }) => {
+export const GoogleAuthButton = ({
+  isRegistration = false,
+  className = '',
+  disabled = false,
+  size = 'large',
+}) => {
   const { signInWithGoogle, isLoading } = useGoogleAuth();
   const handleClick = () => signInWithGoogle(isRegistration);
-  const buttonText = isRegistration ? 'Registration with Google' : 'Login with Google';
+  const buttonText = isRegistration
+    ? 'Registration with Google'
+    : 'Login with Google';
   const loadingText = isRegistration ? 'Registering...' : 'Connecting...';
 
   return (
-    <button className={`google-auth-button ${className} ${size} ${isLoading ? 'loading' : ''}`} onClick={handleClick} disabled={disabled || isLoading} type="button">
+    <button
+      className={`google-auth-button ${className} ${size} ${isLoading ? 'loading' : ''}`}
+      onClick={handleClick}
+      disabled={disabled || isLoading}
+      type="button"
+    >
       <div className="google-button-content">
         {!isLoading && (
           <svg className="images/google-icon" viewBox="0 0 24 24" width="20" height="20">
@@ -201,22 +250,15 @@ export const GoogleAuthButton = ({ isRegistration = false, className = '', disab
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
           </svg>
         )}
-        {isLoading && <div className="loading-spinner"><div className="spinner"></div></div>}
+        {isLoading && (
+          <div className="loading-spinner">
+            <div className="spinner"></div>
+          </div>
+        )}
         <span className="button-text">{isLoading ? loadingText : buttonText}</span>
       </div>
     </button>
   );
 };
 
-// // One Tap Component
-// export const GoogleOneTap = () => {
-//   const { initializeOneTap } = useGoogleAuth();
-//   useEffect(() => {
-//     const timer = setTimeout(() => initializeOneTap(), 1000);
-//     return () => clearTimeout(timer);
-//   }, []);
-//   return null;
-// };
-
-// Default export
 export default GoogleAuthService;
