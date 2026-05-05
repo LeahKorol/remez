@@ -15,6 +15,7 @@ from services.pipeline_service import (
     cleanup,
     get_available_data,
     mark_data,
+    run_pipeline,
     save_results_to_db,
     verify_data_files_exist,
 )
@@ -245,6 +246,54 @@ def test_verify_data_files_exist_missing_quarters_raises_error(
     assert "2023q1" in error.requested_quarters
     assert "2023q2" in error.requested_quarters
     assert len(error.available_quarters) < len(error.requested_quarters)
+    assert "Missing quarters:" in str(error)
+    assert "2023q1" in str(error)
+    assert "2023q2" in str(error)
+
+
+def test_run_pipeline_with_missing_faers_data_files_marks_task_failed(
+    tmp_path, pipeline_request, mocker
+):
+    external_dir = tmp_path / "external"
+    external_dir.mkdir(parents=True)
+
+    mock_settings = mocker.patch("services.pipeline_service.settings")
+    mock_settings.get_output_path.return_value = tmp_path / "output"
+    mock_settings.get_external_data_path.return_value = external_dir
+
+    task = TaskResults(id=42, external_id="task_42")
+    mock_logger = mocker.Mock()
+    mocker.patch("services.pipeline_service.configure_task_logger", return_value=mock_logger)
+    mock_failure_handler = mocker.patch("services.pipeline_service.handle_task_failure")
+    mocker.patch("services.pipeline_service.TaskRepository.update_status")
+
+    missing_data_error = DataFilesNotFoundError(
+        year_start=pipeline_request.year_start,
+        quarter_start=pipeline_request.quarter_start,
+        year_end=pipeline_request.year_end,
+        quarter_end=pipeline_request.quarter_end,
+        requested_quarters=["2023q1", "2023q2", "2023q3"],
+        available_quarters=["2023q1"],
+    )
+    mocker.patch(
+        "services.pipeline_service.verify_data_files_exist",
+        side_effect=missing_data_error,
+    )
+
+    def fail_task_and_set_status(task_obj, error_message, send_callback=True):
+        task_obj.status = TaskStatus.FAILED
+
+    mock_failure_handler.side_effect = fail_task_and_set_status
+
+    run_pipeline(pipeline_request, task)
+
+    mock_failure_handler.assert_called_once()
+    assert task.status == TaskStatus.FAILED
+    assert "Missing quarters:" in mock_failure_handler.call_args.args[1]
+    error_message = mock_failure_handler.call_args.args[1]
+    assert "Missing quarters:" in error_message
+    assert "2023q2" in error_message
+    assert "2023q3" in error_message
 
 
 # ============================================================================
