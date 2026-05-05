@@ -373,6 +373,15 @@ logging.config.dictConfig(LOGGING)
 # For testing, use a number between 0 and 4
 NUM_DEMO_QUARTERS = int(os.getenv("NUM_DEMO_QUARTERS", -1))
 
+FAERS_QUARTER_MIN = int(os.getenv("FAERS_QUARTER_MIN", 1))
+FAERS_QUARTER_MAX = int(os.getenv("FAERS_QUARTER_MAX", 4))
+
+if not 1 <= FAERS_QUARTER_MIN <= FAERS_QUARTER_MAX <= 4:
+    raise RuntimeError(
+        "Invalid FAERS quarter configuration. "
+        "Expected 1 <= FAERS_QUARTER_MIN <= FAERS_QUARTER_MAX <= 4."
+    )
+
 # Email verification settings
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_CONFIRM_EMAIL_ON_GET = True

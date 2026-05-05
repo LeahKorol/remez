@@ -1,13 +1,10 @@
 from django.contrib.auth import get_user_model
-from django.core.validators import (
-    MaxLengthValidator,
-    MaxValueValidator,
-    MinValueValidator,
-)
+from django.core.validators import MaxLengthValidator, MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import CheckConstraint, Q
 
 from analysis.constants import YEAR_END, YEAR_START
+from analysis.validators import validate_configured_quarter_range
 
 # Use TextField and not CharField as recommended in Postgres documentation (copy the url, not click):
 # https://wiki.postgresql.org/wiki/Don't_Do_This#Don.27t_use_varchar.28n.29_by_default
@@ -56,12 +53,8 @@ class Query(models.Model):
     reactions = models.ManyToManyField(ReactionName)
 
     # Quarter parameters
-    quarter_start = models.IntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(4)]
-    )
-    quarter_end = models.IntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(4)]
-    )
+    quarter_start = models.IntegerField(validators=[validate_configured_quarter_range])
+    quarter_end = models.IntegerField(validators=[validate_configured_quarter_range])
     year_start = models.IntegerField(
         validators=[MinValueValidator(YEAR_START), MaxValueValidator(YEAR_END)]
     )

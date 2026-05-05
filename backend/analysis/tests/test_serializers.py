@@ -213,6 +213,29 @@ class TestQuerySerializer:
         serializer = QuerySerializer(instance=query, data=data, partial=True)
         assert not serializer.is_valid()
 
+    def test_create_query_uses_configured_quarter_env_range(
+        self, query_test_data, settings
+    ):
+        """Serializer should respect the configured quarter range."""
+        settings.FAERS_QUARTER_MIN = 2
+        settings.FAERS_QUARTER_MAX = 3
+
+        drug1 = query_test_data["drug1"]
+        reaction1 = query_test_data["reaction1"]
+        data = {
+            "name": "Quarter Range Query",
+            "quarter_start": 1,
+            "quarter_end": 2,
+            "year_start": 2020,
+            "year_end": 2020,
+            "drugs": [drug1.id],
+            "reactions": [reaction1.id],
+        }
+
+        serializer = QuerySerializer(data=data)
+        assert not serializer.is_valid()
+        assert "quarter_start" in serializer.errors
+
     @pytest.mark.parametrize(
         "quarter_start, quarter_end, year_start, year_end, is_valid",
         [

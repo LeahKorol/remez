@@ -68,7 +68,7 @@ class QueryTests(TestCase):
         """Ensure valid queries can be created."""
         before_creation = timezone.now()
 
-        q_start, q_end = 0, 2
+        q_start, q_end = 1, 2
         year_start = year_end = 2020
         query = Query.objects.create(
             user=self.user,
@@ -93,7 +93,7 @@ class QueryTests(TestCase):
         """Test adding drugs and reactions to a query"""
         query = Query.objects.create(
             user=self.user,
-            quarter_start=0,
+            quarter_start=1,
             quarter_end=2,
             year_start=2020,
             year_end=2020,
@@ -108,7 +108,7 @@ class QueryTests(TestCase):
         """Test string representation when name is empty"""
         query = Query.objects.create(
             user=self.user,
-            quarter_start=0,
+            quarter_start=1,
             quarter_end=2,
             year_start=2020,
             year_end=2020,
@@ -119,7 +119,7 @@ class QueryTests(TestCase):
         """Ensure queries are ordered by updated_at"""
         query1 = Query.objects.create(
             user=self.user,
-            quarter_start=0,
+            quarter_start=1,
             quarter_end=2,
             year_start=2020,
             year_end=2020,
@@ -127,7 +127,7 @@ class QueryTests(TestCase):
         time.sleep(0.1)  # Ensure timestamp difference
         query2 = Query.objects.create(
             user=self.user,
-            quarter_start=0,
+            quarter_start=1,
             quarter_end=2,
             year_start=2020,
             year_end=2020,
@@ -141,7 +141,7 @@ class QueryTests(TestCase):
         """Ensure updated_at field changes when the object is updated"""
         query = Query.objects.create(
             user=self.user,
-            quarter_start=0,
+            quarter_start=1,
             quarter_end=2,
             year_start=2020,
             year_end=2020,
@@ -168,7 +168,7 @@ class QueryTests(TestCase):
             query.full_clean()
 
     def test_quarter_range_validation(self):
-        """Ensure quarter_start cannot be less than 0"""
+        """Ensure quarter_start cannot be less than the configured minimum."""
         query = Query(
             user=self.user,
             quarter_start=-1,
@@ -178,6 +178,21 @@ class QueryTests(TestCase):
         )
         with self.assertRaises(ValidationError):
             query.full_clean()
+
+    def test_quarter_range_validation_uses_configured_env_range(self):
+        """Ensure full_clean() respects configured quarter limits."""
+        from django.test import override_settings
+
+        with override_settings(FAERS_QUARTER_MIN=2, FAERS_QUARTER_MAX=3):
+            query = Query(
+                user=self.user,
+                quarter_start=1,
+                quarter_end=2,
+                year_start=2020,
+                year_end=2020,
+            )
+            with self.assertRaises(ValidationError):
+                query.full_clean()
 
 
 class ResultModelTests(TestCase):

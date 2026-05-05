@@ -508,6 +508,27 @@ class TestQueryViewSet:
         # Verify pipeline service was NOT called due to validation error
         mock_trigger.assert_not_called()
 
+    def test_query_serializer_uses_configured_quarter_env_range(
+        self, mocker, api_client, user1, query1, required_fields, settings
+    ):
+        """API validation should use the configured quarter range."""
+        mock_trigger = mocker.patch(
+            "analysis.views.pipeline_service.trigger_pipeline_analysis"
+        )
+        settings.FAERS_QUARTER_MIN = 2
+        settings.FAERS_QUARTER_MAX = 3
+
+        self.authenticate_user(api_client, user=user1)
+        detail_url = reverse("query-detail", kwargs={"id": query1.id})
+        updated_data = required_fields.copy()
+        updated_data["quarter_start"] = 1
+
+        response = api_client.put(detail_url, updated_data)
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "quarter_start" in response.data
+        mock_trigger.assert_not_called()
+
     def test_year_start_lte_year_end(
         self, mocker, api_client, user1, query1, required_fields
     ):
