@@ -4,7 +4,8 @@ Pydantic models for request/response schemas
 
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from core.config import get_settings
+from pydantic import BaseModel, Field, field_validator
 
 
 class PipelineRequest(BaseModel):
@@ -14,8 +15,8 @@ class PipelineRequest(BaseModel):
         ..., description="Starting year for analysis", ge=2000, le=2030
     )
     year_end: int = Field(..., description="Ending year for analysis", ge=2000, le=2030)
-    quarter_start: int = Field(..., ge=1, le=4, description="Starting quarter (1-4)")
-    quarter_end: int = Field(..., ge=1, le=4, description="Ending quarter (1-4)")
+    quarter_start: int = Field(..., description="Starting quarter for analysis")
+    quarter_end: int = Field(..., description="Ending quarter for analysis")
     drugs: List[str] = Field(..., description="List of drugs to analyze", min_items=1)
     reactions: List[str] = Field(
         ..., description="List of reactions to analyze", min_items=1
@@ -29,6 +30,17 @@ class PipelineRequest(BaseModel):
         max_length=100,
         description="ID from external system. Used for updating the results (this way the external system ensures ids uniqeness and format).",
     )
+
+    @field_validator("quarter_start", "quarter_end")
+    @classmethod
+    def validate_quarter_range(cls, value: int, info):
+        settings = get_settings()
+        if value < settings.FAERS_QUARTER_MIN or value > settings.FAERS_QUARTER_MAX:
+            raise ValueError(
+                f"{info.field_name} must be between "
+                f"{settings.FAERS_QUARTER_MIN} and {settings.FAERS_QUARTER_MAX}"
+            )
+        return value
 
     def model_post_init(self, __context) -> None:
         """Validate date ranges"""

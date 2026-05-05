@@ -2,6 +2,8 @@
 Unit tests for pipeline routes
 """
 
+from types import SimpleNamespace
+
 import pytest
 from constants import TaskStatus
 from errors import PipelineCapacityExceededError
@@ -263,6 +265,33 @@ def test_run_pipeline_invalid_request(test_client, invalid_field, invalid_value)
     assert (
         invalid_field in data["detail"][0]["loc"]
         or invalid_field in data["detail"][0]["msg"]
+    )
+
+
+def test_run_pipeline_uses_configured_quarter_env_range(test_client, mocker):
+    """Request validation should respect the configured quarter range."""
+    mocker.patch(
+        "models.schemas.get_settings",
+        return_value=SimpleNamespace(FAERS_QUARTER_MIN=2, FAERS_QUARTER_MAX=3),
+    )
+
+    request_data = {
+        "year_start": 2023,
+        "year_end": 2023,
+        "quarter_start": 1,
+        "quarter_end": 2,
+        "drugs": ["aspirin"],
+        "reactions": ["headache"],
+        "external_id": "test_ext_123",
+    }
+
+    response = test_client.post("/run", json=request_data)
+
+    assert response.status_code == HTTP_422_UNPROCESSABLE_CONTENT
+    data = response.json()
+    assert any(
+        "quarter_start" in error["loc"] or "quarter_start" in error["msg"]
+        for error in data["detail"]
     )
 
 

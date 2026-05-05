@@ -5,11 +5,17 @@ Configuration management with environment variables and defaults
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic_settings import BaseSettings
+from pydantic import field_validator, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """Application settings with environment variable support"""
+
+    model_config = SettingsConfigDict(
+        env_file=Path(__file__).resolve().parent.parent / ".env",
+        extra="ignore",
+    )
 
     # Application settings
     ENVIRONMENT: str = "development"
@@ -29,6 +35,8 @@ class Settings(BaseSettings):
     PIPELINE_CALLBACK_URL: str = (
         "http://localhost:8000/api/v1/analysis/results/update-by-task"
     )
+    FAERS_QUARTER_MIN: int = 1
+    FAERS_QUARTER_MAX: int = 4
 
     # Data directories
     DATA_EXTERNAL_DIR: str = "data/external/faers"
@@ -42,8 +50,25 @@ class Settings(BaseSettings):
     # File paths
     BASE_DIR: Path = Path(__file__).parent.parent
 
-    class Config:
-        env_file = ".env"
+    @model_validator(mode="after")
+    def validate_quarter_range(self):
+        if not 1 <= self.FAERS_QUARTER_MIN <= self.FAERS_QUARTER_MAX <= 4:
+            raise ValueError(
+                "Invalid FAERS quarter configuration. "
+                "Expected 1 <= FAERS_QUARTER_MIN <= FAERS_QUARTER_MAX <= 4."
+            )
+        return self
+
+    @field_validator("DEBUG", mode="before")
+    @classmethod
+    def parse_debug_flag(cls, value):
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"1", "true", "yes", "on", "debug"}:
+                return True
+            if normalized in {"0", "false", "no", "off", "release", "prod", "production"}:
+                return False
+        return value
 
     def get_external_data_path(self) -> Path:
         """Get the full path to external data directory"""
