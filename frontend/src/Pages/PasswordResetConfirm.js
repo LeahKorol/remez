@@ -81,7 +81,6 @@ function PasswordResetConfirm() {
       }
 
       const data = await response.json();
-      console.log('Token validation response:', response.status, data);
 
       if (response.ok) {
         console.log('Token is valid');

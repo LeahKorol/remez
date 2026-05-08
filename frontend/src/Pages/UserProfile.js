@@ -526,7 +526,6 @@ const UserProfile = () => {
             }
 
             const newQuery = response.data;
-            console.log("newQuery: ", newQuery);
 
             if (editingQueryId) {
                 setSavedQueries(prev => prev.map(q => q.id === newQuery.id ? newQuery : q));
@@ -580,7 +579,6 @@ const UserProfile = () => {
 
             // if there is an updated query, view it
             if (state.updatedQuery) {
-                console.log("Received updated query from loading:", state.updatedQuery);
 
                 // update the saved queries list
                 setSavedQueries(prevQueries =>
@@ -729,7 +727,6 @@ const UserProfile = () => {
             setLoading(true);
 
             const queryData = latestQuery;
-            console.log('Query data from backend:', queryData);
 
             const drugsToEdit = (queryData.drugs_details || []).map(d => ({
                 id: d.id ?? null,
@@ -842,8 +839,6 @@ const UserProfile = () => {
     };
     
     const handleQueryUpdate = (updatedQuery) => {
-        console.log("📝 Updating query in savedQueries list:", updatedQuery);
-        
         setSavedQueries(prevQueries => 
             prevQueries.map(q => 
                 q.id === updatedQuery.id ? updatedQuery : q
