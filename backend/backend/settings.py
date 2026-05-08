@@ -189,7 +189,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "Asia/Jerusalem"  # Show dates in Israeli local time
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 
