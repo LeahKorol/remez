@@ -4,7 +4,7 @@ Task repository for managing TaskResults lifecycle and persistence.
 
 import logging
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from constants import TaskStatus
 from core.config import get_settings
@@ -45,7 +45,7 @@ class TaskRepository:
                     return task
 
                 # At limit - find oldest completed task that can be reused
-                min_completed_time = datetime.now() - timedelta(
+                min_completed_time = datetime.now(timezone.utc) - timedelta(
                     minutes=min_retention_minutes
                 )
 
@@ -76,7 +76,7 @@ class TaskRepository:
                 old_completed_at = oldest_completed.completed_at
                 oldest_completed.external_id = external_id
                 oldest_completed.status = TaskStatus.PENDING
-                oldest_completed.created_at = datetime.now()
+                oldest_completed.created_at = datetime.now(timezone.utc)
                 oldest_completed.completed_at = None
                 # Clear old results
                 oldest_completed.ror_values = []
@@ -94,7 +94,7 @@ class TaskRepository:
     def update_status(task: TaskResults, status: TaskStatus):
         """Update task status and timestamps."""
         if status == TaskStatus.COMPLETED or status == TaskStatus.FAILED:
-            task.completed_at = datetime.now()
+            task.completed_at = datetime.now(timezone.utc)
 
         task.status = status
 

@@ -2,7 +2,7 @@ import asyncio
 import logging
 import shutil
 from concurrent.futures import ProcessPoolExecutor
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from utils import Quarter, generate_quarters
 
@@ -177,7 +177,7 @@ def save_results_to_db(task: TaskResults, results_file):
         f"{len(ror_fields[RorFields.ROR_UPPER])}"
     )
     task.status = TaskStatus.COMPLETED
-    task.completed_at = datetime.now()
+    task.completed_at = datetime.now(timezone.utc)
     task.ror_values = ror_fields[RorFields.ROR_VALUES]
     task.ror_lower = ror_fields[RorFields.ROR_LOWER]
     task.ror_upper = ror_fields[RorFields.ROR_UPPER]
