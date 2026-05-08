@@ -1,5 +1,6 @@
 import logging
 from datetime import timedelta
+import datetime as _dt
 
 from django.conf import settings
 from django.shortcuts import get_object_or_404
@@ -72,10 +73,13 @@ class PipelineStatusCheckMixin:
 
         task = pipeline_service.get_pipeline_task(task_id)
 
-        if task is None or not task.get("status"):
-            logger.info(
-                f"Pipeline task {task_id} not ready yet (not found/no status). Keeping local status as {result.status}."
+        # If pipeline reports nothing for this task, mark as failed.
+        if task is None or not task.get("status")   :
+            logger.warning(
+                f"Pipeline task {task_id} not found in pipeline service, marking as failed."
             )
+            result.status = ResultStatus.FAILED
+            result.save()
             return
 
         # Guard against stale task snapshots from previous runs:
@@ -93,7 +97,9 @@ class PipelineStatusCheckMixin:
                 )
 
             query_updated_at = result.query.updated_at
-            if task_created_at < (query_updated_at - timedelta(seconds=1)):
+
+            # small tolerance to avoid rejecting near-simultaneous events
+            if task_created_at < (query_updated_at - timedelta(seconds=10)):
                 logger.info(
                     f"Ignoring stale pipeline task snapshot for result {result.id}: "
                     f"task created_at={task_created_at}, query updated_at={query_updated_at}"

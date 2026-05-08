@@ -233,10 +233,8 @@ class TestQueryViewSet:
         response = api_client.get(detail_url)
 
         assert response.status_code == status.HTTP_200_OK
-        query1.result.status = (
-            ResultStatus.FAILED
-        )  # The pipeline doesnt run during the tests
-        expected_data = QuerySerializer(query1).data
+        # fetch data from db
+        expected_data = QuerySerializer(Query.objects.get(id=query1.id)).data
         assert response.data == expected_data
 
     def test_retrieve_query_not_owned_by_user(self, api_client, user1, query3):
@@ -561,7 +559,7 @@ class TestQueryViewSet:
         # Mock demo mode as disabled
         mocker.patch.object(settings, "NUM_DEMO_QUARTERS", -1)
 
-        self.authenticate_user(api_client, user=user1)
+        api_client.force_authenticate(user=user1)
         detail_url = reverse("query-detail", kwargs={"id": query1.id})
 
         updated_data = required_fields.copy()
@@ -575,6 +573,7 @@ class TestQueryViewSet:
         updated_data["year_start"] = year_start
         updated_data["year_end"] = year_end
         response = api_client.put(detail_url, updated_data)
+        print(response.data)
         assert response.status_code == res_status
         if response.status_code != status.HTTP_200_OK:
             assert "quarter_start" in response.data
@@ -690,8 +689,10 @@ class TestResultViewSetRetrieve:
     ):
         settings.PIPELINE_TASK_TIMEOUT_MINUTES = 45
         old_time = timezone.now() - timedelta(minutes=50)
-        result1.query.created_at = old_time
-        result1.query.save()
+        Query.objects.filter(id=result1.query_id).update(
+            created_at=old_time,
+            updated_at=old_time,
+        ) # bypass auto_now fields to simulate old task
 
         result1.status = ResultStatus.RUNNING
         result1.save()
@@ -1152,8 +1153,10 @@ class TestQueryRetrieveWithTimeoutAndCompletedResults:
 
         # Set query created_at to 61 minutes ago (exceeds timeout)
         old_time = timezone.now() - timedelta(minutes=61)
-        query1.created_at = old_time
-        query1.save()
+        Query.objects.filter(id=query1.id).update(
+            created_at=old_time,
+            updated_at=old_time,
+        ) # bypass auto_now fields to simulate old task
 
         query1.result.status = initial_status
         query1.result.save()

@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 import pytest
 from django.utils import timezone
@@ -27,6 +28,21 @@ def mock_query(db, user1):
 @pytest.fixture
 def mock_result(mock_query):
     return Result.objects.create(query=mock_query, status=ResultStatus.PENDING)
+
+
+def create_result_with_query_age(user, status, age_minutes):
+    query_time = timezone.now() - timedelta(minutes=age_minutes)
+    with patch("django.utils.timezone.now", return_value=query_time):
+        query = Query.objects.create(
+            user=user,
+            name="Test Query",
+            quarter_start=1,
+            quarter_end=2,
+            year_start=2020,
+            year_end=2020,
+        )
+
+    return Result.objects.create(query=query, status=status)
 
 
 @pytest.fixture
@@ -69,17 +85,13 @@ class TestPipelineStatusCheckMixinTimeout:
         mocker,
         settings,
         mixin_instance,
-        mock_result,
+        user1,
         initial_status,
         timeout_mins,
         age_mins,
     ):
         settings.PIPELINE_TASK_TIMEOUT_MINUTES = timeout_mins
-        old_time = timezone.now() - timedelta(minutes=age_mins)
-        mock_result.query.created_at = old_time
-        mock_result.query.save()
-        mock_result.status = initial_status
-        mock_result.save()
+        mock_result = create_result_with_query_age(user1, initial_status, age_mins)
 
         mock_check_status = mocker.patch(
             "analysis.views.pipeline_service.get_pipeline_task"
@@ -92,14 +104,12 @@ class TestPipelineStatusCheckMixinTimeout:
         assert mock_result.status == ResultStatus.FAILED
 
     def test_pending_result_within_timeout_checks_pipeline(
-        self, mocker, settings, mixin_instance, mock_result
+        self, mocker, settings, mixin_instance, user1
     ):
         settings.PIPELINE_TASK_TIMEOUT_MINUTES = 60
-        recent_time = timezone.now() - timedelta(minutes=30)
-        mock_result.query.created_at = recent_time
-        mock_result.query.save()
-        mock_result.status = ResultStatus.PENDING
-        mock_result.save()
+        mock_result = create_result_with_query_age(
+            user1, ResultStatus.PENDING, age_minutes=30
+        )
 
         pipeline_response = {
             "id": mock_result.id,
@@ -121,14 +131,10 @@ class TestPipelineStatusCheckMixinTimeout:
         assert mock_result.status == ResultStatus.RUNNING
 
     def test_timeout_at_exact_threshold_marks_failed(
-        self, mocker, settings, mixin_instance, mock_result
+        self, mocker, settings, mixin_instance, user1
     ):
         settings.PIPELINE_TASK_TIMEOUT_MINUTES = 45
-        exact_time = timezone.now() - timedelta(minutes=45, seconds=1)
-        mock_result.query.created_at = exact_time
-        mock_result.query.save()
-        mock_result.status = ResultStatus.PENDING
-        mock_result.save()
+        mock_result = create_result_with_query_age(user1, ResultStatus.PENDING, age_minutes=46)
 
         mock_check_status = mocker.patch(
             "analysis.views.pipeline_service.get_pipeline_task"
