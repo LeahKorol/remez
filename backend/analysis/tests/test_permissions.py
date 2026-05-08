@@ -100,6 +100,21 @@ class TestIsPipelineServicePermission:
 
         assert permission.has_permission(request, None) is True
 
+    def test_permission_granted_for_allowed_hostname(
+        self, settings, permission, mock_request, mocker
+    ):
+        """Test permission accepts hostname rules that resolve to the client IP."""
+        settings.PIPELINE_SERVICE_IPS = ["pipeline-api"]
+        request = mock_request(REMOTE_ADDR="172.21.0.5")
+        mocker.patch(
+            "analysis.permissions.socket.getaddrinfo",
+            return_value=[
+                (2, 1, 6, "", ("172.21.0.5", 0)),
+            ],
+        )
+
+        assert permission.has_permission(request, None) is True
+
     def test_permission_denied_for_raw_string_configuration(
         self, settings, permission, mock_request
     ):
@@ -135,9 +150,14 @@ class TestIsPipelineServicePermission:
             allowed = permission.has_permission(request, view)
 
         assert allowed is False
-        assert any("Denied pipeline callback request." in message for message in caplog.messages)
+        assert any(
+            "Denied pipeline callback request." in message
+            for message in caplog.messages
+        )
         record = next(
-            record for record in caplog.records if record.message == "Denied pipeline callback request."
+            record
+            for record in caplog.records
+            if record.message == "Denied pipeline callback request."
         )
         assert record.client_ip == "10.0.0.1"
         assert record.endpoint == "update_by_task_id"

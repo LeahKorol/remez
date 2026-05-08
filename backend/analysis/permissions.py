@@ -1,5 +1,6 @@
 import ipaddress
 import logging
+import socket
 
 from django.conf import settings
 from rest_framework.permissions import BasePermission
@@ -80,7 +81,10 @@ class IsPipelineService(BasePermission):
             self.log_denied_request(client_ip, endpoint, "missing_client_ip")
             return False
 
-        if any(self.ip_matches_rule(client_ip, allowed_ip) for allowed_ip in normalized_rules):
+        if any(
+            self.ip_matches_rule(client_ip, allowed_ip)
+            for allowed_ip in normalized_rules
+        ):
             logger.info(
                 "Allowed pipeline callback request.",
                 extra={
@@ -111,17 +115,41 @@ class IsPipelineService(BasePermission):
         return getattr(request, "path", "unknown")
 
     def normalize_rules(self, pipeline_service_ips):
-        return [rule.strip() for rule in pipeline_service_ips if isinstance(rule, str) and rule.strip()]
+        return [
+            rule.strip()
+            for rule in pipeline_service_ips
+            if isinstance(rule, str) and rule.strip()
+        ]
 
     def ip_matches_rule(self, client_ip, allowed_value):
         if not client_ip or not allowed_value:
             return False
+
+        # Exact string match for literal IP entries.
+        if client_ip == allowed_value:
+            return True
 
         try:
             return ipaddress.ip_address(client_ip) in ipaddress.ip_network(
                 allowed_value, strict=False
             )
         except ValueError:
+            # Support hostname rules (e.g. docker service names like "pipeline-api").
+            # Resolve hostname to IP(s) via DNS and check if client_ip matches any resolved address.
+            # This enables container-based deployments where services communicate by name rather than IP.
+            try:
+                resolved = socket.getaddrinfo(allowed_value, None)
+            except socket.gaierror:
+                return False
+
+            for item in resolved:
+                sockaddr = item[4]
+                if not sockaddr:
+                    continue
+                resolved_ip = sockaddr[0]
+                if resolved_ip == client_ip:
+                    return True
+
             return False
 
     def log_denied_request(self, client_ip, endpoint, reason):
