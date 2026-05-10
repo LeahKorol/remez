@@ -1,13 +1,18 @@
+import random
 from datetime import timedelta
 
 import pytest
 from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
+from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
+from rest_framework.settings import api_settings
 from rest_framework.test import APIClient
+from rest_framework.throttling import SimpleRateThrottle
 
 from analysis.models import DrugName, Query, ReactionName, Result, ResultStatus
 from analysis.serializers import QuerySerializer
@@ -169,6 +174,19 @@ def result_data():
         "ror_lower": [2.0, 2.5],
         "ror_upper": [3.0, 3.5],
     }
+
+
+@pytest.fixture
+def create_new_user(db):
+    rand_suffix = random.randint(1000, 9999)
+    user = User.objects.create_user(
+        email=f"user-{rand_suffix}@example.com",
+        password="testpassword",
+    )
+    email_address = EmailAddress.objects.get(user=user)
+    email_address.verified = True
+    email_address.save()
+    return user
 
 
 @pytest.mark.django_db
@@ -692,7 +710,7 @@ class TestResultViewSetRetrieve:
         Query.objects.filter(id=result1.query_id).update(
             created_at=old_time,
             updated_at=old_time,
-        ) # bypass auto_now fields to simulate old task
+        )  # bypass auto_now fields to simulate old task
 
         result1.status = ResultStatus.RUNNING
         result1.save()
@@ -815,6 +833,51 @@ class TestResultViewSetRestrictions:
         response = api_client.put(detail_url, data)
 
         assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
+
+
+@pytest.mark.django_db
+class TestThrottleEnforcement:
+    def test_throttling_enforced_for_authenticated_user(
+        self, api_client, create_new_user
+    ):
+        original_rates = SimpleRateThrottle.THROTTLE_RATES
+        throttle_settings = {
+            **settings.REST_FRAMEWORK,
+            "DEFAULT_THROTTLE_CLASSES": [
+                "rest_framework.throttling.AnonRateThrottle",
+                "rest_framework.throttling.UserRateThrottle",
+            ],
+            "DEFAULT_THROTTLE_RATES": {
+                "anon": "1/minute",
+                "user": "1/minute",
+            },
+        }
+        cache_settings = {
+            "default": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+                "LOCATION": "throttle-test-cache",
+            }
+        }
+
+        with override_settings(
+            REST_FRAMEWORK=throttle_settings,
+            CACHES=cache_settings,
+        ):
+            api_settings.reload()
+            SimpleRateThrottle.THROTTLE_RATES = api_settings.DEFAULT_THROTTLE_RATES
+            cache.clear()
+            api_client.force_authenticate(user=create_new_user)
+            list_url = reverse("query-list")
+
+            first_response = api_client.get(list_url)
+            second_response = api_client.get(list_url)
+
+            assert first_response.status_code == status.HTTP_200_OK
+            assert second_response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+
+        api_settings.reload()
+        SimpleRateThrottle.THROTTLE_RATES = original_rates
+        cache.clear()
 
 
 @pytest.mark.django_db
@@ -1156,7 +1219,7 @@ class TestQueryRetrieveWithTimeoutAndCompletedResults:
         Query.objects.filter(id=query1.id).update(
             created_at=old_time,
             updated_at=old_time,
-        ) # bypass auto_now fields to simulate old task
+        )  # bypass auto_now fields to simulate old task
 
         query1.result.status = initial_status
         query1.result.save()
