@@ -138,14 +138,26 @@ def get_env_setting(*keys, default=None):
 # Choose settings based on command type
 if is_management_command:
     # Direct connection for Django management commands
-    DB_PORT = get_env_setting("DB_PORT_DIRECT", "DB_PORT", "DB_PORT_POOLED", default="5432")
-    DB_HOST = get_env_setting("DB_HOST_DIRECT", "DB_HOST", "DB_HOST_POOLED", default="db")
-    DB_USER = get_env_setting("DB_USER_DIRECT", "DB_USER", "DB_USER_POOLED", default="postgres")
+    DB_PORT = get_env_setting(
+        "DB_PORT_DIRECT", "DB_PORT", "DB_PORT_POOLED", default="5432"
+    )
+    DB_HOST = get_env_setting(
+        "DB_HOST_DIRECT", "DB_HOST", "DB_HOST_POOLED", default="db"
+    )
+    DB_USER = get_env_setting(
+        "DB_USER_DIRECT", "DB_USER", "DB_USER_POOLED", default="postgres"
+    )
 else:
     # Pooled connection for app runtime
-    DB_PORT = get_env_setting("DB_PORT_POOLED", "DB_PORT", "DB_PORT_DIRECT", default="5432")
-    DB_HOST = get_env_setting("DB_HOST_POOLED", "DB_HOST", "DB_HOST_DIRECT", default="db")
-    DB_USER = get_env_setting("DB_USER_POOLED", "DB_USER", "DB_USER_DIRECT", default="postgres")
+    DB_PORT = get_env_setting(
+        "DB_PORT_POOLED", "DB_PORT", "DB_PORT_DIRECT", default="5432"
+    )
+    DB_HOST = get_env_setting(
+        "DB_HOST_POOLED", "DB_HOST", "DB_HOST_DIRECT", default="db"
+    )
+    DB_USER = get_env_setting(
+        "DB_USER_POOLED", "DB_USER", "DB_USER_DIRECT", default="postgres"
+    )
 
 DB_NAME = get_env_setting("DB_NAME", "DB_NAME_DIRECT", default="remez")
 DB_PASSWORD = get_env_setting("DB_PASSWORD", "DB_PASSWORD_DIRECT", default="postgres")
@@ -264,16 +276,13 @@ REST_AUTH = {
     "JWT_AUTH_SAMESITE": "Lax",
 }
 
+# Production must always use secure, HttpOnly JWT cookies.
 if not DEBUG:
     if not REST_AUTH["JWT_AUTH_SECURE"] or not REST_AUTH["JWT_AUTH_HTTPONLY"]:
         raise RuntimeError(
             "Insecure JWT cookie configuration is not allowed when DEBUG=False. "
             "Set JWT_AUTH_SECURE=True and JWT_AUTH_HTTPONLY=True."
         )
-
-    # Production must always use secure, HttpOnly JWT cookies.
-    REST_AUTH["JWT_AUTH_SECURE"] = True
-    REST_AUTH["JWT_AUTH_HTTPONLY"] = True
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(
@@ -288,11 +297,17 @@ SIMPLE_JWT = {
 SIGNING_KEY = os.getenv("SIGNING_KEY")
 
 # CORS settings
-CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+CORS_ALLOWED_ORIGINS = [
+    o for o in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if o
+]
 CORS_ALLOW_CREDENTIALS = True  # Allow using cookies for authentication
 
-DATA_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv("DATA_UPLOAD_MAX_MEMORY_SIZE", 10 * 1024 * 1024))
-FILE_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv("FILE_UPLOAD_MAX_MEMORY_SIZE", 10 * 1024 * 1024))
+DATA_UPLOAD_MAX_MEMORY_SIZE = int(
+    os.getenv("DATA_UPLOAD_MAX_MEMORY_SIZE", 10 * 1024 * 1024)
+)
+FILE_UPLOAD_MAX_MEMORY_SIZE = int(
+    os.getenv("FILE_UPLOAD_MAX_MEMORY_SIZE", 10 * 1024 * 1024)
+)
 
 # Use SMTP server for sending emails, print to console for development
 # EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
