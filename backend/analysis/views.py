@@ -1,6 +1,5 @@
 import logging
 from datetime import timedelta
-import datetime as _dt
 
 from django.conf import settings
 from django.shortcuts import get_object_or_404
@@ -74,7 +73,7 @@ class PipelineStatusCheckMixin:
         task = pipeline_service.get_pipeline_task(task_id)
 
         # If pipeline reports nothing for this task, mark as failed.
-        if task is None or not task.get("status")   :
+        if task is None or not task.get("status"):
             logger.warning(
                 f"Pipeline task {task_id} not found in pipeline service, marking as failed."
             )
@@ -196,10 +195,10 @@ def is_ror_field_changed(old_query: Query, request_data: dict) -> bool:
                     raw_values = []
 
                 new_value = set(int(pk) for pk in raw_values)
-            except (TypeError, ValueError):
+            except (TypeError, ValueError) as e:
                 # If parsing fails, treat as changed and let serializer validation handle details.
                 logger.warning(
-                    f"Failed parsing '{field}' values during update for query {old_query.id}; forcing recalculation."
+                    f"Failed parsing '{field}' values during update for query {old_query.id}; forcing recalculation: {str(e)}"
                 )
                 return True
             old_value = set(obj.pk for obj in old_value.all())
@@ -211,9 +210,9 @@ def is_ror_field_changed(old_query: Query, request_data: dict) -> bool:
             if field in numeric_fields:
                 try:
                     new_value = int(new_value)
-                except (TypeError, ValueError):
+                except (TypeError, ValueError) as e:
                     logger.warning(
-                        f"Failed parsing numeric field '{field}' during update for query {old_query.id}; forcing recalculation."
+                        f"Failed parsing numeric field '{field}' during update for query {old_query.id}; forcing recalculation: {str(e)}"
                     )
                     return True
             if old_value != new_value:
@@ -283,15 +282,19 @@ class QueryViewSet(PipelineStatusCheckMixin, viewsets.ModelViewSet):
         Creates Query and Result objects both and calls pipeline service.
         If settings.NUM_DEMO_QUARTERS is set to a value between 0 and 4, use demo data for the results.
         """
-        # Create Query with user assigned (as it is a create operation)
-        query = serializer.save(user=self.request.user)
+        try:
+            # Create Query with user assigned (as it is a create operation)
+            query = serializer.save(user=self.request.user)
 
-        # Handle demo data mode
-        if settings.NUM_DEMO_QUARTERS >= 0:
-            self._create_demo_result(query)
-        else:
-            # Trigger pipeline service for real analysis
-            self._trigger_pipeline_analysis(query)
+            # Handle demo data mode
+            if settings.NUM_DEMO_QUARTERS >= 0:
+                self._create_demo_result(query)
+            else:
+                # Trigger pipeline service for real analysis
+                self._trigger_pipeline_analysis(query)
+        except Exception as e:
+            logger.exception("Failed to create query: %s", str(e))
+            raise
 
     def perform_update(self, serializer):
         """
@@ -301,55 +304,73 @@ class QueryViewSet(PipelineStatusCheckMixin, viewsets.ModelViewSet):
         """
         logger.debug(f"perform_update called with method: {self.request.method}")
 
-        # If result is currently pending or running, do not re-trigger pipeline
         try:
-            current_status = serializer.instance.result.status
-        except Exception:
-            current_status = None
-
-        if current_status in [ResultStatus.PENDING, ResultStatus.RUNNING]:
-            logger.info(
-                f"Query {serializer.instance.id} update ignored for recalculation: task already {current_status}."
-            )
-            serializer.save()
-            return
-
-        if not is_ror_field_changed(serializer.instance, self.request.data):
-            # No ROR-related fields updated
-            result_status = None
+            # If result is currently pending or running, do not re-trigger pipeline
             try:
-                result_status = serializer.instance.result.status
-            except Exception:
-                result_status = None
-
-            query = serializer.save()
-
-            # Resend to pipeline only if previous status was FAILED
-            if result_status == ResultStatus.FAILED:
-                logger.info(
-                    f"Query {serializer.instance.id} updated without ROR changes and previous status FAILED; re-triggering pipeline."
+                current_status = serializer.instance.result.status
+            except Exception as e:
+                logger.warning(
+                    "Failed to read current result status for query %s: %s",
+                    serializer.instance.id,
+                    str(e),
                 )
-            else:
+                current_status = None
+
+            if current_status in [ResultStatus.PENDING, ResultStatus.RUNNING]:
                 logger.info(
-                    f"Query {serializer.instance.id} updated without ROR changes; not re-triggering pipeline (status={result_status})."
+                    f"Query {serializer.instance.id} update ignored for recalculation: task already {current_status}."
                 )
+                serializer.save()
                 return
 
-        logger.info(
-            f"Query {serializer.instance.id} updated with ROR-related fields; triggering recalculation."
-        )
+            if not is_ror_field_changed(serializer.instance, self.request.data):
+                # No ROR-related fields updated
+                result_status = None
+                try:
+                    result_status = serializer.instance.result.status
+                except Exception as e:
+                    logger.warning(
+                        "Failed to read result status for query %s: %s",
+                        serializer.instance.id,
+                        str(e),
+                    )
+                    result_status = None
 
-        query = serializer.save()  # Save updated query
+                query = serializer.save()
 
-        if settings.NUM_DEMO_QUARTERS >= 0:
-            self._create_demo_result(query)
-        else:
-            self._trigger_pipeline_analysis(query)
+                # Resend to pipeline only if previous status was FAILED
+                if result_status == ResultStatus.FAILED:
+                    logger.info(
+                        f"Query {serializer.instance.id} updated without ROR changes and previous status FAILED; re-triggering pipeline."
+                    )
+                else:
+                    logger.info(
+                        f"Query {serializer.instance.id} updated without ROR changes; not re-triggering pipeline (status={result_status})."
+                    )
+                    return
 
-        # Ensure response serialization reflects the updated result state.
-        query.refresh_from_db()
-        if hasattr(query, "result"):
-            query.result.refresh_from_db()
+            logger.info(
+                f"Query {serializer.instance.id} updated with ROR-related fields; triggering recalculation."
+            )
+
+            query = serializer.save()  # Save updated query
+
+            if settings.NUM_DEMO_QUARTERS >= 0:
+                self._create_demo_result(query)
+            else:
+                self._trigger_pipeline_analysis(query)
+
+            # Ensure response serialization reflects the updated result state.
+            query.refresh_from_db()
+            if hasattr(query, "result"):
+                query.result.refresh_from_db()
+        except Exception as e:
+            logger.exception(
+                "Failed to update query: %s",
+                str(e),
+                extra={"query_id": serializer.instance.id},
+            )
+            raise
 
     def _create_demo_result(self, query):
         """Create Result object with demo data and mark as completed."""
@@ -369,6 +390,7 @@ class QueryViewSet(PipelineStatusCheckMixin, viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Error creating demo result for query {query.id}: {str(e)}")
             # Keep result in PENDING status if demo creation fails
+            raise
 
     def _trigger_pipeline_analysis(self, query):
         """Trigger pipeline analysis for the query."""
@@ -527,8 +549,8 @@ class ResultViewSet(PipelineStatusCheckMixin, viewsets.ReadOnlyModelViewSet):
 
         try:
             result = Result.objects.get(id=task_id)
-        except Result.DoesNotExist:
-            logger.warning(f"No result was found for id {task_id}")
+        except Result.DoesNotExist as e:
+            logger.warning(f"No result was found for id {task_id}: {str(e)}")
             return Response(
                 {"error": "Result not found for this task_id"},
                 status=status.HTTP_404_NOT_FOUND,
