@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 import logging.config
 import os
+import re
 import sys
 from datetime import timedelta
 from pathlib import Path
@@ -382,6 +383,44 @@ LOGGING = {
 }
 
 logging.config.dictConfig(LOGGING)
+
+
+def _parse_faers_quarter(value: str) -> tuple[int, int]:
+    match = re.match(r"^(\d{4})-?q([1-4])$", value)
+    if not match:
+        raise RuntimeError(f"Invalid FAERS quarter format: {value}")
+    year, quarter = match.groups()
+    return int(year), int(quarter)
+
+
+def _require_env_quarter_bounds() -> tuple[tuple[int, int], tuple[int, int]]:
+    env_from = os.getenv("FAERS_FROM")
+    env_to = os.getenv("FAERS_TO")
+    if not env_from or not env_to:
+        if DEBUG:
+            logging.getLogger("FAERS").warning(
+                "FAERS_FROM and FAERS_TO environment variables are not set. Using default demo bounds 2020q1..2020q3."
+            )
+            return (2020, 1), (2020, 3)
+        raise RuntimeError("Missing FAERS_FROM/FAERS_TO environment variables")
+
+    q_from = _parse_faers_quarter(env_from)
+    q_to = _parse_faers_quarter(env_to)
+
+    if q_to < q_from:
+        raise RuntimeError("FAERS_FROM must be <= FAERS_TO")
+
+    return q_from, q_to
+
+
+FAERS_QUARTER_RANGE_START, FAERS_QUARTER_RANGE_END = _require_env_quarter_bounds()
+logging.getLogger("FAERS").info(
+    "FAERS quarter bounds set to %sq%s..%sq%s",
+    FAERS_QUARTER_RANGE_START[0],
+    FAERS_QUARTER_RANGE_START[1],
+    FAERS_QUARTER_RANGE_END[0],
+    FAERS_QUARTER_RANGE_END[1],
+)
 
 # Num of quarters of demo data to use for the analysis pipeline
 # defaults is -1 , i.e. use real data

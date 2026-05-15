@@ -113,6 +113,8 @@ FAERS_FROM=2020q1
 FAERS_TO=2020q2
 FAERS_AUTO_SYNC=True
 
+# FAERS_FROM/FAERS_TO are required. The pipeline fails on startup if missing or invalid.
+
 # Data Directories
 DATA_EXTERNAL_DIR=data/external/faers
 DATA_OUTPUT_DIR=pipeline_output

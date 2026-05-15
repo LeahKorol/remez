@@ -2,10 +2,14 @@
 Configuration management with environment variables and defaults
 """
 
+import logging
 from functools import lru_cache
 from pathlib import Path
 
 from pydantic_settings import BaseSettings
+from utils import Quarter
+
+logger = logging.getLogger("FAERS")
 
 
 class Settings(BaseSettings):
@@ -29,6 +33,10 @@ class Settings(BaseSettings):
     PIPELINE_CALLBACK_URL: str = (
         "http://localhost:8000/api/v1/analysis/results/update-by-task"
     )
+
+    # FAERS data bounds
+    FAERS_FROM: str
+    FAERS_TO: str
 
     # Data directories
     DATA_EXTERNAL_DIR: str = "data/external/faers"
@@ -56,6 +64,26 @@ class Settings(BaseSettings):
     def get_logs_dir(self) -> Path:
         """Get the full path to logs directory"""
         return self.BASE_DIR / self.LOGS_DIR
+
+    def get_faers_quarter_bounds(self) -> tuple[Quarter, Quarter]:
+        """Return FAERS quarter bounds derived from env vars."""
+
+        try:
+            q_from = Quarter(self.FAERS_FROM)
+            q_to = Quarter(self.FAERS_TO)
+        except RuntimeError as err:
+            logger.error(
+                f"Invalid FAERS_FROM/FAERS_TO format ({self.FAERS_FROM}..{self.FAERS_TO}): {err}."
+            )
+            raise RuntimeError("Invalid FAERS_FROM/FAERS_TO format") from err
+
+        if (q_to.year, q_to.quarter) < (q_from.year, q_from.quarter):
+            logger.error(
+                f"FAERS_FROM must be <= FAERS_TO ({self.FAERS_FROM}..{self.FAERS_TO})."
+            )
+            raise RuntimeError("FAERS_FROM must be <= FAERS_TO")
+
+        return q_from, q_to
 
 
 @lru_cache()

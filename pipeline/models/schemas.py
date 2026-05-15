@@ -4,6 +4,7 @@ Pydantic models for request/response schemas
 
 from typing import Dict, List, Optional
 
+from core.config import get_settings
 from pydantic import BaseModel, Field
 
 
@@ -11,9 +12,9 @@ class PipelineRequest(BaseModel):
     """Request model for pipeline execution"""
 
     year_start: int = Field(
-        ..., description="Starting year for analysis", ge=2000, le=2030
+        ..., description="Starting year for analysis", ge=1900, le=2100
     )
-    year_end: int = Field(..., description="Ending year for analysis", ge=2000, le=2030)
+    year_end: int = Field(..., description="Ending year for analysis", ge=1900, le=2100)
     quarter_start: int = Field(..., ge=1, le=4, description="Starting quarter (1-4)")
     quarter_end: int = Field(..., ge=1, le=4, description="Ending quarter (1-4)")
     drugs: List[str] = Field(..., description="List of drugs to analyze", min_items=1)
@@ -39,6 +40,14 @@ class PipelineRequest(BaseModel):
             raise ValueError(
                 "quarter_end must be greater than quarter_start for the same year"
             )
+
+        q_min, q_max = get_settings().get_faers_quarter_bounds()
+        start_tuple = (self.year_start, self.quarter_start)
+        end_tuple = (self.year_end, self.quarter_end)
+        min_tuple = (q_min.year, q_min.quarter)
+        max_tuple = (q_max.year, q_max.quarter)
+        if start_tuple < min_tuple or end_tuple > max_tuple:
+            raise ValueError(f"Quarter range must be within {q_min}..{q_max}")
 
 
 class HealthResponse(BaseModel):

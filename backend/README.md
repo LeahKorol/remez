@@ -145,6 +145,11 @@ ROOT_LOG_LEVEL=DEBUG
 # For testing, use a number between 0 and 4
 NUM_DEMO_QUARTERS=-1
 
+# FAERS quarter bounds (required)
+# The backend will fail on startup if these are missing or invalid.
+FAERS_FROM=2020q1
+FAERS_TO=2020q3
+
 # Pipeline Service
 
 # IP address of the pipeline service allowed to access certain endpoints
