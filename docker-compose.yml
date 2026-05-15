@@ -58,8 +58,9 @@ services:
       PIPELINE_SERVICE_IPS: pipeline-api,127.0.0.1
 
       FAERS_FROM: ${FAERS_FROM}
-      FAERS_TO: ${FAERS_TO} # Not load any data by default.
-      FAERS_AUTO_SYNC: ${FAERS_AUTO_SYNC:-True}
+      FAERS_TO: ${FAERS_TO}
+      FAERS_AUTO_SYNC: ${FAERS_AUTO_SYNC:-True} # Not load any data by default.
+    restart: unless-stopped
 
   faers-init:
     profiles: ["manual"]
@@ -94,6 +95,7 @@ services:
       REACT_APP_API_BASE: /api/v1
       REACT_APP_GOOGLE_CLIENT_ID: ${REACT_APP_GOOGLE_CLIENT_ID}
       REACT_APP_GOOGLE_REDIRECT_URI: ${REACT_APP_GOOGLE_REDIRECT_URI}
+    restart: unless-stopped
 
   pipeline-api:
     build:
