@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { API_BASE } from '../utils/apiBase';
 import './PasswordResetConfirm.css';
 
 // Function to handle backend error formatting
@@ -63,7 +64,7 @@ function PasswordResetConfirm() {
 
       // Create a validation endpoint request or use GET method if available
       // If your backend supports GET validation, use this:
-      const response = await fetch(`http://127.0.0.1:8000/api/v1/auth/password/reset/validate/${uidb64}/${token}/`, {
+      const response = await fetch(`${API_BASE}/auth/password/reset/validate/${uidb64}/${token}/`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -80,7 +81,6 @@ function PasswordResetConfirm() {
       }
 
       const data = await response.json();
-      console.log('Token validation response:', response.status, data);
 
       if (response.ok) {
         console.log('Token is valid');
@@ -171,7 +171,7 @@ function PasswordResetConfirm() {
     }
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/v1/auth/password/reset/confirm/', {
+      const response = await fetch(`${API_BASE}/auth/password/reset/confirm/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

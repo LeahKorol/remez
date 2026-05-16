@@ -389,3 +389,93 @@ class ResendEmailVerificationEdgeCases(TestCase):
         self.assertEqual(response.status_code, 200)
         response_data = response.json()
         self.assertIn("If this email exists", response_data["message"])
+
+
+class GoogleAuthViews(TestCase):
+    login_url = "/api/v1/auth/google/login/"
+    register_url = "/api/v1/auth/google/register/"
+
+    def test_google_login_links_existing_user_and_verifies_email(self):
+        user = get_user_model().objects.create_user(
+            email="google-user@example.com",
+            password="testpass123",
+            name="Existing User",
+        )
+        email_address = EmailAddress.objects.get(user=user)
+        email_address.verified = False
+        email_address.save()
+
+        payload = {
+            "google_id": "google-123",
+            "email": "google-user@example.com",
+            "name": "Existing User",
+            "verified_email": True,
+        }
+
+        response = self.client.post(
+            self.login_url, data=payload, content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        user.refresh_from_db()
+        email_address.refresh_from_db()
+        self.assertEqual(user.google_id, payload["google_id"])
+        self.assertTrue(email_address.verified)
+        self.assertIn("access", response.json())
+        self.assertIn("refresh", response.json())
+
+    def test_google_login_rejects_unverified_google_email(self):
+        response = self.client.post(
+            self.login_url,
+            data={
+                "google_id": "google-456",
+                "email": "google-user@example.com",
+                "name": "Existing User",
+                "verified_email": False,
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()["error"],
+            "Google login requires a verified Google email.",
+        )
+
+    def test_google_register_marks_email_verified(self):
+        payload = {
+            "google_id": "google-789",
+            "email": "new-google-user@example.com",
+            "name": "New Google User",
+            "verified_email": True,
+        }
+
+        response = self.client.post(
+            self.register_url, data=payload, content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, 201)
+        user = get_user_model().objects.get(email=payload["email"])
+        email_address = EmailAddress.objects.get(user=user, email=payload["email"])
+        self.assertEqual(user.google_id, payload["google_id"])
+        self.assertTrue(email_address.verified)
+        self.assertIn("access", response.json())
+        self.assertIn("refresh", response.json())
+
+    def test_google_register_rejects_unverified_google_email(self):
+        response = self.client.post(
+            self.register_url,
+            data={
+                "google_id": "google-101",
+                "email": "new-google-user@example.com",
+                "name": "New Google User",
+                "verified_email": False,
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()["error"],
+            "Google registration requires a verified Google email.",
+        )

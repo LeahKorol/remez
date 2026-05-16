@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 import logging.config
 import os
+import re
 import sys
 from datetime import timedelta
 from pathlib import Path
@@ -124,24 +125,50 @@ USE_DIRECT_DB_COMMANDS = {
 }
 is_management_command = len(sys.argv) > 1 and sys.argv[1] in USE_DIRECT_DB_COMMANDS
 
+
+def get_env_setting(*keys, default=None):
+    for key in keys:
+        if not key:
+            continue
+        value = os.getenv(key)
+        if value not in (None, ""):
+            return value
+    return default
+
+
 # Choose settings based on command type
 if is_management_command:
     # Direct connection for Django management commands
-    DB_PORT = os.environ["DB_PORT_DIRECT"]
-    DB_HOST = os.environ["DB_HOST_DIRECT"]
-    DB_USER = os.environ["DB_USER_DIRECT"]
+    DB_PORT = get_env_setting(
+        "DB_PORT_DIRECT", "DB_PORT", "DB_PORT_POOLED", default="5432"
+    )
+    DB_HOST = get_env_setting(
+        "DB_HOST_DIRECT", "DB_HOST", "DB_HOST_POOLED", default="db"
+    )
+    DB_USER = get_env_setting(
+        "DB_USER_DIRECT", "DB_USER", "DB_USER_POOLED", default="postgres"
+    )
 else:
     # Pooled connection for app runtime
-    DB_PORT = os.environ["DB_PORT_POOLED"]
-    DB_HOST = os.environ["DB_HOST_POOLED"]
-    DB_USER = os.environ["DB_USER_POOLED"]
+    DB_PORT = get_env_setting(
+        "DB_PORT_POOLED", "DB_PORT", "DB_PORT_DIRECT", default="5432"
+    )
+    DB_HOST = get_env_setting(
+        "DB_HOST_POOLED", "DB_HOST", "DB_HOST_DIRECT", default="db"
+    )
+    DB_USER = get_env_setting(
+        "DB_USER_POOLED", "DB_USER", "DB_USER_DIRECT", default="postgres"
+    )
+
+DB_NAME = get_env_setting("DB_NAME", "DB_NAME_DIRECT", default="remez")
+DB_PASSWORD = get_env_setting("DB_PASSWORD", "DB_PASSWORD_DIRECT", default="postgres")
 
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("DB_NAME"),
+        "NAME": DB_NAME,
         "USER": DB_USER,
-        "PASSWORD": os.environ.get("DB_PASSWORD"),
+        "PASSWORD": DB_PASSWORD,
         "HOST": DB_HOST,
         "PORT": DB_PORT,
         # "OPTIONS": {"sslmode": "require"},  # Supabase requires SSL
@@ -175,7 +202,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "Asia/Jerusalem"  # Show dates in Israeli local time
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 
@@ -220,6 +247,14 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.TokenAuthentication",
     ),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": os.getenv("DRF_ANON_THROTTLE_RATE", "30/minute"),
+        "user": os.getenv("DRF_USER_THROTTLE_RATE", "120/minute"),
+    },
 }
 
 REST_AUTH = {
@@ -236,11 +271,19 @@ REST_AUTH = {
     "JWT_AUTH_COOKIE": os.getenv("JWT_AUTH_COOKIE", "jwt-access"),
     "JWT_AUTH_REFRESH_COOKIE": os.getenv("JWT_AUTH_REFRESH_COOKIE", "jwt-refresh"),
     # If set to True, the cookie will only be sent over HTTPS connections
-    "JWT_AUTH_SECURE": os.getenv("JWT_AUTH_SECURE", "False") == "True",
+    "JWT_AUTH_SECURE": os.getenv("JWT_AUTH_SECURE", "True") == "True",
     # If set to True, refresh token will not be sent in the response body
-    "JWT_AUTH_HTTPONLY": os.getenv("JWT_AUTH_HTTPONLY", "False") == "True",
+    "JWT_AUTH_HTTPONLY": os.getenv("JWT_AUTH_HTTPONLY", "True") == "True",
     "JWT_AUTH_SAMESITE": "Lax",
 }
+
+# Production must always use secure, HttpOnly JWT cookies.
+if not DEBUG:
+    if not REST_AUTH["JWT_AUTH_SECURE"] or not REST_AUTH["JWT_AUTH_HTTPONLY"]:
+        raise RuntimeError(
+            "Insecure JWT cookie configuration is not allowed when DEBUG=False. "
+            "Set JWT_AUTH_SECURE=True and JWT_AUTH_HTTPONLY=True."
+        )
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(
@@ -255,8 +298,17 @@ SIMPLE_JWT = {
 SIGNING_KEY = os.getenv("SIGNING_KEY")
 
 # CORS settings
-CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+CORS_ALLOWED_ORIGINS = [
+    o for o in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if o
+]
 CORS_ALLOW_CREDENTIALS = True  # Allow using cookies for authentication
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = int(
+    os.getenv("DATA_UPLOAD_MAX_MEMORY_SIZE", 10 * 1024 * 1024)
+)
+FILE_UPLOAD_MAX_MEMORY_SIZE = int(
+    os.getenv("FILE_UPLOAD_MAX_MEMORY_SIZE", 10 * 1024 * 1024)
+)
 
 # Use SMTP server for sending emails, print to console for development
 # EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
@@ -332,6 +384,44 @@ LOGGING = {
 
 logging.config.dictConfig(LOGGING)
 
+
+def _parse_faers_quarter(value: str) -> tuple[int, int]:
+    match = re.match(r"^(\d{4})-?q([1-4])$", value)
+    if not match:
+        raise RuntimeError(f"Invalid FAERS quarter format: {value}")
+    year, quarter = match.groups()
+    return int(year), int(quarter)
+
+
+def _require_env_quarter_bounds() -> tuple[tuple[int, int], tuple[int, int]]:
+    env_from = os.getenv("FAERS_FROM")
+    env_to = os.getenv("FAERS_TO")
+    if not env_from or not env_to:
+        if DEBUG:
+            logging.getLogger("FAERS").warning(
+                "FAERS_FROM and FAERS_TO environment variables are not set. Using default demo bounds 2020q1..2020q3."
+            )
+            return (2020, 1), (2020, 3)
+        raise RuntimeError("Missing FAERS_FROM/FAERS_TO environment variables")
+
+    q_from = _parse_faers_quarter(env_from)
+    q_to = _parse_faers_quarter(env_to)
+
+    if q_to < q_from:
+        raise RuntimeError("FAERS_FROM must be <= FAERS_TO")
+
+    return q_from, q_to
+
+
+FAERS_QUARTER_RANGE_START, FAERS_QUARTER_RANGE_END = _require_env_quarter_bounds()
+logging.getLogger("FAERS").info(
+    "FAERS quarter bounds set to %sq%s..%sq%s",
+    FAERS_QUARTER_RANGE_START[0],
+    FAERS_QUARTER_RANGE_START[1],
+    FAERS_QUARTER_RANGE_END[0],
+    FAERS_QUARTER_RANGE_END[1],
+)
+
 # Num of quarters of demo data to use for the analysis pipeline
 # defaults is -1 , i.e. use real data
 # For testing, use a number between 0 and 4
@@ -361,10 +451,11 @@ REST_AUTH_REGISTER_SERIALIZERS = {
 
 # Pipeline service settings
 
-# Comma-separated list of allowed IPs. If the variable is empty or not set, allow all IPs.
+# Comma-separated list of allowed IPs. In DEBUG mode, an empty list allows all IPs
+# to support local Docker setups. In production, an empty list denies all requests.
 pipeline_ips = os.getenv("PIPELINE_SERVICE_IPS", "")
-PIPELINE_SERVICE_IPS = pipeline_ips.strip().split(",") if pipeline_ips else None
-PIPELINE_BASE_URL = "http://localhost:8001"
+PIPELINE_SERVICE_IPS = [ip.strip() for ip in pipeline_ips.split(",") if ip.strip()]
+PIPELINE_BASE_URL = os.getenv("PIPELINE_BASE_URL", "http://localhost:8001")
 PIPELINE_TIMEOUT = 30  # seconds
 # Timeout (minutes) before a pipeline task is considered failed
 PIPELINE_TASK_TIMEOUT_MINUTES = int(os.getenv("PIPELINE_TASK_TIMEOUT_MINUTES", 60))

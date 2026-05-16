@@ -1,0 +1,13 @@
+.git/
+.env
+venv/
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+.coverage
+logs/
+pipeline_output/

@@ -7,7 +7,7 @@ from django.core.validators import (
 from django.db import models
 from django.db.models import CheckConstraint, Q
 
-from analysis.constants import YEAR_END, YEAR_START
+from analysis.constants import DB_YEAR_START, DB_YEAR_END
 
 # Use TextField and not CharField as recommended in Postgres documentation (copy the url, not click):
 # https://wiki.postgresql.org/wiki/Don't_Do_This#Don.27t_use_varchar.28n.29_by_default
@@ -63,10 +63,10 @@ class Query(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(4)]
     )
     year_start = models.IntegerField(
-        validators=[MinValueValidator(YEAR_START), MaxValueValidator(YEAR_END)]
+        validators=[MinValueValidator(DB_YEAR_START), MaxValueValidator(DB_YEAR_END)]
     )
     year_end = models.IntegerField(
-        validators=[MinValueValidator(YEAR_START), MaxValueValidator(YEAR_END)]
+        validators=[MinValueValidator(DB_YEAR_START), MaxValueValidator(DB_YEAR_END)]
     )
 
     class Meta:

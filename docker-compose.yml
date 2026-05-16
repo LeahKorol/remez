@@ -2,55 +2,79 @@ services:
   db:
     image: postgres:16
     environment:
-      POSTGRES_USER: ${DB_USER_DIRECT}
-      POSTGRES_PASSWORD: ${DB_PASSWORD_DIRECT}
-      POSTGRES_DB: ${DB_NAME_DIRECT}
+      POSTGRES_USER: ${DB_USER_DIRECT:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD_DIRECT:-postgres}
+      POSTGRES_DB: ${DB_NAME_DIRECT:-remez}
     ports:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER_DIRECT:-postgres} -d ${DB_NAME_DIRECT:-remez}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
-    build: ./backend
+    env_file:
+      - /backend/.env.prod
+    build:
+      context: ./backend
+      dockerfile: dockerfile
     volumes:
-      - ./backend:/app
+      - ./backend/logs:/app/logs
+      - ./backend/analysis/management/commands/output:/app/analysis/management/commands/output
     ports:
       - "8000:8000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+      pipeline-api:
+        condition: service_started
     environment:
-      DB_HOST_DIRECT: db
-      DB_PORT_DIRECT: 5432
-      DB_PORT_POOLED: 5432
-      DB_NAME_DIRECT: ${DB_NAME_DIRECT}
-      DB_USER_DIRECT: ${DB_USER_DIRECT}
-      DB_PASSWORD_DIRECT: ${DB_PASSWORD_DIRECT}
+      FAERS_FROM: ${FAERS_FROM}
+      FAERS_TO: ${FAERS_TO}
+      FAERS_AUTO_SYNC: ${FAERS_AUTO_SYNC:-True} # Not load any data by default.
+    restart: unless-stopped
 
   frontend:
-    build: ./frontend
+    env_file:
+    - ./frontend/.env.prod
+    build:
+      context: ./frontend
+      dockerfile: dockerfile
     ports:
       - "3000:3000"
     depends_on:
       - backend
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    environment:
-      - CHOKIDAR_USEPOLLING=true
-      
+    restart: unless-stopped
+
   pipeline-api:
+    env_file:
+      - ./pipeline/.env.prod
     build:
-      context: .
-      dockerfile: ./pipeline/Dockerfile
+      context: ./pipeline
+      dockerfile: Dockerfile
     ports:
-      - "8080:8000"  # Map to 8080 to avoid conflict with backend service
+      - "8080:8000"
     volumes:
-      - ./pipeline:/app/pipeline
-      - ./pipeline/data:/app/pipeline/data
-      - ./pipeline/config:/app/pipeline/config
-      - ./pipeline/pipeline_output:/app/pipeline/pipeline_output
+      - ./pipeline/logs:/app/logs
+      - ./pipeline/data/external/faers:/app/data/external/faers
     environment:
-      - PYTHONUNBUFFERED=1
+      FAERS_FROM: ${FAERS_FROM}
+      FAERS_TO: ${FAERS_TO}
+      FAERS_AUTO_SYNC: ${FAERS_AUTO_SYNC:-True}
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    depends_on:
+      - frontend
+      - backend
+    ports:
+      - "8600:8600"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     restart: unless-stopped
 
 volumes:

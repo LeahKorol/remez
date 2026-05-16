@@ -137,7 +137,7 @@ class TestPipelineService:
 
         service = PipelineService()
         assert service.health_check() is True
-        mock_get.assert_called_once()
+        mock_get.assert_called_once_with("http://localhost:8001/api/v1/health", timeout=5)
 
     def test_health_check_failure(self, mocker):
         """Test failed health check"""
@@ -148,7 +148,7 @@ class TestPipelineService:
 
         service = PipelineService()
         assert service.health_check() is False
-        mock_get.assert_called_once()
+        mock_get.assert_called_once_with("http://localhost:8001/api/v1/health", timeout=5)
 
 
 @pytest.mark.django_db

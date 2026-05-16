@@ -108,6 +108,13 @@ PIPELINE_MIN_RESULT_RETENTION_MINUTES=30
 # Callback Configuration
 PIPELINE_CALLBACK_URL=http://localhost:8000/api/v1/analysis/results/update-by-task
 
+# FAERS Auto Sync
+FAERS_FROM=2020q1
+FAERS_TO=2020q2
+FAERS_AUTO_SYNC=True
+
+# FAERS_FROM/FAERS_TO are required. The pipeline fails on startup if missing or invalid.
+
 # Data Directories
 DATA_EXTERNAL_DIR=data/external/faers
 DATA_OUTPUT_DIR=pipeline_output
@@ -131,6 +138,22 @@ python main.py
 ```bash
 uvicorn main:app --host 0.0.0.0 --port 8001
 ```
+
+### Container Startup FAERS Sync
+
+When running in Docker, the pipeline container can automatically download FAERS source files on startup using the same shared range variables as backend:
+
+- `FAERS_FROM`
+- `FAERS_TO`
+- `FAERS_AUTO_SYNC` (`True` by default in compose)
+
+If enabled, startup runs:
+
+```bash
+python download_faers_data.py "$FAERS_FROM" "$FAERS_TO" --force
+```
+
+Files are stored in the pipeline external data path (`data/external/faers/`), which is the same location used by pipeline execution and data availability checks.
 
 ### With Custom Configuration
 
@@ -168,6 +191,14 @@ https://data.nber.org/fda/faers/{year}/csv/{filetype}{yearquarter}.csv.zip
 **Examples:**
 - 2018 Q1 Demo data: `https://data.nber.org/fda/faers/2018/demo2018q1.csv.zip`
 - 2020 Q1 Demo data: `https://data.nber.org/fda/faers/2020/csv/demo2020q1.csv.zip`
+
+These ZIP files are intentionally not tracked in git. Download them into
+`pipeline/data/external/faers/` from the backend management command:
+
+```bash
+cd backend
+python manage.py download_faers_data 2020q1 2020q2 --dir_out ../pipeline/data/external/faers
+```
 
 **Example for 2020 Q1:**
 ```

@@ -3,6 +3,7 @@ FastAPI main application entry point
 """
 
 from contextlib import asynccontextmanager
+import logging
 
 from api.v1.router import api_router
 from core.config import get_settings
@@ -18,8 +19,11 @@ async def lifespan(app: FastAPI):
     """Application lifespan events"""
     settings = get_settings()
     logger = setup_logging(settings.LOG_LEVEL)
+    faers_logger = logging.getLogger("FAERS")
     logger.info("FAERS API starting up...")
     logger.info(f"Environment: {settings.ENVIRONMENT}")
+    q_min, q_max = settings.get_faers_quarter_bounds()
+    faers_logger.info(f"FAERS quarter bounds set to {q_min}..{q_max}")
     create_db_and_tables()
     await http_client.get_or_create()
     yield

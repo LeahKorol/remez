@@ -2,7 +2,7 @@
 Unit tests for TaskRepository class.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from constants import TaskStatus
@@ -122,7 +122,7 @@ def test_create_or_reuse_slot_override_old_task(
     mock_settings.PIPELINE_MAX_RESULTS = 1
 
     # Create old completed task (beyond retention time)
-    old_time = datetime.now() - timedelta(minutes=75)
+    old_time = datetime.now(timezone.utc) - timedelta(minutes=75)
     old_task = create_test_task("old_task", TaskStatus.COMPLETED, old_time)
 
     # Act
@@ -147,9 +147,13 @@ def test_create_or_reuse_slot_override_old_task(
         (
             "completed task",
             TaskStatus.COMPLETED,
-            datetime.now() - timedelta(minutes=30),
+            datetime.now(timezone.utc) - timedelta(minutes=30),
         ),
-        ("failed task", TaskStatus.FAILED, datetime.now() - timedelta(minutes=30)),
+        (
+            "failed task",
+            TaskStatus.FAILED,
+            datetime.now(timezone.utc) - timedelta(minutes=30),
+        ),
         ("running task", TaskStatus.RUNNING, None),
     ],
 )
@@ -177,7 +181,7 @@ def test_create_or_reuse_slot_prefers_oldest_completed(
     mock_settings.PIPELINE_MAX_RESULTS = 2
     mock_settings.PIPELINE_MIN_RESULT_RETENTION_MINUTES = 30
 
-    oldest_time = datetime.now() - timedelta(minutes=60)
+    oldest_time = datetime.now(timezone.utc) - timedelta(minutes=60)
 
     create_test_task("newest", TaskStatus.RUNNING)
     oldest_task = create_test_task("oldest", TaskStatus.COMPLETED, oldest_time)
@@ -199,7 +203,7 @@ def test_create_or_reuse_slot_ignores_failed_within_retention(
     mock_settings.PIPELINE_MIN_RESULT_RETENTION_MINUTES = 60
 
     # Recent failed task (within retention)
-    recent_time = datetime.now() - timedelta(minutes=30)
+    recent_time = datetime.now(timezone.utc) - timedelta(minutes=30)
     create_test_task("recent_failed", TaskStatus.FAILED, recent_time)
     create_test_task("running", TaskStatus.RUNNING)
 
@@ -344,7 +348,7 @@ def test_save_task_results_preserves_timestamps(test_session, create_test_task):
     # Arrange
     task = create_test_task("test_task")
     original_created_at = task.created_at
-    task.completed_at = datetime.now()
+    task.completed_at = datetime.now(timezone.utc)
     original_completed_at = task.completed_at
     task.ror_values = [1.0]
 
@@ -354,4 +358,9 @@ def test_save_task_results_preserves_timestamps(test_session, create_test_task):
     # Assert
     test_session.refresh(task)
     assert task.created_at == original_created_at
-    assert task.completed_at == original_completed_at
+
+    completed_at = task.completed_at
+    assert completed_at is not None
+    if completed_at.tzinfo is None:
+        completed_at = completed_at.replace(tzinfo=timezone.utc)
+    assert completed_at == original_completed_at

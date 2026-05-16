@@ -1,4 +1,5 @@
 .env
+.env.prod
 
 .github
 
@@ -20,3 +21,6 @@ __pycache__/
 **/pipeline_output/**
 
 /*.coverage
+
+*.csv.zip
+pipeline/data/external/faers/*.csv.zip

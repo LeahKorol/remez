@@ -1,6 +1,15 @@
+from django.conf import settings
+
+from analysis.utils import Quarter
+
 # The years there are records about in FAERS data
-YEAR_START = 2004
-YEAR_END = 2025
+FAERS_QUARTER_RANGE_START = Quarter(*settings.FAERS_QUARTER_RANGE_START)
+FAERS_QUARTER_RANGE_END = Quarter(*settings.FAERS_QUARTER_RANGE_END)
+YEAR_START = settings.FAERS_QUARTER_RANGE_START[0]
+YEAR_END = settings.FAERS_QUARTER_RANGE_END[0]
+
+DB_YEAR_START = 2004
+DB_YEAR_END = 2025
 
 # Demo data for pipeline results
 PIPELINE_DEMO_DATA = {

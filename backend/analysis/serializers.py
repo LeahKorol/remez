@@ -1,6 +1,7 @@
 from django.db import transaction
 from rest_framework import serializers
 
+from analysis.constants import FAERS_QUARTER_RANGE_END, FAERS_QUARTER_RANGE_START
 from analysis.models import DrugName, Query, ReactionName, Result, ResultStatus
 
 
@@ -88,6 +89,34 @@ class QuerySerializer(serializers.ModelSerializer):
                     {
                         "quarter_start": "quarter_start must be less than quarter_end within the same year"
                     }
+                )
+
+        year_start = data.get("year_start", getattr(self.instance, "year_start", None))
+        year_end = data.get("year_end", getattr(self.instance, "year_end", None))
+        quarter_start = data.get(
+            "quarter_start", getattr(self.instance, "quarter_start", None)
+        )
+        quarter_end = data.get(
+            "quarter_end", getattr(self.instance, "quarter_end", None)
+        )
+
+        if all(
+            value is not None
+            for value in [year_start, year_end, quarter_start, quarter_end]
+        ):
+            start_tuple = (year_start, quarter_start)
+            end_tuple = (year_end, quarter_end)
+            min_tuple = (
+                FAERS_QUARTER_RANGE_START.year,
+                FAERS_QUARTER_RANGE_START.quarter,
+            )
+            max_tuple = (
+                FAERS_QUARTER_RANGE_END.year,
+                FAERS_QUARTER_RANGE_END.quarter,
+            )
+            if start_tuple < min_tuple or end_tuple > max_tuple:
+                raise serializers.ValidationError(
+                    f"Quarter range must be within {FAERS_QUARTER_RANGE_START}..{FAERS_QUARTER_RANGE_END}"
                 )
         return data
 

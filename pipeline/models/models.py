@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from constants import TaskStatus
@@ -23,7 +23,7 @@ class TaskBase(SQLModel):
         description="Current state of the task. Defaults to PENDING.",
     )
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(),
+        default_factory=lambda: datetime.now(timezone.utc),
         nullable=False,
         description="Task creation timestamp",
     )

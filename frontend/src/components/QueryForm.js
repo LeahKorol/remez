@@ -3,6 +3,7 @@ import { FaInfoCircle, FaPlus, FaTimes } from 'react-icons/fa';
 import CustomSelect from './CustomSelect';
 import ToastNotification from './ToastNotification';
 import { fetchWithRefresh } from '../utils/tokenService';
+import { API_BASE } from '../utils/apiBase';
 import '../Pages/UserProfile.css';
 
 const QUARTER_RANGE_TOOLTIP =
@@ -125,7 +126,7 @@ export default function QueryForm({
             return;
         }
         try {
-            const url = `http://127.0.0.1:8000/api/v1/analysis/drug-names/search/${encodeURIComponent(prefix)}/`;
+            const url = `${API_BASE}/analysis/drug-names/search/${encodeURIComponent(prefix)}/`;
             const response = await fetchWithRefresh(url);
             if (response.ok) {
                 const data = await response.json();
@@ -189,7 +190,7 @@ export default function QueryForm({
             return;
         }
         try {
-            const url = `http://127.0.0.1:8000/api/v1/analysis/reaction-names/search/${encodeURIComponent(prefix)}/`;
+            const url = `${API_BASE}/analysis/reaction-names/search/${encodeURIComponent(prefix)}/`;
             const response = await fetchWithRefresh(url);
             if (response.ok) {
                 const data = await response.json();

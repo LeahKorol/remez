@@ -1,3 +1,5 @@
+import { API_BASE } from './apiBase';
+
 class TokenService {
     constructor() {
         this.isRefreshing = false;
@@ -25,7 +27,6 @@ class TokenService {
     }
 
     async refreshAccessToken() {
-        const API_BASE = (process && process.env && process.env.REACT_APP_API_BASE) || "http://127.0.0.1:8000/api/v1";
         const refreshToken = this.getRefreshToken();
         if (!refreshToken) {
             throw new Error('No refresh token available');

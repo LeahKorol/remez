@@ -16,9 +16,6 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery, onQueryUpdate }
     setCurrentQuery(query);
   }, [query]);
 
-  console.log("Rendering QueryDetailsView for:", currentQuery);
-  console.log("status: ", currentQuery?.result?.status);
-
   const isQueryLocked =
     currentQuery?.result?.status !== "completed" &&
     currentQuery?.result?.status !== "failed";
@@ -167,7 +164,6 @@ const QueryDetailsView = ({ query, handleNewQuery, refreshQuery, onQueryUpdate }
     if (!refreshQuery) return;
     try {
       const fullQuery = await refreshQuery(currentQuery.id);
-      console.log("Refreshed query:", fullQuery);
 
       setCurrentQuery(fullQuery);
 

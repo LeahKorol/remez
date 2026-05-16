@@ -3,7 +3,7 @@ Unit tests for pipeline_service functions
 """
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -30,7 +30,7 @@ def sample_task():
         id=1,
         external_id="test_ext_001",
         status=TaskStatus.RUNNING,
-        created_at=datetime.now(),
+        created_at=datetime.now(timezone.utc),
     )
 
 

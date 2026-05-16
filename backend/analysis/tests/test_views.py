@@ -1,13 +1,18 @@
+import random
 from datetime import timedelta
 
 import pytest
 from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
+from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
+from rest_framework.settings import api_settings
 from rest_framework.test import APIClient
+from rest_framework.throttling import SimpleRateThrottle
 
 from analysis.models import DrugName, Query, ReactionName, Result, ResultStatus
 from analysis.serializers import QuerySerializer
@@ -171,6 +176,19 @@ def result_data():
     }
 
 
+@pytest.fixture
+def create_new_user(db):
+    rand_suffix = random.randint(1000, 9999)
+    user = User.objects.create_user(
+        email=f"user-{rand_suffix}@example.com",
+        password="testpassword",
+    )
+    email_address = EmailAddress.objects.get(user=user)
+    email_address.verified = True
+    email_address.save()
+    return user
+
+
 @pytest.mark.django_db
 class TestQueryViewSet:
     """Test cases for QueryViewSet"""
@@ -233,10 +251,8 @@ class TestQueryViewSet:
         response = api_client.get(detail_url)
 
         assert response.status_code == status.HTTP_200_OK
-        query1.result.status = (
-            ResultStatus.FAILED
-        )  # The pipeline doesnt run during the tests
-        expected_data = QuerySerializer(query1).data
+        # fetch data from db
+        expected_data = QuerySerializer(Query.objects.get(id=query1.id)).data
         assert response.data == expected_data
 
     def test_retrieve_query_not_owned_by_user(self, api_client, user1, query3):
@@ -561,7 +577,7 @@ class TestQueryViewSet:
         # Mock demo mode as disabled
         mocker.patch.object(settings, "NUM_DEMO_QUARTERS", -1)
 
-        self.authenticate_user(api_client, user=user1)
+        api_client.force_authenticate(user=user1)
         detail_url = reverse("query-detail", kwargs={"id": query1.id})
 
         updated_data = required_fields.copy()
@@ -575,6 +591,7 @@ class TestQueryViewSet:
         updated_data["year_start"] = year_start
         updated_data["year_end"] = year_end
         response = api_client.put(detail_url, updated_data)
+        print(response.data)
         assert response.status_code == res_status
         if response.status_code != status.HTTP_200_OK:
             assert "quarter_start" in response.data
@@ -690,8 +707,10 @@ class TestResultViewSetRetrieve:
     ):
         settings.PIPELINE_TASK_TIMEOUT_MINUTES = 45
         old_time = timezone.now() - timedelta(minutes=50)
-        result1.query.created_at = old_time
-        result1.query.save()
+        Query.objects.filter(id=result1.query_id).update(
+            created_at=old_time,
+            updated_at=old_time,
+        )  # bypass auto_now fields to simulate old task
 
         result1.status = ResultStatus.RUNNING
         result1.save()
@@ -817,6 +836,51 @@ class TestResultViewSetRestrictions:
 
 
 @pytest.mark.django_db
+class TestThrottleEnforcement:
+    def test_throttling_enforced_for_authenticated_user(
+        self, api_client, create_new_user
+    ):
+        original_rates = SimpleRateThrottle.THROTTLE_RATES
+        throttle_settings = {
+            **settings.REST_FRAMEWORK,
+            "DEFAULT_THROTTLE_CLASSES": [
+                "rest_framework.throttling.AnonRateThrottle",
+                "rest_framework.throttling.UserRateThrottle",
+            ],
+            "DEFAULT_THROTTLE_RATES": {
+                "anon": "1/minute",
+                "user": "1/minute",
+            },
+        }
+        cache_settings = {
+            "default": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+                "LOCATION": "throttle-test-cache",
+            }
+        }
+
+        with override_settings(
+            REST_FRAMEWORK=throttle_settings,
+            CACHES=cache_settings,
+        ):
+            api_settings.reload()
+            SimpleRateThrottle.THROTTLE_RATES = api_settings.DEFAULT_THROTTLE_RATES
+            cache.clear()
+            api_client.force_authenticate(user=create_new_user)
+            list_url = reverse("query-list")
+
+            first_response = api_client.get(list_url)
+            second_response = api_client.get(list_url)
+
+            assert first_response.status_code == status.HTTP_200_OK
+            assert second_response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+
+        api_settings.reload()
+        SimpleRateThrottle.THROTTLE_RATES = original_rates
+        cache.clear()
+
+
+@pytest.mark.django_db
 class TestResultViewSetUpdateByTaskId:
     """Test cases for external service update by task_id"""
 
@@ -843,9 +907,12 @@ class TestResultViewSetUpdateByTaskId:
         assert result1.status == result_data["status"]
         assert result1.ror_values == result_data["ror_values"]
 
-    def test_update_by_task_id_unauthorized_ip(self, api_client, result1, result_data):
+    def test_update_by_task_id_denied_for_invalid_ip(
+        self, settings, api_client, result1, result_data
+    ):
         """Test that unauthorized IP cannot update by task_id"""
         settings.PIPELINE_SERVICE_IPS = ["192.168.1.100"]
+        settings.DEBUG = False
         update_url = reverse("result-update-by-task-id", kwargs={"task_id": result1.id})
 
         response = api_client.put(
@@ -855,7 +922,41 @@ class TestResultViewSetUpdateByTaskId:
             format="json",
         )
 
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_update_by_task_id_denied_when_whitelist_empty_in_production(
+        self, settings, api_client, result1, result_data
+    ):
+        """Empty whitelist must fail closed in production."""
+        settings.PIPELINE_SERVICE_IPS = []
+        settings.DEBUG = False
+        update_url = reverse("result-update-by-task-id", kwargs={"task_id": result1.id})
+
+        response = api_client.put(
+            update_url,
+            result_data,
+            REMOTE_ADDR="192.168.1.100",
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_update_by_task_id_allowed_when_whitelist_empty_in_debug(
+        self, settings, api_client, result1, result_data
+    ):
+        """Empty whitelist is only allowed in DEBUG mode for development."""
+        settings.PIPELINE_SERVICE_IPS = []
+        settings.DEBUG = True
+        update_url = reverse("result-update-by-task-id", kwargs={"task_id": result1.id})
+
+        response = api_client.put(
+            update_url,
+            result_data,
+            REMOTE_ADDR="192.168.1.100",
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_200_OK
 
     def test_update_by_task_id_not_found(self, settings, api_client, result_data):
         """Test update with non-existent task_id"""
@@ -1115,8 +1216,10 @@ class TestQueryRetrieveWithTimeoutAndCompletedResults:
 
         # Set query created_at to 61 minutes ago (exceeds timeout)
         old_time = timezone.now() - timedelta(minutes=61)
-        query1.created_at = old_time
-        query1.save()
+        Query.objects.filter(id=query1.id).update(
+            created_at=old_time,
+            updated_at=old_time,
+        )  # bypass auto_now fields to simulate old task
 
         query1.result.status = initial_status
         query1.result.save()
