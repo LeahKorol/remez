@@ -1,103 +1,160 @@
 # PRODUCTION DEPLOYMENT GUIDE
 
-This document describes how to deploy and configure **REMEZ** in a production environment using Docker Compose and Nginx.
+This document describes how to deploy and configure **REMEZ** in a production environment using Docker Compose and environment files.
 
 ---
 
 ## 1. System Overview
 
-REMEZ consists of four services:
+REMEZ consists of four services orchestrated by Docker Compose:
 
 * **Frontend** (React UI)
 * **Backend** (Django REST API)
 * **Pipeline** (FastAPI FAERS processing service)
 * **PostgreSQL** (database)
 
-All services are managed via a single root `docker-compose.yml`.
-
 ---
 
-## 2. Environment Configuration
+## 2. Environment-Driven Deployment Strategy
 
-### 2.1 Root `.env` (Docker Compose)
+### 2.1 Core Principle
 
-The root `.env` file contains shared infrastructure configuration:
+All configuration is **environment-file-driven**. The single `docker-compose.yml` supports both local and production deployments without modification by selecting the appropriate `.env` files via environment variables:
 
-* Database credentials
-* Shared service URLs
-* Global runtime variables
+```bash
+# Local (default) - uses ./backend/.env, ./frontend/.env, ./pipeline/.env
+docker compose up
 
----
-
-### 2.2 Service Environment Files
-
-Each service has:
-
-* `backend/env.prof`
-* `pipeline/env.prof`
-* `frontend/env.prof`
-
-These contain:
-
-* Service-specific configuration
-* API keys
-* Runtime flags
-
----
-
-### 2.3 Required Variables
-
-Each service defines required environment variables in:
-
-* `backend/.env.prod.example`
-* `pipeline/.env.prod.example`
-* `frontend/.env.prod.example`
-
-These files are the **source of truth for production configuration**.
-
----
-
-### 2.4 Load Order
-
-1. Root `.env`
-2. Service `env.prof`
-
----
-
-## 3. Docker Deployment
-
-Single compose file:
-
-```text
-docker-compose.yml
+# Production - uses ./backend/.env.prod, ./frontend/.env.prod, ./pipeline/.env.prod
+BACKEND_ENV_FILE=./backend/.env.prod \
+FRONTEND_ENV_FILE=./frontend/.env.prod \
+PIPELINE_ENV_FILE=./pipeline/.env.prod \
+docker compose up
 ```
 
-Includes:
+### 2.2 Environment File Organization
 
-* Backend
-* Pipeline
-* Frontend
-* Postgres
+Each service has two environment file variants:
+
+| Service | Local | Production |
+|---------|-------|------------|
+| Backend | `backend/.env` | `backend/.env.prod` |
+| Frontend | `frontend/.env` | `frontend/.env.prod` |
+| Pipeline | `pipeline/.env` | `pipeline/.env.prod` |
+
+### 2.3 Configuration Sources (by service)
+
+**Backend Environment Variables:**
+- `backend/.env.prod.example` — template with all required variables
+- Includes: database config, API URLs (FRONTEND_URL, BACKEND_URL, PIPELINE_BASE_URL), JWT settings, email config, FAERS bounds
+- **Local**: DEBUG=True, FAERS_AUTO_SYNC=True, localhost URLs
+- **Production**: DEBUG=False, FAERS_AUTO_SYNC=False, production URLs (https://remez.jce.ac)
+
+**Frontend Environment Variables:**
+- `frontend/.env.prod.example` — template with required variables
+- Includes: REACT_APP_API_BASE, REACT_APP_GOOGLE_CLIENT_ID, REACT_APP_GOOGLE_REDIRECT_URI
+- **Local**: http://localhost:3000 callback URI
+- **Production**: https://remez.jce.ac callback URI
+
+**Pipeline Environment Variables:**
+- `pipeline/.env.prod.example` — template with required variables
+- Includes: PIPELINE_CALLBACK_URL (for results posting), FAERS bounds, FAERS_AUTO_SYNC flag
+- **Local**: Points to Docker service names (backend:8000, pipeline-api:8000)
+- **Production**: Points to deployed origin or internal service names
+
+---
+
+## 3. Deployment Steps
+
+### 3.1 Prepare Production Environment Files
+
+1. **Copy templates to production files:**
+   ```bash
+   cp backend/.env.prod.example backend/.env.prod
+   cp frontend/.env.prod.example frontend/.env.prod
+   cp pipeline/.env.prod.example pipeline/.env.prod
+   ```
+
+2. **Update values in each `.env.prod` file:**
+   - Backend: Update `BACKEND_URL`, `FRONTEND_URL`, `PIPELINE_BASE_URL`, `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`
+   - Frontend: Update `REACT_APP_GOOGLE_REDIRECT_URI` to match your deployment domain
+   - Pipeline: Ensure `PIPELINE_CALLBACK_URL` points to your deployed backend
+
+3. **Verify Google OAuth:**
+   - Add your production domain to [Google Cloud Console](https://console.cloud.google.com/apis/credentials) authorized redirect URIs
+   - Ensure `frontend/.env.prod` has the correct `REACT_APP_GOOGLE_REDIRECT_URI`
+
+### 3.2 Deploy with Docker Compose
+
+```bash
+# Set environment variables to select prod files
+export BACKEND_ENV_FILE=./backend/.env.prod
+export FRONTEND_ENV_FILE=./frontend/.env.prod
+export PIPELINE_ENV_FILE=./pipeline/.env.prod
+
+# Deploy
+docker compose up --build -d
+```
+
+### 3.3 Initialize Database
+
+The Django entrypoint automatically runs migrations on startup. Verify with:
+
+```bash
+docker compose logs backend | grep -i migration
+```
 
 ---
 
 ## 4. FAERS Data Initialization
 
-### 4.1 Auto Sync
+### 4.1 Auto Sync Configuration
 
-```text
-FAERS_AUTO_SYNC=True
+- **Local development** (`backend/.env`): `FAERS_AUTO_SYNC=True`
+  - Downloads FAERS data automatically on startup
+  - Pipeline processes data in background
+
+- **Production** (`backend/.env.prod`): `FAERS_AUTO_SYNC=False`
+  - Prevents automatic downloads in production
+  - Configure FAERS sync during off-peak hours via management commands
+
+### 4.2 Manual FAERS Data Refresh
+
+If needed during production:
+
+```bash
+docker compose exec backend python manage.py download_faers_data --quarters 2020q1 2020q2 2020q3
 ```
-
-When enabled:
-
-* Pipeline deletes all FAERS raw files
-* Pipeline re-downloads FAERS datasets
-* Backend ingests new data into DB
 
 ---
 
-### 4.2 Database Behavior
+## 5. Monitoring & Observability
+
+### 5.1 Backend Entrypoint Logging
+
+The backend entrypoint now provides observable startup phases:
+
+```
+[backend-entrypoint] START: Running database migrations
+[backend-entrypoint] OK: Database migrations completed
+[backend-entrypoint] START: Starting Django development server
+[backend-entrypoint] OK: Server ready on port 8000
+```
+
+Check logs with:
+```bash
+docker compose logs -f backend
+```
+
+### 5.2 Log Levels
+
+Control verbosity via `ROOT_LOG_LEVEL` in backend `.env`/`.env.prod`:
+- Local: `DEBUG`
+- Production: `INFO` or `WARNING`
+
+---
+
+## 6. Database Behavior
 
 * Backend is **append-only**
 * No DB reset or deletion occurs

@@ -43,31 +43,31 @@ REMEZ Frontend is a modern React application that provides a user-friendly inter
 #
 
 ### Environment Variables
-Create a .env file in the root directory with the following variables:
+
+Create a `.env` file in the frontend root directory. See `.env.example` and `.env.prod.example` for complete templates.
+
+**Frontend-Only Configuration:**
+
+```bash
+# API Configuration
+REACT_APP_API_BASE=/api/v1                  # Backend API base path
+
+# Google OAuth Configuration
+REACT_APP_GOOGLE_CLIENT_ID=your-client-id-here
+REACT_APP_GOOGLE_REDIRECT_URI=http://localhost:3000/auth/google/callback
+
+# Docker Development Server
+HOST=0.0.0.0                               # Listen on all interfaces
+CHOKIDAR_USEPOLLING=true                   # File system polling for Docker
 ```
-# Auth cookies setting
-JWT_AUTH_COOKIE=jwt-access
-JWT_AUTH_REFRESH_COOKIE=jwt-refresh
-JWT_AUTH_SECURE=False
-JWT_AUTH_HTTPONLY=True
-ACCESS_TOKEN_LIFETIME_HOURS=4
-REFRESH_TOKEN_LIFETIME_DAYS=7 
 
-# CORS origins
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
-# http://localhost:5173,http://127.0.0.1:5173
+**Environment File Variants:**
 
-# Google OAuth Settings 
-REACT_APP_GOOGLE_CLIENT_ID=<YOUR_ID>
-REACT_APP_GOOGLE_REDIRECT_URI=http://localhost:3000/auth/google/callback,http://127.0.0.1:3000/auth/google/callback
+- **Local** (`.env`): Uses `http://localhost:3000` for OAuth redirect
+- **Production** (`.env.prod`): Uses `https://remez.jce.ac` for OAuth redirect
 
-# Frontend URLs
-# <EMAIL_CONFIRM_REDIRECT_BASE_URL>/<key>
-EMAIL_CONFIRM_REDIRECT_BASE_URL=http://localhost:3000/email/confirm/
-# <PASSWORD_RESET_CONFIRM_REDIRECT_BASE_URL>/<uidb64>/<token>/
-PASSWORD_RESET_CONFIRM_REDIRECT_BASE_URL=http://localhost:3000/password-reset/confirm/
-```
+**Important Note:** 
+Frontend `.env` files contain **only frontend variables**. Backend configuration (JWT, CORS, email) is managed server-side and does **not** belong in the frontend environment.
 
 #
 

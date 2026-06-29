@@ -85,58 +85,82 @@ pipeline/
 
 ## Configuration
 
-Create a `.env` file in the pipeline directory with the following variables.
-Change the values according to your preferences.
+### Environment Variables
 
-```env
+Create a `.env` file in the pipeline directory. See `pipeline/.env.example` and `pipeline/.env.prod.example` for complete templates.
+
+**Pipeline-Specific Variables:**
+
+```bash
+# Backend Integration
+PIPELINE_CALLBACK_URL=http://backend:8000/api/v1/analysis/results/update-by-task
+
+# FAERS Analysis Configuration
+FAERS_FROM=2020q1                  # Starting quarter (required)
+FAERS_TO=2020q3                    # Ending quarter (required)
+FAERS_AUTO_SYNC=True               # Auto-download FAERS data on startup
+
+# Processing Configuration
+PIPELINE_THREADS=7                 # Worker threads for analysis
+PIPELINE_MAX_WORKERS=20            # Max concurrent processes
+PIPELINE_MAX_RESULTS=100           # Keep last N results in database
+PIPELINE_MIN_RESULT_RETENTION_MINUTES=30  # Minimum storage time for results
+PIPELINE_CLEAN_INTERNAL_DIRS=True  # Clean temporary files after processing
+
+# Data Storage
+DATA_EXTERNAL_DIR=data/external/faers    # FAERS quarterly data location
+DATA_OUTPUT_DIR=pipeline_output          # Analysis results output
+LOGS_DIR=logs                            # Per-task log files
+
+# Database
+DATABASE_URL=sqlite:///database.sqlite3  # SQLite task buffer
+SQLITE_FILE_NAME=database.sqlite3
+
 # Application Settings
 ENVIRONMENT=development
-DEBUG=False
-HOST=127.0.0.1
+HOST=0.0.0.0                        # Listen on all interfaces (for Docker)
 PORT=8001
-
-# Logging Configuration
 LOG_LEVEL=INFO
-
-# Pipeline Processing Settings
-PIPELINE_THREADS=7
-PIPELINE_CLEAN_INTERNAL_DIRS=True
-PIPELINE_MAX_WORKERS=20
-PIPELINE_MAX_RESULTS=100
-PIPELINE_MIN_RESULT_RETENTION_MINUTES=30
-
-# Callback Configuration
-PIPELINE_CALLBACK_URL=http://localhost:8000/api/v1/analysis/results/update-by-task
-
-# FAERS Auto Sync
-FAERS_FROM=2020q1
-FAERS_TO=2020q2
-FAERS_AUTO_SYNC=True
-
-# FAERS_FROM/FAERS_TO are required. The pipeline fails on startup if missing or invalid.
-
-# Data Directories
-DATA_EXTERNAL_DIR=data/external/faers
-DATA_OUTPUT_DIR=pipeline_output
-LOGS_DIR=logs
-
-# Database Settings
-SQLITE_FILE_NAME=database.sqlite3
-DATABASE_URL=sqlite:///database.sqlite3
+DEBUG=False
 ```
+
+**Production Differences:**
+
+For production (`pipeline/.env.prod`), key changes:
+- `FAERS_AUTO_SYNC=False` (manual sync recommended for production)
+- `PIPELINE_CALLBACK_URL` points to production backend: `https://remez.jce.ac/api/v1/analysis/results/update-by-task`
+- Same FAERS_FROM/FAERS_TO as backend for consistency
+- `LOG_LEVEL=WARNING` (reduce verbosity)
 
 ## Running the Application
 
-### Development Mode
+### Development Mode (Local)
 
 ```bash
+# Uses .env by default
 python main.py
 ```
 
 ### Production Mode
 
 ```bash
+# With production environment file
+export $(cat .env.prod | xargs)
 uvicorn main:app --host 0.0.0.0 --port 8001
+```
+
+### Docker Deployment
+
+In Docker Compose, env files are selected automatically:
+- **Local**: Uses `pipeline/.env` (default)
+- **Production**: Uses `pipeline/.env.prod` when `PIPELINE_ENV_FILE=./pipeline/.env.prod` is set
+
+```bash
+# Local development
+docker compose up pipeline-api
+
+# Production deployment
+PIPELINE_ENV_FILE=./pipeline/.env.prod docker compose up pipeline-api
 ```
 
 ### Container Startup FAERS Sync

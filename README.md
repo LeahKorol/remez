@@ -70,13 +70,33 @@ remez/
 └── README.md          # This file
 ```
 
-## Quick Start
+## Deployment Models
+
+REMEZ supports both **local development** and **production** deployments via environment files:
+
+- **Local (default)**: Uses `backend/.env`, `frontend/.env`, `pipeline/.env`
+- **Production**: Uses `backend/.env.prod`, `frontend/.env.prod`, `pipeline/.env.prod`
+
+The docker-compose configuration automatically selects the correct env files:
+
+```bash
+# Local development (default)
+docker compose up --build
+
+# Production deployment
+BACKEND_ENV_FILE=./backend/.env.prod \
+FRONTEND_ENV_FILE=./frontend/.env.prod \
+PIPELINE_ENV_FILE=./pipeline/.env.prod \
+docker compose up --build
+```
+
+## Quick Start - Local Development
 
 ### Prerequisites
 
 - **Python 3.9+**
 - **Node.js 16+** 
-- **PostgreSQL** (or Supabase account)
+- **Docker & Docker Compose**
 - **Git**
 
 ### 1. Clone Repository
@@ -86,17 +106,30 @@ git clone https://github.com/LeahKorol/remez.git
 cd remez
 ```
 
-### 2. Backend Setup
+### 2. Launch with Docker Compose
+
+```bash
+docker compose up --build
+```
+
+Services start automatically:
+- **Frontend**: http://localhost:3000
+- **Backend**: http://localhost:8000
+- **Pipeline**: http://pipeline-api:8000 (internal)
+- **Nginx**: http://localhost:8600
+
+**Troubleshooting:** Check service logs with `docker compose logs -f backend` (or `frontend`, `pipeline-api`)
+
+### 3. Manual Backend Setup (Without Docker)
 
 ```bash
 cd backend
 pip install -r requirements.txt
-# Configure .env file and initialise the database
 python manage.py migrate
 python manage.py runserver
 ```
 
-**[See Backend README](./backend/README.md) for detailed setup including database configuration and initialisation**
+**[See Backend README](./backend/README.md) for detailed setup including database configuration**
 
 ### 3. Pipeline Setup
 

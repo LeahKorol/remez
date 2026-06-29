@@ -79,6 +79,74 @@ backend/
 
 ### Environment Variables
 
+Create a `.env` file in the backend directory. See `backend/.env.example` and `backend/.env.prod.example` for complete templates.
+
+**Backend-Specific Variables:**
+
+```bash
+# Django Configuration
+DEBUG=True                          # Set to False in production
+SECRET_KEY=your-secret-key-here     # Django secret key
+sIGNING_KEY=your-signing-key-here   # Signing key for tokens
+ALLOWED_HOSTS=localhost,127.0.0.1,backend,nginx   # Allowed hostnames
+
+# JWT Authentication
+JWT_AUTH_COOKIE=jwt-access
+JWT_AUTH_SECURE=False               # Set to True with HTTPS
+JWT_AUTH_HTTPONLY=True
+ACCESS_TOKEN_LIFETIME_HOURS=4
+REFRESH_TOKEN_LIFETIME_DAYS=7
+
+# CORS Configuration
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+
+# Service URLs (point to other services)
+FRONTEND_URL=http://localhost:3000
+BACKEND_URL=http://localhost:8000
+PIPELINE_BASE_URL=http://pipeline-api:8000
+
+# Email Configuration
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=your-email@gmail.com
+EMAIL_HOST_PASSWORD=your-app-password
+DEFAULT_FROM_EMAIL=your-email@gmail.com
+
+# Password Reset & Email Confirmation Redirects
+EMAIL_CONFIRM_REDIRECT_BASE_URL=http://localhost:3000/email/confirm/
+PASSWORD_RESET_CONFIRM_REDIRECT_BASE_URL=http://localhost:3000/reset-password/
+
+# Database Configuration
+DB_HOST=db                          # Docker service name or IP
+DB_PORT=5432
+DB_NAME=remez
+DB_USER=postgres
+DB_PASSWORD=postgres
+
+# Pipeline Security
+PIPELINE_SERVICE_IPS=pipeline-api,127.0.0.1   # IPs allowed to call pipeline endpoints
+
+# FAERS Analysis Configuration
+FAERS_AUTO_SYNC=True                # Auto-download FAERS data on startup
+FAERS_FROM=2020q1                   # Starting quarter for analysis
+FAERS_TO=2020q3                     # Ending quarter for analysis
+NUM_DEMO_QUARTERS=-1                # Use -1 for real data, 0-4 for demo
+
+# Logging
+ROOT_LOG_LEVEL=DEBUG                # DEBUG, INFO, WARNING, ERROR
+```
+
+**Production Differences:**
+
+For production (`backend/.env.prod`), key changes:
+- `DEBUG=False`
+- `FAERS_AUTO_SYNC=False` (manual sync recommended)
+- URLs use HTTPS and production domain: `FRONTEND_URL=https://remez.jce.ac`
+- `CORS_ALLOWED_ORIGINS=https://remez.jce.ac`
+- `JWT_AUTH_SECURE=True` (require HTTPS for cookies)
+- `ROOT_LOG_LEVEL=INFO` or `WARNING`
+
 Create a `.env` file in the backend directory with the following variables:
 
 ```env

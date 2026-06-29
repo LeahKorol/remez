@@ -17,7 +17,7 @@ services:
 
   backend:
     env_file:
-      - /backend/.env.prod
+      - ${BACKEND_ENV_FILE:-./backend/.env}
     build:
       context: ./backend
       dockerfile: dockerfile
@@ -31,15 +31,11 @@ services:
         condition: service_healthy
       pipeline-api:
         condition: service_started
-    environment:
-      FAERS_FROM: ${FAERS_FROM}
-      FAERS_TO: ${FAERS_TO}
-      FAERS_AUTO_SYNC: ${FAERS_AUTO_SYNC:-True} # Not load any data by default.
     restart: unless-stopped
 
   frontend:
     env_file:
-    - ./frontend/.env.prod
+      - ${FRONTEND_ENV_FILE:-./frontend/.env}
     build:
       context: ./frontend
       dockerfile: dockerfile
@@ -51,7 +47,7 @@ services:
 
   pipeline-api:
     env_file:
-      - ./pipeline/.env.prod
+      - ${PIPELINE_ENV_FILE:-./pipeline/.env}
     build:
       context: ./pipeline
       dockerfile: Dockerfile
@@ -60,10 +56,6 @@ services:
     volumes:
       - ./pipeline/logs:/app/logs
       - ./pipeline/data/external/faers:/app/data/external/faers
-    environment:
-      FAERS_FROM: ${FAERS_FROM}
-      FAERS_TO: ${FAERS_TO}
-      FAERS_AUTO_SYNC: ${FAERS_AUTO_SYNC:-True}
     restart: unless-stopped
 
   nginx:
