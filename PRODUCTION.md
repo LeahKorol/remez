@@ -15,21 +15,23 @@ REMEZ consists of four services orchestrated by Docker Compose:
 
 ---
 
-## 2. Environment-Driven Deployment Strategy
+## 2. Compose Files Strategy
 
 ### 2.1 Core Principle
 
-All configuration is **environment-file-driven**. The single `docker-compose.yml` supports both local and production deployments without modification by selecting the appropriate `.env` files via environment variables:
+All configuration is **environment-file-driven** using two compose files:
+
+- `docker-compose.yml` for local development
+- `docker-compose.prod.yml` for production
+
+The production compose file already references `backend/.env.prod`, `frontend/.env.prod`, and `pipeline/.env.prod` directly, so no runtime patching is required.
 
 ```bash
-# Local (default) - uses ./backend/.env, ./frontend/.env, ./pipeline/.env
-docker compose up
+# Local
+docker compose up --build
 
-# Production - uses ./backend/.env.prod, ./frontend/.env.prod, ./pipeline/.env.prod
-BACKEND_ENV_FILE=./backend/.env.prod \
-FRONTEND_ENV_FILE=./frontend/.env.prod \
-PIPELINE_ENV_FILE=./pipeline/.env.prod \
-docker compose up
+# Production
+docker compose -f docker-compose.prod.yml up --build -d
 ```
 
 ### 2.2 Environment File Organization
@@ -87,14 +89,13 @@ Each service has two environment file variants:
 ### 3.2 Deploy with Docker Compose
 
 ```bash
-# Set environment variables to select prod files
-export BACKEND_ENV_FILE=./backend/.env.prod
-export FRONTEND_ENV_FILE=./frontend/.env.prod
-export PIPELINE_ENV_FILE=./pipeline/.env.prod
-
-# Deploy
-docker compose up --build -d
+docker compose -f docker-compose.prod.yml up --build -d
 ```
+
+Notes:
+- Only Nginx is exposed publicly on port `8600`.
+- Backend, frontend, pipeline-api, and PostgreSQL remain internal-only.
+- Production resource limits are defined in `docker-compose.prod.yml`.
 
 ### 3.3 Initialize Database
 

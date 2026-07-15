@@ -66,28 +66,26 @@ remez/
 ├── backend/           # Django REST API service  
 ├── pipeline/          # FastAPI data processing service
 ├── docs/              # Project documentation
-├── docker-compose.yml # Container orchestration
+├── docker-compose.yml # Local container orchestration
+├── docker-compose.prod.yml # Production container orchestration
 └── README.md          # This file
 ```
 
 ## Deployment Models
 
-REMEZ supports both **local development** and **production** deployments via environment files:
+REMEZ supports both **local development** and **production** deployments:
 
-- **Local (default)**: Uses `backend/.env`, `frontend/.env`, `pipeline/.env`
-- **Production**: Uses `backend/.env.prod`, `frontend/.env.prod`, `pipeline/.env.prod`
+- **Local (default)**: `docker-compose.yml` with `backend/.env`, `frontend/.env`, `pipeline/.env`
+- **Production**: `docker-compose.prod.yml` with `backend/.env.prod`, `frontend/.env.prod`, `pipeline/.env.prod`
 
-The docker-compose configuration automatically selects the correct env files:
+Run the matching compose file directly:
 
 ```bash
 # Local development (default)
 docker compose up --build
 
 # Production deployment
-BACKEND_ENV_FILE=./backend/.env.prod \
-FRONTEND_ENV_FILE=./frontend/.env.prod \
-PIPELINE_ENV_FILE=./pipeline/.env.prod \
-docker compose up --build
+docker compose -f docker-compose.prod.yml up --build -d
 ```
 
 ## Quick Start - Local Development
